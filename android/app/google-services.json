@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "352736844640",
+    "project_id": "safarsync-f272c",
+    "storage_bucket": "safarsync-f272c.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:352736844640:android:0297c95c6dba337bdcdc05",
+        "android_client_info": {
+          "package_name": "com.example.safarsync_mobileapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD7mIM1cdkE4qeQ9kMaD1JnR9y25yihU1M"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
