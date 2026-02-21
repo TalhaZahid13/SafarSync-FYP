@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-
 import 'src/auth/login.dart';
 import 'src/auth/signup.dart';
 import 'src/components/navigation/top_navigation.dart';
@@ -63,7 +62,6 @@ class AuthGate extends StatelessWidget {
   }
 }
 
-
 class App extends StatefulWidget {
   const App({super.key});
 
@@ -84,9 +82,7 @@ class _AppState extends State<App> {
   Widget renderPage() {
     switch (activeTab) {
       case 'home':
-        return HomePage(
-          onPlanRoute: _goToRoutes,
-        );
+        return HomePage(onPlanRoute: _goToRoutes);
       case 'explore':
         return const ExplorePage();
       case 'routes':
@@ -96,9 +92,7 @@ class _AppState extends State<App> {
       case 'profile':
         return const ProfilePage();
       default:
-        return HomePage(
-          onPlanRoute: _goToRoutes,
-        );
+        return HomePage(onPlanRoute: _goToRoutes);
     }
   }
 
@@ -150,4 +144,3 @@ class _AppState extends State<App> {
     );
   }
 }
-
