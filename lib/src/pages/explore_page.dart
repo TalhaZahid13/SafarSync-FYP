@@ -23,6 +23,7 @@ class _ExplorePageState extends State<ExplorePage> {
     },
   ];
 
+  /// Make sure every destination has an `image` entry.
   final destinations = [
     {
       'name': 'Fairy Meadows',
@@ -30,6 +31,8 @@ class _ExplorePageState extends State<ExplorePage> {
       'category': 'nature',
       'rating': 4.9,
       'price': 'Rs 40,000',
+      'image':
+      'https://images.unsplash.com/photo-1614104072206-056aa80e59ff?auto=format&fit=crop&w=900&q=80',
     },
     {
       'name': 'Skardu Valley',
@@ -37,6 +40,8 @@ class _ExplorePageState extends State<ExplorePage> {
       'category': 'nature',
       'rating': 4.8,
       'price': 'Rs 45,000',
+      'image':
+      'https://images.unsplash.com/photo-1523987355523-c7b5b0dd90d2?auto=format&fit=crop&w=900&q=80',
     },
     {
       'name': 'Mohenjo-daro',
@@ -44,6 +49,8 @@ class _ExplorePageState extends State<ExplorePage> {
       'category': 'history',
       'rating': 4.6,
       'price': 'Rs 20,000',
+      'image':
+      'https://images.unsplash.com/photo-1548013146-72479768bada?auto=format&fit=crop&w=900&q=80',
     },
     {
       'name': 'Rohtas Fort',
@@ -51,6 +58,8 @@ class _ExplorePageState extends State<ExplorePage> {
       'category': 'history',
       'rating': 4.5,
       'price': 'Rs 15,000',
+      'image':
+      'https://images.unsplash.com/photo-1599661046289-3a4aaf9a4926?auto=format&fit=crop&w=900&q=80',
     },
     {
       'name': 'Food Street Lahore',
@@ -58,6 +67,8 @@ class _ExplorePageState extends State<ExplorePage> {
       'category': 'food',
       'rating': 4.7,
       'price': 'Rs 5,000',
+      'image':
+      'https://images.unsplash.com/photo-1544027993-37dbfe43562a?auto=format&fit=crop&w=900&q=80',
     },
     {
       'name': 'Burns Road Karachi',
@@ -65,6 +76,8 @@ class _ExplorePageState extends State<ExplorePage> {
       'category': 'food',
       'rating': 4.8,
       'price': 'Rs 4,000',
+      'image':
+      'https://images.unsplash.com/photo-1592861956120-e524fc739696?auto=format&fit=crop&w=900&q=80',
     },
     {
       'name': 'K2 Base Camp',
@@ -72,6 +85,8 @@ class _ExplorePageState extends State<ExplorePage> {
       'category': 'adventure',
       'rating': 5.0,
       'price': 'Rs 150,000',
+      'image':
+      'https://images.unsplash.com/photo-1526481280695-3c687fd543c0?auto=format&fit=crop&w=900&q=80',
     },
     {
       'name': 'Chitral Valley Trek',
@@ -79,6 +94,8 @@ class _ExplorePageState extends State<ExplorePage> {
       'category': 'adventure',
       'rating': 4.7,
       'price': 'Rs 55,000',
+      'image':
+      'https://images.unsplash.com/photo-1518684079-3c830dcef090?auto=format&fit=crop&w=900&q=80',
     },
   ];
 
@@ -87,9 +104,9 @@ class _ExplorePageState extends State<ExplorePage> {
     final filteredDestinations = destinations.where((dest) {
       final matchesCategory =
           activeCategory == 'all' || dest['category'] == activeCategory;
-      final matchesSearch = (dest['name'] as String).toLowerCase().contains(
-        searchQuery.toLowerCase(),
-      );
+      final matchesSearch = (dest['name'] as String)
+          .toLowerCase()
+          .contains(searchQuery.toLowerCase());
       return matchesCategory && matchesSearch;
     }).toList();
 
@@ -117,7 +134,7 @@ class _ExplorePageState extends State<ExplorePage> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.1),
+              color: Colors.white.withOpacity(0.06),
               borderRadius: BorderRadius.circular(16),
             ),
             child: Row(
@@ -131,14 +148,15 @@ class _ExplorePageState extends State<ExplorePage> {
                       border: InputBorder.none,
                       hintStyle: TextStyle(color: Colors.grey),
                     ),
-                    style: const TextStyle(color: Colors.black),
+                    style: const TextStyle(color: Colors.white),
                     onChanged: (val) => setState(() {
                       searchQuery = val;
                     }),
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.filter_list, color: Color(0xFF1B5A6E)),
+                  icon:
+                  const Icon(Icons.filter_list, color: Color(0xFF1B5A6E)),
                   onPressed: () {
                     // TODO: implement filter
                   },
@@ -171,20 +189,24 @@ class _ExplorePageState extends State<ExplorePage> {
                       borderRadius: BorderRadius.circular(16),
                       gradient: isActive
                           ? const LinearGradient(
-                              colors: [Color(0xFFFDB913), Color(0xFF1B5A6E)],
-                            )
+                        colors: [Color(0xFFFDB913), Color(0xFF1B5A6E)],
+                      )
                           : null,
                       color: isActive ? null : Colors.white.withOpacity(0.1),
                     ),
                     child: Row(
                       children: [
-                        Icon(category['icon'] as IconData, size: 16),
+                        Icon(
+                          category['icon'] as IconData,
+                          size: 16,
+                          color: Colors.white,
+                        ),
                         const SizedBox(width: 4),
                         Text(
                           category['name'] as String,
-                          style: TextStyle(
+                          style: const TextStyle(
                             fontSize: 12,
-                            color: isActive ? Colors.white : Colors.black87,
+                            color: Colors.white,
                           ),
                         ),
                       ],
@@ -205,110 +227,164 @@ class _ExplorePageState extends State<ExplorePage> {
               crossAxisCount: 2,
               mainAxisSpacing: 12,
               crossAxisSpacing: 12,
-              childAspectRatio: 0.8,
+              childAspectRatio: 0.70,
             ),
             itemBuilder: (context, index) {
               final dest = filteredDestinations[index];
+
+              // SAFE image read: may be null
+              final String? imageUrl = dest['image'] as String?;
               return Container(
-                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.1),
+                  color: Theme.of(context).cardColor,
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Name & Location
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                dest['name'] as String,
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.black87,
-                                ),
-                              ),
-                              Text(
-                                dest['location'] as String,
-                                style: const TextStyle(
-                                  fontSize: 10,
-                                  color: Colors.grey,
-                                ),
-                              ),
-                            ],
-                          ),
+                    // IMAGE (or placeholder if null)
+                    ClipRRect(
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(16),
+                      ),
+                      child: imageUrl != null
+                          ? Image.network(
+                        imageUrl,
+                        height: 90,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                      )
+                          : Container(
+                        height: 90,
+                        width: double.infinity,
+                        color: Colors.grey.shade800,
+                        child: const Icon(
+                          Icons.landscape,
+                          color: Colors.white54,
                         ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.yellow.shade50,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Row(
-                            children: [
-                              const Icon(
-                                Icons.star,
-                                size: 12,
-                                color: Colors.yellow,
-                              ),
-                              const SizedBox(width: 2),
-                              Text(
-                                '${dest['rating']}',
-                                style: const TextStyle(
-                                  fontSize: 10,
-                                  color: Colors.black87,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
-                    const Spacer(),
-                    // Price & Button
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          dest['price'] as String,
-                          style: const TextStyle(color: Color(0xFF1B5A6E)),
-                        ),
-                        Container(
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [Color(0xFFFDB913), Color(0xFF1B5A6E)],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
+
+                    // CONTENT
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.all(8),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Name & Rating
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                    CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        dest['name'] as String,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        dest['location'] as String,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                          fontSize: 10,
+                                          color: Colors.white70,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 6,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.yellow.shade50,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(
+                                        Icons.star,
+                                        size: 12,
+                                        color: Colors.yellow,
+                                      ),
+                                      const SizedBox(width: 2),
+                                      Text(
+                                        '${dest['rating']}',
+                                        style: const TextStyle(
+                                          fontSize: 10,
+                                          color: Colors.black87,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: ElevatedButton(
-                            onPressed: () {},
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor:
-                                  Colors.transparent, // must be transparent
-                              shadowColor: Colors.transparent, // remove shadow
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 12,
-                              ),
+
+                            const Spacer(),
+
+                            // Price & Button
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  dest['price'] as String,
+                                  style: const TextStyle(
+                                    color: Color(0xFFFFC837),
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                InkWell(
+                                  onTap: () {
+                                    // TODO: open details
+                                  },
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 6,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      gradient: const LinearGradient(
+                                        colors: [
+                                          Color(0xFFFDB913),
+                                          Color(0xFF1B5A6E),
+                                        ],
+                                        begin: Alignment.topLeft,
+                                        end: Alignment.bottomRight,
+                                      ),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: const Text(
+                                      'View Details',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 11,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
-                            child: const Text('Edit Profile'),
-                          ),
+                          ],
                         ),
-                      ],
+                      ),
                     ),
                   ],
                 ),
@@ -318,6 +394,7 @@ class _ExplorePageState extends State<ExplorePage> {
 
           if (filteredDestinations.isEmpty)
             Container(
+              margin: const EdgeInsets.only(top: 16),
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
                 color: Colors.white.withOpacity(0.1),

@@ -6,7 +6,7 @@ class TopNavigation extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 24.0), // mb-6
+      padding: const EdgeInsets.only(bottom: 24.0),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -22,74 +22,49 @@ class TopNavigation extends StatelessWidget {
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              SizedBox(height: 4), // mb-1
+              SizedBox(height: 4),
               Text(
                 'Ready for your next adventure?',
                 style: TextStyle(
-                  color: Colors.white70, // text-white/80
+                  color: Colors.white70,
                   fontSize: 14,
                 ),
               ),
             ],
           ),
 
-          // Action Buttons
-          Row(
+          // Notification Button ONLY
+          Stack(
             children: [
-              // Bell button
-              Stack(
-                children: [
-                  Container(
-                    width: 44, // w-11 (~44px)
-                    height: 44,
-                    decoration: BoxDecoration(
-                      color: Colors.white12, // approximate glass effect
-                      borderRadius: BorderRadius.circular(22),
-                    ),
-                    child: IconButton(
-                      icon: const Icon(
-                        Icons.notifications_none, // substitute for Bell
-                        color: Colors.white,
-                        size: 20,
-                      ),
-                      onPressed: () {},
-                    ),
-                  ),
-                  // Red dot notification
-                  Positioned(
-                    top: 0,
-                    right: 0,
-                    child: Container(
-                      width: 8, // w-2 (~8px)
-                      height: 8,
-                      decoration: const BoxDecoration(
-                        color: Colors.red,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(width: 12), // gap-3
-              // User button
               Container(
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
+                  color: Colors.white12,
                   borderRadius: BorderRadius.circular(22),
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF1B5A6E), Color(0xFF2B7A8E)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
                 ),
                 child: IconButton(
                   icon: const Icon(
-                    Icons.person, // substitute for User
+                    Icons.notifications_none,
                     color: Colors.white,
                     size: 20,
                   ),
-                  onPressed: () {},
+                  onPressed: () {
+                    // TODO: open notifications screen
+                  },
+                ),
+              ),
+              // Red dot (unread notifications)
+              Positioned(
+                top: 6,
+                right: 6,
+                child: Container(
+                  width: 8,
+                  height: 8,
+                  decoration: const BoxDecoration(
+                    color: Colors.red,
+                    shape: BoxShape.circle,
+                  ),
                 ),
               ),
             ],

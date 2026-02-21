@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide SearchBar;
 import '../components/home/search_bar.dart';
 import '../components/home/quick_access_cards.dart';
 import '../components/smart/weather_widget.dart';
@@ -12,7 +12,12 @@ import '../components/discover/interest_filters.dart';
 import '../components/smart/smart_alerts.dart';
 
 class HomePage extends StatelessWidget {
-  const HomePage({super.key});
+  final VoidCallback onPlanRoute; // 👈 important
+
+  const HomePage({
+    super.key,
+    required this.onPlanRoute,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -21,60 +26,43 @@ class HomePage extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Search Bar
-          SearchBar(),
+          const SearchBar(),
+          const SizedBox(height: 16),
 
-          SizedBox(height: 16),
+          const SmartAlerts(),
+          const SizedBox(height: 16),
 
-          // Smart Alerts
-          SmartAlerts(),
+          const QuickAccessCards(),
+          const SizedBox(height: 16),
 
-          SizedBox(height: 16),
+          const ResponsiveWeatherEmergency(),
+          const SizedBox(height: 16),
 
-          // Quick Access Cards
-          QuickAccessCards(),
-
-          SizedBox(height: 16),
-
-          // Weather & EmergencyICE
-          ResponsiveWeatherEmergency(),
-
-          SizedBox(height: 16),
-
-          // Popular Destinations
           PopularDestinations(),
+          const SizedBox(height: 16),
 
-          SizedBox(height: 16),
+          const InterestFilters(),
+          const SizedBox(height: 16),
 
-          // Interest Filters
-          InterestFilters(),
+          const AIRecommendations(),
+          const SizedBox(height: 16),
 
-          SizedBox(height: 16),
+          // 🔥 yahan se Routes ko trigger karenge
+          SmartRoutePlanner(
+            onPlanRoute: onPlanRoute,
+          ),
+          const SizedBox(height: 16),
 
-          // AI Recommendations
-          AIRecommendations(),
+          const HotelFoodFinder(),
+          const SizedBox(height: 16),
 
-          SizedBox(height: 16),
-
-          // Smart Route Planner
-          SmartRoutePlanner(),
-
-          SizedBox(height: 16),
-
-          // Hotel & Food Finder
-          HotelFoodFinder(),
-
-          SizedBox(height: 16),
-
-          // Additional Feature Sections
-          FeatureSections(),
+          // FeatureSections() ko hata diya tha na
         ],
       ),
     );
   }
 }
 
-/// A helper widget to mimic the grid layout (WeatherWidget + EmergencyICE)
 class ResponsiveWeatherEmergency extends StatelessWidget {
   const ResponsiveWeatherEmergency({super.key});
 
@@ -83,19 +71,17 @@ class ResponsiveWeatherEmergency extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         if (constraints.maxWidth > 800) {
-          // Desktop / Tablet: 3-column layout
-          return Row(
+          return const Row(
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: const [
+            children: [
               Expanded(flex: 1, child: WeatherWidget()),
               SizedBox(width: 16),
               Expanded(flex: 2, child: EmergencyICE()),
             ],
           );
         } else {
-          // Mobile: stacked layout
-          return Column(
-            children: const [
+          return const Column(
+            children: [
               WeatherWidget(),
               SizedBox(height: 16),
               EmergencyICE(),

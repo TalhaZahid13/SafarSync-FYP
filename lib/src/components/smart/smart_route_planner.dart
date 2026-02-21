@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
 
 class SmartRoutePlanner extends StatelessWidget {
-  const SmartRoutePlanner({super.key});
+  final VoidCallback onPlanRoute; // 👈 required callback
+
+  const SmartRoutePlanner({
+    super.key,
+    required this.onPlanRoute,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -9,7 +14,7 @@ class SmartRoutePlanner extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.1), // Glass effect
+        color: Colors.white.withOpacity(0.1),
         borderRadius: BorderRadius.circular(24),
       ),
       child: Column(
@@ -46,34 +51,38 @@ class SmartRoutePlanner extends StatelessWidget {
                       Text(
                         'Smart Route Planner',
                         style: TextStyle(
-                          color: Colors.black87,
+                          color: Colors.white,
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
                       Text(
                         'Optimized for weather & traffic',
-                        style: TextStyle(color: Colors.grey, fontSize: 12),
+                        style: TextStyle(color: Colors.white70, fontSize: 12),
                       ),
                     ],
                   ),
                 ],
               ),
               // Plan Route Button
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFFFDB913), Color(0xFF1B5A6E)],
+              InkWell(
+                onTap: onPlanRoute, // 👈 yahan se App ka callback chalega
+                borderRadius: BorderRadius.circular(16),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
                   ),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: const Text(
-                  'Plan Route',
-                  style: TextStyle(color: Colors.white),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFFFDB913), Color(0xFF1B5A6E)],
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: const Text(
+                    'Plan Route',
+                    style: TextStyle(color: Colors.white),
+                  ),
                 ),
               ),
             ],
@@ -173,7 +182,7 @@ class SmartRoutePlanner extends StatelessWidget {
                         Container(
                           width: 32,
                           height: 32,
-                          decoration: BoxDecoration(
+                          decoration: const BoxDecoration(
                             color: Colors.green,
                             shape: BoxShape.circle,
                           ),
@@ -254,7 +263,7 @@ class SmartRoutePlanner extends StatelessWidget {
                         Container(
                           width: 32,
                           height: 32,
-                          decoration: BoxDecoration(
+                          decoration: const BoxDecoration(
                             color: Colors.red,
                             shape: BoxShape.circle,
                           ),
@@ -298,7 +307,9 @@ class SmartRoutePlanner extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               _infoBox('Distance', '60 km', Colors.amber.shade50),
+              const SizedBox(width: 8),
               _infoBox('Duration', '1h 30m', Colors.blue.shade50),
+              const SizedBox(width: 8),
               _infoBox('Fuel Cost', 'Rs 800', Colors.green.shade50),
             ],
           ),

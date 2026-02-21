@@ -1,6 +1,12 @@
 import 'package:flutter/material.dart';
 
 class RoutesPage extends StatelessWidget {
+  RoutesPage({super.key});
+
+  // 0.0 = 0%, 1.0 = 100%
+  // Abhi yeh hard-coded hai; baad mein isay actual distance se link kar sakte ho.
+  final double activeRouteProgress = 0.35;
+
   final List<Map<String, dynamic>> savedRoutes = [
     {
       'name': 'Northern Pakistan Tour',
@@ -40,11 +46,21 @@ class RoutesPage extends StatelessWidget {
       ),
       child: Column(
         children: [
-          Text(label, style: const TextStyle(fontSize: 10, color: Colors.grey)),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 10,
+              color: Colors.grey,
+            ),
+          ),
           const SizedBox(height: 2),
           Text(
             value,
-            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
+            ),
           ),
         ],
       ),
@@ -55,10 +71,14 @@ class RoutesPage extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.5),
+        color: const Color(0xFF2C2C2C), // dark card
         borderRadius: BorderRadius.circular(20),
-        boxShadow: const [
-          BoxShadow(color: Colors.black12, blurRadius: 6, offset: Offset(0, 3)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.3),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
         ],
       ),
       child: Column(
@@ -73,7 +93,10 @@ class RoutesPage extends StatelessWidget {
                 children: [
                   Text(
                     route['name'],
-                    style: const TextStyle(fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
                   ),
                   Row(
                     children: [
@@ -81,17 +104,20 @@ class RoutesPage extends StatelessWidget {
                         route['from'],
                         style: const TextStyle(
                           fontSize: 12,
-                          color: Colors.grey,
+                          color: Colors.white70,
                         ),
                       ),
                       const SizedBox(width: 4),
-                      const Text('→', style: TextStyle(color: Colors.grey)),
+                      const Text(
+                        '→',
+                        style: TextStyle(color: Colors.white54),
+                      ),
                       const SizedBox(width: 4),
                       Text(
                         route['to'],
                         style: const TextStyle(
                           fontSize: 12,
-                          color: Colors.grey,
+                          color: Colors.white70,
                         ),
                       ),
                     ],
@@ -108,7 +134,7 @@ class RoutesPage extends StatelessWidget {
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  backgroundColor: Colors.transparent, // must be transparent
+                  backgroundColor: Colors.transparent,
                   shadowColor: Colors.transparent,
                 ),
                 child: ShaderMask(
@@ -119,7 +145,9 @@ class RoutesPage extends StatelessWidget {
                   },
                   child: const Text(
                     'Start',
-                    style: TextStyle(color: Colors.white),
+                    style: TextStyle(
+                      color: Colors.white,
+                    ),
                   ),
                 ),
               ),
@@ -148,7 +176,7 @@ class RoutesPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF1B1B1B),
+      backgroundColor: const Color(0xFF121212), // same as main.dart
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -172,14 +200,24 @@ class RoutesPage extends StatelessWidget {
                     SizedBox(height: 4),
                     Text(
                       'Saved and planned routes',
-                      style: TextStyle(color: Colors.white70, fontSize: 12),
+                      style: TextStyle(
+                        color: Colors.white70,
+                        fontSize: 12,
+                      ),
                     ),
                   ],
                 ),
                 ElevatedButton.icon(
                   onPressed: () {},
-                  icon: const Icon(Icons.add, size: 16),
-                  label: const Text('New Route'),
+                  icon:
+                  const Icon(Icons.add, size: 16, color: Colors.black87),
+                  label: const Text(
+                    'New Route',
+                    style: TextStyle(
+                      color: Colors.black87,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 16,
@@ -194,13 +232,14 @@ class RoutesPage extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 16),
+
             // Active Route
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.3),
+                color: const Color(0xFF2C2C2C),
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: Colors.amber, width: 2),
+                border: Border.all(color: const Color(0xFFFFC837), width: 2),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -228,12 +267,15 @@ class RoutesPage extends StatelessWidget {
                         children: const [
                           Text(
                             'Active Route',
-                            style: TextStyle(color: Colors.black87),
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                           Text(
                             'In Progress',
                             style: TextStyle(
-                              color: Color(0xFF1B5A6E),
+                              color: Color(0xFFFFC837),
                               fontSize: 12,
                             ),
                           ),
@@ -242,6 +284,7 @@ class RoutesPage extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 12),
+
                   // Route Stops
                   Container(
                     padding: const EdgeInsets.all(12),
@@ -290,7 +333,7 @@ class RoutesPage extends StatelessWidget {
                         Container(
                           margin: const EdgeInsets.symmetric(vertical: 6),
                           height: 1,
-                          color: Colors.grey,
+                          color: Colors.grey.shade400,
                         ),
                         Row(
                           children: [
@@ -330,6 +373,35 @@ class RoutesPage extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 12),
+
+                  // 🔥 NEW: Route progress bar
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Route progress',
+                        style: TextStyle(
+                          color: Colors.white70,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: LinearProgressIndicator(
+                          value: activeRouteProgress, // 0.0 - 1.0
+                          minHeight: 8,
+                          backgroundColor: Colors.white.withOpacity(0.25),
+                          valueColor: const AlwaysStoppedAnimation(
+                            Color(0xFF1B5A6E),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+
                   // Info cards
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -343,6 +415,7 @@ class RoutesPage extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
+
             // Saved Routes
             const Text(
               'Saved Routes',
@@ -357,10 +430,10 @@ class RoutesPage extends StatelessWidget {
               children: savedRoutes
                   .map(
                     (route) => Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: _buildSavedRouteCard(route),
-                    ),
-                  )
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: _buildSavedRouteCard(route),
+                ),
+              )
                   .toList(),
             ),
           ],

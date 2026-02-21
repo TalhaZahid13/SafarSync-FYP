@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../utils/pdf_export.dart'; // TripData, Destination, RouteData, Hotel, Restaurant, TripStats
+import 'profile_settings.dart';
+import '../auth/login.dart';
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
@@ -63,6 +66,8 @@ class ProfilePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cardColor = Theme.of(context).cardColor; // matches main.dart
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -83,13 +88,15 @@ class ProfilePage extends StatelessWidget {
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(20),
             ),
-            color: Colors.white.withOpacity(0.1),
+            color: cardColor,
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
                 children: [
                   Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Avatar
                       Container(
                         width: 80,
                         height: 80,
@@ -108,6 +115,8 @@ class ProfilePage extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 16),
+
+                      // Name + email + location
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -124,7 +133,7 @@ class ProfilePage extends StatelessWidget {
                               'talhazahid710@email.com',
                               style: TextStyle(
                                 fontSize: 14,
-                                color: Colors.grey,
+                                color: Colors.white70,
                               ),
                             ),
                             SizedBox(height: 8),
@@ -140,7 +149,7 @@ class ProfilePage extends StatelessWidget {
                                   'Islamabad, Pakistan',
                                   style: TextStyle(
                                     fontSize: 12,
-                                    color: Colors.grey,
+                                    color: Colors.white70,
                                   ),
                                 ),
                               ],
@@ -148,31 +157,50 @@ class ProfilePage extends StatelessWidget {
                           ],
                         ),
                       ),
-                      ElevatedButton(
-                        onPressed: () {},
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 24,
-                            vertical: 12,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          backgroundColor: Colors.transparent,
-                          shadowColor: Colors.transparent,
-                        ),
-                        child: ShaderMask(
-                          shaderCallback: (bounds) {
-                            return const LinearGradient(
-                              colors: [Color(0xFFFDB913), Color(0xFF1B5A6E)],
-                            ).createShader(bounds);
+
+                      const SizedBox(width: 8),
+
+                      // Edit Profile button (wrapped to avoid overflow)
+                      FittedBox(
+                        child: ElevatedButton(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const ProfileSettingsPage(),
+                              ),
+                            );
                           },
-                          child: const Text(
-                            'Edit Profile',
-                            style: TextStyle(color: Colors.white, fontSize: 16),
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 8,
+                            ),
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            backgroundColor: Colors.transparent,
+                            shadowColor: Colors.transparent,
+                          ),
+                          child: ShaderMask(
+                            shaderCallback: (bounds) {
+                              return const LinearGradient(
+                                colors: [Color(0xFFFDB913), Color(0xFF1B5A6E)],
+                              ).createShader(bounds);
+                            },
+                            child: const Text(
+                              'Edit Profile',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 14,
+                              ),
+                            ),
                           ),
                         ),
                       ),
+
                     ],
                   ),
                   const SizedBox(height: 16),
@@ -187,12 +215,14 @@ class ProfilePage extends StatelessWidget {
                         Colors.amber.shade200,
                         const Color(0xFF1B5A6E),
                       ),
+                      const SizedBox(width: 8),
                       statCard(
                         '12',
                         'Badges Earned',
                         Colors.yellow.shade200,
                         Colors.yellow.shade600,
                       ),
+                      const SizedBox(width: 8),
                       statCard(
                         '8',
                         'Trips Planned',
@@ -212,7 +242,7 @@ class ProfilePage extends StatelessWidget {
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(20),
             ),
-            color: Colors.white.withOpacity(0.1),
+            color: cardColor,
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
@@ -236,7 +266,7 @@ class ProfilePage extends StatelessWidget {
                     physics: const NeverScrollableScrollPhysics(),
                     children: List.generate(
                       4,
-                      (index) => Column(
+                          (index) => Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           const Icon(
@@ -246,12 +276,13 @@ class ProfilePage extends StatelessWidget {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            [
+                            const [
                               'Adventurer',
                               'Explorer',
                               'Globetrotter',
                               'Road Warrior',
                             ][index],
+                            textAlign: TextAlign.center,
                             style: const TextStyle(
                               fontSize: 10,
                               color: Colors.white,
@@ -272,7 +303,7 @@ class ProfilePage extends StatelessWidget {
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(20),
             ),
-            color: Colors.white.withOpacity(0.1),
+            color: cardColor,
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
@@ -287,19 +318,19 @@ class ProfilePage extends StatelessWidget {
                     context,
                     LucideIcons.settings,
                     'Account Settings',
-                    () {},
+                        () {},
                   ),
                   settingsButton(
                     context,
                     LucideIcons.bell,
                     'Notifications',
-                    () {},
+                        () {},
                   ),
                   settingsButton(
                     context,
                     LucideIcons.shield,
                     'Privacy & Security',
-                    () {},
+                        () {},
                   ),
                   settingsButton(
                     context,
@@ -311,9 +342,21 @@ class ProfilePage extends StatelessWidget {
                     context,
                     LucideIcons.handHelping,
                     'Help & Support',
-                    () {},
+                        () {},
                   ),
-                  settingsButton(context, LucideIcons.logOut, 'Log Out', () {}),
+                  settingsButton(
+                    context,
+                    LucideIcons.logOut,
+                    'Log Out',
+                        () {
+                      FirebaseAuth.instance.signOut();
+                      Navigator.pushAndRemoveUntil(
+                        context,
+                        MaterialPageRoute(builder: (_) => const LoginPage()),
+                            (route) => false,
+                      );
+                    },
+                  )
                 ],
               ),
             ),
@@ -344,6 +387,7 @@ class ProfilePage extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               label,
+              textAlign: TextAlign.center,
               style: const TextStyle(fontSize: 12, color: Colors.grey),
             ),
           ],
@@ -353,11 +397,12 @@ class ProfilePage extends StatelessWidget {
   }
 
   Widget settingsButton(
-    BuildContext context,
-    IconData icon,
-    String label,
-    VoidCallback onTap,
-  ) {
+      BuildContext context,
+      IconData icon,
+      String label,
+      VoidCallback onTap,
+      ) {
+    final isLogout = label.contains('Log Out');
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
@@ -368,14 +413,14 @@ class ProfilePage extends StatelessWidget {
             Icon(
               icon,
               size: 20,
-              color: label.contains('Log Out') ? Colors.red : Colors.grey,
+              color: isLogout ? Colors.red : Colors.white70,
             ),
             const SizedBox(width: 8),
             Text(
               label,
               style: TextStyle(
                 fontSize: 14,
-                color: label.contains('Log Out') ? Colors.red : Colors.white,
+                color: isLogout ? Colors.red : Colors.white,
               ),
             ),
           ],

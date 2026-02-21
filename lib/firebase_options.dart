@@ -47,21 +47,21 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyBNUCF4L7mbZOmbwfgu5CIXAYs3jVtV8sk',
-    appId: '1:352736844640:web:c046b91bbd62dce2dcdc05',
-    messagingSenderId: '352736844640',
-    projectId: 'safarsync-f272c',
-    authDomain: 'safarsync-f272c.firebaseapp.com',
-    storageBucket: 'safarsync-f272c.firebasestorage.app',
-    measurementId: 'G-QCBDXWTR9Y',
+    apiKey: 'AIzaSyAlQ4IoWDs7sY0YrkR4Ert0PIlwIZgUO9k',
+    appId: '1:176464109317:web:a306a568efe403e658616c',
+    messagingSenderId: '176464109317',
+    projectId: 'safarsync-273c5',
+    authDomain: 'safarsync-273c5.firebaseapp.com',
+    storageBucket: 'safarsync-273c5.firebasestorage.app',
+    measurementId: 'G-QQWKZNLB05',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyD7mIM1cdkE4qeQ9kMaD1JnR9y25yihU1M',
-    appId: '1:352736844640:android:0297c95c6dba337bdcdc05',
-    messagingSenderId: '352736844640',
-    projectId: 'safarsync-f272c',
-    storageBucket: 'safarsync-f272c.firebasestorage.app',
+    apiKey: 'AIzaSyAJPimJVyxPMnZcCfUAXYL9zfJVgK6-aOU',
+    appId: '1:176464109317:android:7a88d78d2b8794c558616c',
+    messagingSenderId: '176464109317',
+    projectId: 'safarsync-273c5',
+    storageBucket: 'safarsync-273c5.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(

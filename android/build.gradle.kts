@@ -1,8 +1,15 @@
+import org.gradle.api.file.Directory
+
 allprojects {
     repositories {
         google()
         mavenCentral()
     }
+}
+
+// Yahan se VERSION hata diya hai
+plugins {
+    id("com.google.gms.google-services") apply false
 }
 
 val newBuildDir: Directory =
@@ -15,6 +22,7 @@ subprojects {
     val newSubprojectBuildDir: Directory = newBuildDir.dir(project.name)
     project.layout.buildDirectory.value(newSubprojectBuildDir)
 }
+
 subprojects {
     project.evaluationDependsOn(":app")
 }
