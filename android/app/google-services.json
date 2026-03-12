@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "176464109317",
+    "project_id": "safarsync-273c5",
+    "storage_bucket": "safarsync-273c5.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:176464109317:android:7a88d78d2b8794c558616c",
+        "android_client_info": {
+          "package_name": "com.example.safarsync_mobileapp"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "176464109317-faq5cgpnek9o5f4hidu5861gcqfk8jmc.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAJPimJVyxPMnZcCfUAXYL9zfJVgK6-aOU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "176464109317-faq5cgpnek9o5f4hidu5861gcqfk8jmc.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
