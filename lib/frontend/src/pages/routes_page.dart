@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/responsive.dart';
 
 class RoutesPage extends StatelessWidget {
   RoutesPage({super.key});
@@ -46,13 +47,7 @@ class RoutesPage extends StatelessWidget {
       ),
       child: Column(
         children: [
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 10,
-              color: Colors.grey,
-            ),
-          ),
+          Text(label, style: const TextStyle(fontSize: 10, color: Colors.grey)),
           const SizedBox(height: 2),
           Text(
             value,
@@ -108,10 +103,7 @@ class RoutesPage extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 4),
-                      const Text(
-                        '→',
-                        style: TextStyle(color: Colors.white54),
-                      ),
+                      const Text('→', style: TextStyle(color: Colors.white54)),
                       const SizedBox(width: 4),
                       Text(
                         route['to'],
@@ -145,9 +137,7 @@ class RoutesPage extends StatelessWidget {
                   },
                   child: const Text(
                     'Start',
-                    style: TextStyle(
-                      color: Colors.white,
-                    ),
+                    style: TextStyle(color: Colors.white),
                   ),
                 ),
               ),
@@ -175,63 +165,124 @@ class RoutesPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final padding = ResponsiveUtil.getResponsivePadding(context);
+    final isMobile = ResponsiveUtil.isMobile(context);
     return Scaffold(
       backgroundColor: const Color(0xFF121212), // same as main.dart
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(padding),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Header
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: const [
-                    Text(
-                      'My Routes',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
+            isMobile
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: const [
+                          Text(
+                            'My Routes',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          SizedBox(height: 4),
+                          Text(
+                            'Saved and planned routes',
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                    SizedBox(height: 4),
-                    Text(
-                      'Saved and planned routes',
-                      style: TextStyle(
-                        color: Colors.white70,
-                        fontSize: 12,
+                      SizedBox(height: padding),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: () {},
+                          icon: const Icon(
+                            Icons.add,
+                            size: 16,
+                            color: Colors.black87,
+                          ),
+                          label: const Text(
+                            'New Route',
+                            style: TextStyle(
+                              color: Colors.black87,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 12,
+                            ),
+                            backgroundColor: const Color(0xFFFDB913),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-                ElevatedButton.icon(
-                  onPressed: () {},
-                  icon:
-                  const Icon(Icons.add, size: 16, color: Colors.black87),
-                  label: const Text(
-                    'New Route',
-                    style: TextStyle(
-                      color: Colors.black87,
-                      fontWeight: FontWeight.w600,
-                    ),
+                    ],
+                  )
+                : Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: const [
+                          Text(
+                            'My Routes',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          SizedBox(height: 4),
+                          Text(
+                            'Saved and planned routes',
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                      ElevatedButton.icon(
+                        onPressed: () {},
+                        icon: const Icon(
+                          Icons.add,
+                          size: 16,
+                          color: Colors.black87,
+                        ),
+                        label: const Text(
+                          'New Route',
+                          style: TextStyle(
+                            color: Colors.black87,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
+                          backgroundColor: const Color(0xFFFDB913),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
-                    backgroundColor: const Color(0xFFFDB913),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
+            SizedBox(height: padding),
 
             // Active Route
             Container(
@@ -283,7 +334,7 @@ class RoutesPage extends StatelessWidget {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
+                  SizedBox(height: padding * 0.75),
 
                   // Route Stops
                   Container(
@@ -372,7 +423,7 @@ class RoutesPage extends StatelessWidget {
                       ],
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  SizedBox(height: padding * 0.75),
 
                   // 🔥 NEW: Route progress bar
                   Column(
@@ -386,7 +437,7 @@ class RoutesPage extends StatelessWidget {
                           fontWeight: FontWeight.w600,
                         ),
                       ),
-                      const SizedBox(height: 6),
+                      SizedBox(height: padding * 0.375),
                       ClipRRect(
                         borderRadius: BorderRadius.circular(8),
                         child: LinearProgressIndicator(
@@ -400,7 +451,7 @@ class RoutesPage extends StatelessWidget {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
+                  SizedBox(height: padding * 0.75),
 
                   // Info cards
                   Row(
@@ -414,7 +465,7 @@ class RoutesPage extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: padding),
 
             // Saved Routes
             const Text(
@@ -425,15 +476,15 @@ class RoutesPage extends StatelessWidget {
                 fontWeight: FontWeight.bold,
               ),
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: padding * 0.75),
             Column(
               children: savedRoutes
                   .map(
                     (route) => Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: _buildSavedRouteCard(route),
-                ),
-              )
+                      padding: EdgeInsets.only(bottom: padding * 0.75),
+                      child: _buildSavedRouteCard(route),
+                    ),
+                  )
                   .toList(),
             ),
           ],

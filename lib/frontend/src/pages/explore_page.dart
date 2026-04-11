@@ -32,7 +32,7 @@ class _ExplorePageState extends State<ExplorePage> {
       'rating': 4.9,
       'price': 'Rs 40,000',
       'image':
-      'https://images.unsplash.com/photo-1614104072206-056aa80e59ff?auto=format&fit=crop&w=900&q=80',
+          'https://images.unsplash.com/photo-1614104072206-056aa80e59ff?auto=format&fit=crop&w=900&q=80',
     },
     {
       'name': 'Skardu Valley',
@@ -41,7 +41,7 @@ class _ExplorePageState extends State<ExplorePage> {
       'rating': 4.8,
       'price': 'Rs 45,000',
       'image':
-      'https://images.unsplash.com/photo-1523987355523-c7b5b0dd90d2?auto=format&fit=crop&w=900&q=80',
+          'https://images.unsplash.com/photo-1523987355523-c7b5b0dd90d2?auto=format&fit=crop&w=900&q=80',
     },
     {
       'name': 'Mohenjo-daro',
@@ -50,7 +50,7 @@ class _ExplorePageState extends State<ExplorePage> {
       'rating': 4.6,
       'price': 'Rs 20,000',
       'image':
-      'https://images.unsplash.com/photo-1548013146-72479768bada?auto=format&fit=crop&w=900&q=80',
+          'https://images.unsplash.com/photo-1548013146-72479768bada?auto=format&fit=crop&w=900&q=80',
     },
     {
       'name': 'Rohtas Fort',
@@ -59,7 +59,7 @@ class _ExplorePageState extends State<ExplorePage> {
       'rating': 4.5,
       'price': 'Rs 15,000',
       'image':
-      'https://images.unsplash.com/photo-1599661046289-3a4aaf9a4926?auto=format&fit=crop&w=900&q=80',
+          'https://images.unsplash.com/photo-1599661046289-3a4aaf9a4926?auto=format&fit=crop&w=900&q=80',
     },
     {
       'name': 'Food Street Lahore',
@@ -68,7 +68,7 @@ class _ExplorePageState extends State<ExplorePage> {
       'rating': 4.7,
       'price': 'Rs 5,000',
       'image':
-      'https://images.unsplash.com/photo-1544027993-37dbfe43562a?auto=format&fit=crop&w=900&q=80',
+          'https://images.unsplash.com/photo-1544027993-37dbfe43562a?auto=format&fit=crop&w=900&q=80',
     },
     {
       'name': 'Burns Road Karachi',
@@ -77,7 +77,7 @@ class _ExplorePageState extends State<ExplorePage> {
       'rating': 4.8,
       'price': 'Rs 4,000',
       'image':
-      'https://images.unsplash.com/photo-1592861956120-e524fc739696?auto=format&fit=crop&w=900&q=80',
+          'https://images.unsplash.com/photo-1592861956120-e524fc739696?auto=format&fit=crop&w=900&q=80',
     },
     {
       'name': 'K2 Base Camp',
@@ -86,7 +86,7 @@ class _ExplorePageState extends State<ExplorePage> {
       'rating': 5.0,
       'price': 'Rs 150,000',
       'image':
-      'https://images.unsplash.com/photo-1526481280695-3c687fd543c0?auto=format&fit=crop&w=900&q=80',
+          'https://images.unsplash.com/photo-1526481280695-3c687fd543c0?auto=format&fit=crop&w=900&q=80',
     },
     {
       'name': 'Chitral Valley Trek',
@@ -95,7 +95,7 @@ class _ExplorePageState extends State<ExplorePage> {
       'rating': 4.7,
       'price': 'Rs 55,000',
       'image':
-      'https://images.unsplash.com/photo-1518684079-3c830dcef090?auto=format&fit=crop&w=900&q=80',
+          'https://images.unsplash.com/photo-1518684079-3c830dcef090?auto=format&fit=crop&w=900&q=80',
     },
   ];
 
@@ -104,9 +104,9 @@ class _ExplorePageState extends State<ExplorePage> {
     final filteredDestinations = destinations.where((dest) {
       final matchesCategory =
           activeCategory == 'all' || dest['category'] == activeCategory;
-      final matchesSearch = (dest['name'] as String)
-          .toLowerCase()
-          .contains(searchQuery.toLowerCase());
+      final matchesSearch = (dest['name'] as String).toLowerCase().contains(
+        searchQuery.toLowerCase(),
+      );
       return matchesCategory && matchesSearch;
     }).toList();
 
@@ -155,8 +155,7 @@ class _ExplorePageState extends State<ExplorePage> {
                   ),
                 ),
                 IconButton(
-                  icon:
-                  const Icon(Icons.filter_list, color: Color(0xFF1B5A6E)),
+                  icon: const Icon(Icons.filter_list, color: Color(0xFF1B5A6E)),
                   onPressed: () {
                     // TODO: implement filter
                   },
@@ -189,8 +188,8 @@ class _ExplorePageState extends State<ExplorePage> {
                       borderRadius: BorderRadius.circular(16),
                       gradient: isActive
                           ? const LinearGradient(
-                        colors: [Color(0xFFFDB913), Color(0xFF1B5A6E)],
-                      )
+                              colors: [Color(0xFFFDB913), Color(0xFF1B5A6E)],
+                            )
                           : null,
                       color: isActive ? null : Colors.white.withOpacity(0.1),
                     ),
@@ -249,20 +248,20 @@ class _ExplorePageState extends State<ExplorePage> {
                       ),
                       child: imageUrl != null
                           ? Image.network(
-                        imageUrl,
-                        height: 90,
-                        width: double.infinity,
-                        fit: BoxFit.cover,
-                      )
+                              imageUrl,
+                              height: 90,
+                              width: double.infinity,
+                              fit: BoxFit.cover,
+                            )
                           : Container(
-                        height: 90,
-                        width: double.infinity,
-                        color: Colors.grey.shade800,
-                        child: const Icon(
-                          Icons.landscape,
-                          color: Colors.white54,
-                        ),
-                      ),
+                              height: 90,
+                              width: double.infinity,
+                              color: Colors.grey.shade800,
+                              child: const Icon(
+                                Icons.landscape,
+                                color: Colors.white54,
+                              ),
+                            ),
                     ),
 
                     // CONTENT
@@ -279,7 +278,7 @@ class _ExplorePageState extends State<ExplorePage> {
                                 Expanded(
                                   child: Column(
                                     crossAxisAlignment:
-                                    CrossAxisAlignment.start,
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         dest['name'] as String,

@@ -4,6 +4,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../utils/pdf_export.dart'; // TripData, Destination, RouteData, Hotel, Restaurant, TripStats
 import 'profile_settings.dart';
 import '../auth/login.dart';
+import '../utils/responsive.dart';
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
@@ -67,9 +68,11 @@ class ProfilePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cardColor = Theme.of(context).cardColor; // matches main.dart
+    final padding = ResponsiveUtil.getResponsivePadding(context);
+    final isMobile = ResponsiveUtil.isMobile(context);
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(padding),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -81,7 +84,7 @@ class ProfilePage extends StatelessWidget {
               fontWeight: FontWeight.bold,
             ),
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: padding),
 
           // User Info Card
           Card(
@@ -90,120 +93,236 @@ class ProfilePage extends StatelessWidget {
             ),
             color: cardColor,
             child: Padding(
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.all(padding),
               child: Column(
                 children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Avatar
-                      Container(
-                        width: 80,
-                        height: 80,
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFFFDB913), Color(0xFF1B5A6E)],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          borderRadius: BorderRadius.circular(40),
-                        ),
-                        child: const Icon(
-                          LucideIcons.user,
-                          color: Colors.white,
-                          size: 40,
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-
-                      // Name + email + location
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: const [
-                            Text(
-                              'Muhammad Talha',
-                              style: TextStyle(
-                                fontSize: 18,
-                                color: Colors.white,
-                              ),
-                            ),
-                            SizedBox(height: 4),
-                            Text(
-                              'talhazahid710@email.com',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.white70,
-                              ),
-                            ),
-                            SizedBox(height: 8),
-                            Row(
-                              children: [
-                                Icon(
-                                  LucideIcons.mapPin,
-                                  size: 16,
-                                  color: Color(0xFF1B5A6E),
+                  isMobile
+                      ? Column(
+                          children: [
+                            Container(
+                              width: 80,
+                              height: 80,
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  colors: [
+                                    Color(0xFFFDB913),
+                                    Color(0xFF1B5A6E),
+                                  ],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
                                 ),
-                                SizedBox(width: 4),
+                                borderRadius: BorderRadius.circular(40),
+                              ),
+                              child: const Icon(
+                                LucideIcons.user,
+                                color: Colors.white,
+                                size: 40,
+                              ),
+                            ),
+                            SizedBox(height: padding * 0.75),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: const [
                                 Text(
-                                  'Islamabad, Pakistan',
+                                  'Muhammad Talha',
                                   style: TextStyle(
-                                    fontSize: 12,
+                                    fontSize: 18,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                SizedBox(height: 4),
+                                Text(
+                                  'talhazahid710@email.com',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontSize: 14,
                                     color: Colors.white70,
                                   ),
                                 ),
+                                SizedBox(height: 8),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      LucideIcons.mapPin,
+                                      size: 16,
+                                      color: Color(0xFF1B5A6E),
+                                    ),
+                                    SizedBox(width: 4),
+                                    Text(
+                                      'Islamabad, Pakistan',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.white70,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ],
+                            ),
+                            SizedBox(height: padding * 0.75),
+                            SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton(
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) =>
+                                          const ProfileSettingsPage(),
+                                    ),
+                                  );
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 8,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  backgroundColor: Colors.transparent,
+                                  shadowColor: Colors.transparent,
+                                ),
+                                child: ShaderMask(
+                                  shaderCallback: (bounds) {
+                                    return const LinearGradient(
+                                      colors: [
+                                        Color(0xFFFDB913),
+                                        Color(0xFF1B5A6E),
+                                      ],
+                                    ).createShader(bounds);
+                                  },
+                                  child: const Text(
+                                    'Edit Profile',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        )
+                      : Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Avatar
+                            Container(
+                              width: 80,
+                              height: 80,
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  colors: [
+                                    Color(0xFFFDB913),
+                                    Color(0xFF1B5A6E),
+                                  ],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                                borderRadius: BorderRadius.circular(40),
+                              ),
+                              child: const Icon(
+                                LucideIcons.user,
+                                color: Colors.white,
+                                size: 40,
+                              ),
+                            ),
+                            SizedBox(width: padding),
+
+                            // Name + email + location
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: const [
+                                  Text(
+                                    'Muhammad Talha',
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  SizedBox(height: 4),
+                                  Text(
+                                    'talhazahid710@email.com',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: Colors.white70,
+                                    ),
+                                  ),
+                                  SizedBox(height: 8),
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        LucideIcons.mapPin,
+                                        size: 16,
+                                        color: Color(0xFF1B5A6E),
+                                      ),
+                                      SizedBox(width: 4),
+                                      Text(
+                                        'Islamabad, Pakistan',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.white70,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+
+                            SizedBox(width: padding * 0.5),
+
+                            // Edit Profile button (wrapped to avoid overflow)
+                            FittedBox(
+                              child: ElevatedButton(
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) =>
+                                          const ProfileSettingsPage(),
+                                    ),
+                                  );
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 8,
+                                  ),
+                                  minimumSize: Size.zero,
+                                  tapTargetSize:
+                                      MaterialTapTargetSize.shrinkWrap,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  backgroundColor: Colors.transparent,
+                                  shadowColor: Colors.transparent,
+                                ),
+                                child: ShaderMask(
+                                  shaderCallback: (bounds) {
+                                    return const LinearGradient(
+                                      colors: [
+                                        Color(0xFFFDB913),
+                                        Color(0xFF1B5A6E),
+                                      ],
+                                    ).createShader(bounds);
+                                  },
+                                  child: const Text(
+                                    'Edit Profile',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ),
+                              ),
                             ),
                           ],
                         ),
-                      ),
-
-                      const SizedBox(width: 8),
-
-                      // Edit Profile button (wrapped to avoid overflow)
-                      FittedBox(
-                        child: ElevatedButton(
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const ProfileSettingsPage(),
-                              ),
-                            );
-                          },
-                          style: ElevatedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 8,
-                            ),
-                            minimumSize: Size.zero,
-                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            backgroundColor: Colors.transparent,
-                            shadowColor: Colors.transparent,
-                          ),
-                          child: ShaderMask(
-                            shaderCallback: (bounds) {
-                              return const LinearGradient(
-                                colors: [Color(0xFFFDB913), Color(0xFF1B5A6E)],
-                              ).createShader(bounds);
-                            },
-                            child: const Text(
-                              'Edit Profile',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 14,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-
-                    ],
-                  ),
-                  const SizedBox(height: 16),
+                  SizedBox(height: padding),
 
                   // Stats
                   Row(
@@ -215,14 +334,14 @@ class ProfilePage extends StatelessWidget {
                         Colors.amber.shade200,
                         const Color(0xFF1B5A6E),
                       ),
-                      const SizedBox(width: 8),
+                      SizedBox(width: padding * 0.5),
                       statCard(
                         '12',
                         'Badges Earned',
                         Colors.yellow.shade200,
                         Colors.yellow.shade600,
                       ),
-                      const SizedBox(width: 8),
+                      SizedBox(width: padding * 0.5),
                       statCard(
                         '8',
                         'Trips Planned',
@@ -235,7 +354,7 @@ class ProfilePage extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: padding),
 
           // Recent Badges
           Card(
@@ -244,7 +363,7 @@ class ProfilePage extends StatelessWidget {
             ),
             color: cardColor,
             child: Padding(
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.all(padding),
               child: Column(
                 children: [
                   Row(
@@ -257,16 +376,16 @@ class ProfilePage extends StatelessWidget {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 8),
+                  SizedBox(height: padding * 0.5),
                   GridView.count(
                     shrinkWrap: true,
-                    crossAxisCount: 4,
+                    crossAxisCount: isMobile ? 2 : 4,
                     crossAxisSpacing: 8,
                     mainAxisSpacing: 8,
                     physics: const NeverScrollableScrollPhysics(),
                     children: List.generate(
                       4,
-                          (index) => Column(
+                      (index) => Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           const Icon(
@@ -274,7 +393,7 @@ class ProfilePage extends StatelessWidget {
                             size: 32,
                             color: Colors.yellow,
                           ),
-                          const SizedBox(height: 4),
+                          SizedBox(height: padding * 0.25),
                           Text(
                             const [
                               'Adventurer',
@@ -296,7 +415,7 @@ class ProfilePage extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: padding),
 
           // Settings Menu
           Card(
@@ -305,7 +424,7 @@ class ProfilePage extends StatelessWidget {
             ),
             color: cardColor,
             child: Padding(
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.all(padding),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -313,24 +432,24 @@ class ProfilePage extends StatelessWidget {
                     'Settings',
                     style: TextStyle(fontSize: 16, color: Colors.white),
                   ),
-                  const SizedBox(height: 8),
+                  SizedBox(height: padding * 0.5),
                   settingsButton(
                     context,
                     LucideIcons.settings,
                     'Account Settings',
-                        () {},
+                    () {},
                   ),
                   settingsButton(
                     context,
                     LucideIcons.bell,
                     'Notifications',
-                        () {},
+                    () {},
                   ),
                   settingsButton(
                     context,
                     LucideIcons.shield,
                     'Privacy & Security',
-                        () {},
+                    () {},
                   ),
                   settingsButton(
                     context,
@@ -342,21 +461,16 @@ class ProfilePage extends StatelessWidget {
                     context,
                     LucideIcons.handHelping,
                     'Help & Support',
-                        () {},
+                    () {},
                   ),
-                  settingsButton(
-                    context,
-                    LucideIcons.logOut,
-                    'Log Out',
-                        () {
-                      FirebaseAuth.instance.signOut();
-                      Navigator.pushAndRemoveUntil(
-                        context,
-                        MaterialPageRoute(builder: (_) => const LoginPage()),
-                            (route) => false,
-                      );
-                    },
-                  )
+                  settingsButton(context, LucideIcons.logOut, 'Log Out', () {
+                    FirebaseAuth.instance.signOut();
+                    Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(builder: (_) => const LoginPage()),
+                      (route) => false,
+                    );
+                  }),
                 ],
               ),
             ),
@@ -397,11 +511,11 @@ class ProfilePage extends StatelessWidget {
   }
 
   Widget settingsButton(
-      BuildContext context,
-      IconData icon,
-      String label,
-      VoidCallback onTap,
-      ) {
+    BuildContext context,
+    IconData icon,
+    String label,
+    VoidCallback onTap,
+  ) {
     final isLogout = label.contains('Log Out');
     return InkWell(
       onTap: onTap,
@@ -410,11 +524,7 @@ class ProfilePage extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
         child: Row(
           children: [
-            Icon(
-              icon,
-              size: 20,
-              color: isLogout ? Colors.red : Colors.white70,
-            ),
+            Icon(icon, size: 20, color: isLogout ? Colors.red : Colors.white70),
             const SizedBox(width: 8),
             Text(
               label,

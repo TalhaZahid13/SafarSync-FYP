@@ -1,39 +1,61 @@
 import 'package:flutter/material.dart';
+import '../../utils/responsive.dart';
 
 class TopNavigation extends StatelessWidget {
   const TopNavigation({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final titleFontSize = ResponsiveUtil.getResponsiveFontSize(
+      context,
+      mobileSize: 18,
+      tabletSize: 20,
+      laptopSize: 24,
+    );
+    final subtitleFontSize = ResponsiveUtil.getResponsiveFontSize(
+      context,
+      mobileSize: 12,
+      tabletSize: 14,
+      laptopSize: 16,
+    );
+    final padding = ResponsiveUtil.getResponsivePadding(context);
+
     return Padding(
-      padding: const EdgeInsets.only(bottom: 24.0),
+      padding: EdgeInsets.only(bottom: padding),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           // Greeting Text
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: const [
-              Text(
-                'Assalam-o-Alaikum, Talha 👋',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Assalam-o-Alaikum, Talha 👋',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: titleFontSize,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-              ),
-              SizedBox(height: 4),
-              Text(
-                'Ready for your next adventure?',
-                style: TextStyle(
-                  color: Colors.white70,
-                  fontSize: 14,
+                SizedBox(height: padding * 0.25),
+                Text(
+                  'Ready for your next adventure?',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: subtitleFontSize,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
 
           // Notification Button ONLY
+          SizedBox(width: padding * 0.5),
           Stack(
             children: [
               Container(

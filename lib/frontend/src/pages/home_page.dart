@@ -7,27 +7,25 @@ import '../components/smart/smart_route_planner.dart';
 import '../components/discover/hotel_food_finder.dart';
 import '../components/emergency/emergency_ice.dart';
 import '../components/ai/ai_recommendations.dart';
-import '../components/home/feature_sections.dart';
 import '../components/discover/interest_filters.dart';
 import '../components/smart/smart_alerts.dart';
+import '../utils/responsive.dart';
 
 class HomePage extends StatelessWidget {
   final VoidCallback onPlanRoute; // 👈 important
 
-  const HomePage({
-    super.key,
-    required this.onPlanRoute,
-  });
+  const HomePage({super.key, required this.onPlanRoute});
 
   @override
   Widget build(BuildContext context) {
+    final padding = ResponsiveUtil.getResponsivePadding(context);
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(padding),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SearchBar(),
-          const SizedBox(height: 16),
+          SizedBox(height: padding),
 
           const SmartAlerts(),
           const SizedBox(height: 16),
@@ -48,9 +46,7 @@ class HomePage extends StatelessWidget {
           const SizedBox(height: 16),
 
           // 🔥 yahan se Routes ko trigger karenge
-          SmartRoutePlanner(
-            onPlanRoute: onPlanRoute,
-          ),
+          SmartRoutePlanner(onPlanRoute: onPlanRoute),
           const SizedBox(height: 16),
 
           const HotelFoodFinder(),
@@ -81,11 +77,7 @@ class ResponsiveWeatherEmergency extends StatelessWidget {
           );
         } else {
           return const Column(
-            children: [
-              WeatherWidget(),
-              SizedBox(height: 16),
-              EmergencyICE(),
-            ],
+            children: [WeatherWidget(), SizedBox(height: 16), EmergencyICE()],
           );
         }
       },
