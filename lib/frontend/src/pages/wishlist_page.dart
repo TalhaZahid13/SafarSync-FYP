@@ -91,7 +91,7 @@ class WishlistPage extends StatelessWidget {
                 crossAxisCount: gridColumns,
                 mainAxisSpacing: 12,
                 crossAxisSpacing: 12,
-                childAspectRatio: 3 / 2,
+                childAspectRatio: 1.35,
               ),
               itemBuilder: (context, index) {
                 final item = items[index];
@@ -115,9 +115,11 @@ class WishlistPage extends StatelessWidget {
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Expanded(
+                          Flexible(
                             child: Text(
                               item['name'],
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
                                 fontWeight: FontWeight.bold,
                                 color: Colors.black87,
@@ -131,7 +133,7 @@ class WishlistPage extends StatelessWidget {
                             },
                             iconSize: 20,
                             padding: EdgeInsets.zero,
-                            constraints: BoxConstraints(),
+                            constraints: const BoxConstraints(),
                           ),
                         ],
                       ),
@@ -144,9 +146,11 @@ class WishlistPage extends StatelessWidget {
                             color: Colors.grey,
                           ),
                           const SizedBox(width: 4),
-                          Expanded(
+                          Flexible(
                             child: Text(
                               item['location'],
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
                                 fontSize: 12,
                                 color: Colors.grey,
@@ -155,33 +159,41 @@ class WishlistPage extends StatelessWidget {
                           ),
                         ],
                       ),
-                      const Spacer(),
+                      const SizedBox(height: 8),
                       // Rating and Price
                       Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Row(
-                            children: [
-                              const Icon(
-                                Icons.star,
-                                size: 14,
-                                color: Colors.amber,
-                              ),
-                              const SizedBox(width: 2),
-                              Text(
-                                '${item['rating']}',
+                          Expanded(
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.star,
+                                  size: 14,
+                                  color: Colors.amber,
+                                ),
+                                const SizedBox(width: 2),
+                                Text(
+                                  '${item['rating']}',
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.black87,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Flexible(
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.centerRight,
+                              child: Text(
+                                item['price'],
                                 style: const TextStyle(
                                   fontSize: 12,
-                                  color: Colors.black87,
+                                  color: Color(0xFF1B5A6E),
                                 ),
                               ),
-                            ],
-                          ),
-                          Text(
-                            item['price'],
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: Color(0xFF1B5A6E),
                             ),
                           ),
                         ],

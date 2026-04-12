@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../utils/api_service.dart';
 
 /// Home screen search bar:
 /// - UI app ki theme ke mutabiq
@@ -63,32 +64,99 @@ class _SearchBarState extends State<SearchBar> {
     ),
   ];
 
-  void _handleSearch(String query) {
+  Future<void> _handleSearch(String query) async {
     final trimmed = query.trim();
     if (trimmed.isEmpty) {
       return;
     }
 
-    final lower = trimmed.toLowerCase();
+    // Show loading while searching
+    _showSearchLoadingSheet(trimmed);
 
-    final results = _allItems.where((item) {
-      return item.title.toLowerCase().contains(lower) ||
-          item.subtitle.toLowerCase().contains(lower);
-    }).toList();
+    try {
+      final result = await ApiService.searchDestinations(trimmed);
 
-    if (results.isEmpty) {
-      _showResultsSheet(
-        title: 'No matches found',
-        results: const [],
-        query: trimmed,
-      );
-    } else {
-      _showResultsSheet(
-        title: 'Search results',
-        results: results,
-        query: trimmed,
-      );
+      if (!mounted) return;
+      Navigator.pop(context); // Close loading sheet
+
+      if (result['success']) {
+        final resultsData = result['results'];
+        final data = result['data'];
+        final destList = resultsData is List
+            ? resultsData
+            : (data is Map ? data['destinations'] as List? : data as List?);
+
+        final searchResults = (destList ?? [])
+            .map(
+              (d) => _SearchItem(
+                type: _SearchType.place,
+                title: d['name'] ?? 'Unknown',
+                subtitle:
+                    '${d['location'] ?? d['country'] ?? 'Pakistan'} • Destination',
+              ),
+            )
+            .toList();
+
+        if (mounted) {
+          _showResultsSheet(
+            title: searchResults.isEmpty
+                ? 'No matches found'
+                : 'Search results',
+            results: searchResults,
+            query: trimmed,
+          );
+        }
+      } else {
+        if (mounted) {
+          _showResultsSheet(
+            title: 'Search failed',
+            results: const [],
+            query: trimmed,
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context); // Close loading sheet
+        _showResultsSheet(
+          title: 'Error searching',
+          results: const [],
+          query: trimmed,
+        );
+      }
+      print('Search error: $e');
     }
+  }
+
+  void _showSearchLoadingSheet(String query) {
+    showModalBottomSheet(
+      context: context,
+      isDismissible: false,
+      backgroundColor: const Color(0xFF1E1E1E),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox(height: 20),
+                const CircularProgressIndicator(),
+                const SizedBox(height: 16),
+                Text(
+                  'Searching for "$query"...',
+                  style: const TextStyle(color: Colors.white70),
+                ),
+                const SizedBox(height: 20),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   void _showResultsSheet({
@@ -137,10 +205,7 @@ class _SearchBarState extends State<SearchBar> {
                     padding: EdgeInsets.only(top: 8, bottom: 16),
                     child: Text(
                       'Try searching by place name, route name, or a wishlist item.',
-                      style: TextStyle(
-                        color: Colors.white54,
-                        fontSize: 12,
-                      ),
+                      style: TextStyle(color: Colors.white54, fontSize: 12),
                     ),
                   )
                 else
@@ -153,8 +218,9 @@ class _SearchBarState extends State<SearchBar> {
                       itemBuilder: (context, index) {
                         final item = results[index];
                         return ListTile(
-                          contentPadding:
-                          const EdgeInsets.symmetric(vertical: 4),
+                          contentPadding: const EdgeInsets.symmetric(
+                            vertical: 4,
+                          ),
                           leading: _buildTypeIcon(item.type),
                           title: Text(
                             item.title,

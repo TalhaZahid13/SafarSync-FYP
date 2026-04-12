@@ -2,7 +2,7 @@ import 'package:flutter/material.dart' hide SearchBar;
 import '../components/home/search_bar.dart';
 import '../components/home/quick_access_cards.dart';
 import '../components/smart/weather_widget.dart';
-import '../components/discover/popular_destinations.dart';
+import '../components/discover/popular_destinations.dart' hide Destination;
 import '../components/smart/smart_route_planner.dart';
 import '../components/discover/hotel_food_finder.dart';
 import '../components/emergency/emergency_ice.dart';

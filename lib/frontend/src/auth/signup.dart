@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import '../utils/api_service.dart';
+import 'login.dart';
 
 class SignupPage extends StatefulWidget {
   const SignupPage({super.key});
@@ -17,7 +18,6 @@ class _SignupPageState extends State<SignupPage> {
   final _confirmPasswordController = TextEditingController();
 
   bool _isLoading = false;
-  final _auth = FirebaseAuth.instance;
 
   @override
   void dispose() {
@@ -41,9 +41,9 @@ class _SignupPageState extends State<SignupPage> {
         contact.isEmpty ||
         password.isEmpty ||
         confirmPassword.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill all fields')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Please fill all fields')));
       return;
     }
 
@@ -55,60 +55,46 @@ class _SignupPageState extends State<SignupPage> {
     }
 
     if (password != confirmPassword) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Passwords do not match')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Passwords do not match')));
       return;
     }
 
     setState(() => _isLoading = true);
 
     try {
-      final cred = await _auth.createUserWithEmailAndPassword(
+      final result = await ApiService.signup(
         email: email,
         password: password,
+        fullName: fullName,
+        phoneNumber: contact,
       );
 
-      // Display name set
-      await cred.user?.updateDisplayName(fullName);
-
-      // TODO: contact number / extra data ko Firestore / Realtime DB mein save kar sakte ho
-
+      if (result['success']) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Account created successfully')),
+          );
+          // Navigate to login page
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const LoginPage()),
+          );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(result['message'] ?? 'Signup failed')),
+          );
+        }
+      }
+    } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Account created successfully')),
-        );
-        // AuthGate user ko logged-in dekh ke App() dikha dega
-        Navigator.pop(context);
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
-    } on FirebaseAuthException catch (e) {
-      String message = 'Signup failed';
-
-      switch (e.code) {
-        case 'email-already-in-use':
-          message = 'An account already exists for this email';
-          break;
-        case 'invalid-email':
-          message = 'Invalid email address';
-          break;
-        case 'weak-password':
-          message = 'Password is too weak';
-          break;
-        case 'operation-not-allowed':
-          message =
-          'Email/password sign-in is disabled. Enable it in Firebase console.';
-          break;
-        default:
-          message = 'Signup failed (${e.code})';
-      }
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message)),
-      );
-    } catch (_) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Something went wrong')),
-      );
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -168,10 +154,7 @@ class _SignupPageState extends State<SignupPage> {
                 const SizedBox(height: 4),
                 const Text(
                   'Create your account to start planning trips',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.white70,
-                  ),
+                  style: TextStyle(fontSize: 14, color: Colors.white70),
                   textAlign: TextAlign.center,
                 ),
 
@@ -241,23 +224,23 @@ class _SignupPageState extends State<SignupPage> {
                     ),
                     child: _isLoading
                         ? const SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          Colors.black87,
-                        ),
-                      ),
-                    )
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.black87,
+                              ),
+                            ),
+                          )
                         : const Text(
-                      'Sign Up',
-                      style: TextStyle(
-                        color: Colors.black87,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
+                            'Sign Up',
+                            style: TextStyle(
+                              color: Colors.black87,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                   ),
                 ),
               ],
@@ -281,10 +264,7 @@ class _SignupPageState extends State<SignupPage> {
       children: [
         Text(
           label,
-          style: const TextStyle(
-            color: Colors.white70,
-            fontSize: 12,
-          ),
+          style: const TextStyle(color: Colors.white70, fontSize: 12),
         ),
         const SizedBox(height: 6),
         TextField(
