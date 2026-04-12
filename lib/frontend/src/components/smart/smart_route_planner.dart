@@ -3,10 +3,7 @@ import 'package:flutter/material.dart';
 class SmartRoutePlanner extends StatelessWidget {
   final VoidCallback onPlanRoute; // 👈 required callback
 
-  const SmartRoutePlanner({
-    super.key,
-    required this.onPlanRoute,
-  });
+  const SmartRoutePlanner({super.key, required this.onPlanRoute});
 
   @override
   Widget build(BuildContext context) {
@@ -22,66 +19,84 @@ class SmartRoutePlanner extends StatelessWidget {
         children: [
           // Header Row
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Icon + Title
-              Row(
-                children: [
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF3B82F6), Color(0xFF06B6D4)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(
-                      Icons.navigation,
-                      color: Colors.white,
-                      size: 20,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
-                      Text(
-                        'Smart Route Planner',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
+              Expanded(
+                child: Row(
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF3B82F6), Color(0xFF06B6D4)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
                         ),
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      Text(
-                        'Optimized for weather & traffic',
-                        style: TextStyle(color: Colors.white70, fontSize: 12),
+                      child: const Icon(
+                        Icons.navigation,
+                        color: Colors.white,
+                        size: 20,
                       ),
-                    ],
-                  ),
-                ],
-              ),
-              // Plan Route Button
-              InkWell(
-                onTap: onPlanRoute, // 👈 yahan se App ka callback chalega
-                borderRadius: BorderRadius.circular(16),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFFFDB913), Color(0xFF1B5A6E)],
                     ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: const [
+                          Text(
+                            'Smart Route Planner',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          Text(
+                            'Optimized for weather & traffic',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              // Plan Route Button
+              Flexible(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerRight,
+                  child: InkWell(
+                    onTap: onPlanRoute, // 👈 yahan se App ka callback chalega
                     borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: const Text(
-                    'Plan Route',
-                    style: TextStyle(color: Colors.white),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFFFDB913), Color(0xFF1B5A6E)],
+                        ),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: const Text(
+                        'Plan Route',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                    ),
                   ),
                 ),
               ),

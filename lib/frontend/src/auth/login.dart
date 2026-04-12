@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import '../utils/api_service.dart';
 import 'signup.dart';
 import 'forgot_password.dart';
 
@@ -15,8 +15,7 @@ class _LoginPageState extends State<LoginPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isLoading = false;
-
-  final _auth = FirebaseAuth.instance;
+  bool _obscurePassword = true;
 
   @override
   void dispose() {
@@ -39,27 +38,27 @@ class _LoginPageState extends State<LoginPage> {
     setState(() => _isLoading = true);
 
     try {
-      await _auth.signInWithEmailAndPassword(email: email, password: password);
+      final result = await ApiService.login(email: email, password: password);
 
-      // ✅ Login successful → Go to Home (App)
-      Navigator.pushReplacementNamed(context, '/home');
-    } on FirebaseAuthException catch (e) {
-      String message = 'Login failed';
-      if (e.code == 'user-not-found') {
-        message = 'No user found for this email';
-      } else if (e.code == 'wrong-password') {
-        message = 'Wrong password provided';
-      } else if (e.message != null) {
-        message = e.message!;
+      if (result['success']) {
+        // ✅ Login successful → Go to Home (App)
+        if (mounted) {
+          Navigator.pushReplacementNamed(context, '/home');
+        }
+      } else {
+        // ❌ Login failed
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(result['message'] ?? 'Login failed')),
+          );
+        }
       }
-
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(message)));
-    } catch (_) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Something went wrong')));
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
+      }
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);

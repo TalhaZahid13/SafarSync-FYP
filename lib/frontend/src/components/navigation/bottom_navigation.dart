@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../utils/responsive.dart';
 
 class BottomNavigation extends StatelessWidget {
   final String activeTab;
@@ -20,11 +21,16 @@ class BottomNavigation extends StatelessWidget {
       {'id': 'wishlist', 'icon': Icons.favorite, 'label': 'Wishlist'},
       {'id': 'profile', 'icon': Icons.person, 'label': 'Profile'},
     ];
+    final isMobile = ResponsiveUtil.isMobile(context);
+    final padding = ResponsiveUtil.getResponsivePadding(context);
 
     return SafeArea(
       bottom: true,
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+        padding: EdgeInsets.symmetric(
+          vertical: padding * 0.5,
+          horizontal: padding,
+        ),
         color: Colors.transparent,
         child: Container(
           decoration: BoxDecoration(
@@ -38,7 +44,7 @@ class BottomNavigation extends StatelessWidget {
               ),
             ],
           ),
-          padding: const EdgeInsets.symmetric(vertical: 8),
+          padding: EdgeInsets.symmetric(vertical: padding * 0.5),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: navItems.map((item) {
@@ -49,9 +55,9 @@ class BottomNavigation extends StatelessWidget {
                 },
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 8,
-                    horizontal: 12,
+                  padding: EdgeInsets.symmetric(
+                    vertical: padding * 0.5,
+                    horizontal: isMobile ? 6 : 12,
                   ),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(20),
@@ -67,9 +73,9 @@ class BottomNavigation extends StatelessWidget {
                       Icon(
                         item['icon'] as IconData,
                         color: isActive ? Colors.white : Colors.grey[600],
-                        size: 24,
+                        size: isMobile ? 20 : 24,
                       ),
-                      const SizedBox(height: 4),
+                      SizedBox(height: padding * 0.25),
                       Text(
                         item['label'] as String,
                         style: TextStyle(

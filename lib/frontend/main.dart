@@ -1,22 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'src/auth/login.dart';
 import 'src/auth/signup.dart';
 import 'src/components/navigation/top_navigation.dart';
 import 'src/components/navigation/bottom_navigation.dart';
 import 'src/components/emergency/floating_emergency_button.dart';
 import 'src/components/ai/ai_assistant.dart';
-import 'src/components/home/search_bar.dart';
 import 'src/pages/home_page.dart';
 import 'src/pages/explore_page.dart';
 import 'src/pages/routes_page.dart';
 import 'src/pages/wishlist_page.dart';
 import 'src/pages/profile_page.dart';
+import 'src/utils/api_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
+  try {
+    await Firebase.initializeApp();
+  } catch (e) {
+    print('Firebase initialization error: $e');
+  }
   runApp(const SafarSyncApp());
 }
 
@@ -33,32 +37,50 @@ class SafarSyncApp extends StatelessWidget {
         scaffoldBackgroundColor: const Color(0xFF121212),
         cardColor: const Color(0xFF2C2C2C),
       ),
-      home: const AuthGate(), // 🔐 login vs app decision here
+      home: const AuthGate(),
+      routes: {
+        '/login': (context) => const LoginPage(),
+        '/signup': (context) => const SignupPage(),
+        '/home': (context) => const App(),
+      },
     );
   }
 }
 
-class AuthGate extends StatelessWidget {
+class AuthGate extends StatefulWidget {
   const AuthGate({super.key});
 
   @override
+  State<AuthGate> createState() => _AuthGateState();
+}
+
+class _AuthGateState extends State<AuthGate> {
+  bool _isChecking = true;
+  bool _isLoggedIn = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkAuthStatus();
+  }
+
+  Future<void> _checkAuthStatus() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('jwt_token');
+
+    setState(() {
+      _isLoggedIn = token != null;
+      _isChecking = false;
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return StreamBuilder<User?>(
-      stream: FirebaseAuth.instance.authStateChanges(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          );
-        }
+    if (_isChecking) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
 
-        if (snapshot.hasData) {
-          return const App();
-        }
-
-        return const LoginPage();
-      },
-    );
+    return _isLoggedIn ? const App() : const LoginPage();
   }
 }
 

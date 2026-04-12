@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/api_service.dart';
 
 class ExplorePage extends StatefulWidget {
   const ExplorePage({super.key});
@@ -10,6 +11,9 @@ class ExplorePage extends StatefulWidget {
 class _ExplorePageState extends State<ExplorePage> {
   String searchQuery = '';
   String activeCategory = 'all';
+  List<dynamic> destinations = [];
+  bool isLoadingDestinations = false;
+  String? errorMessage;
 
   final categories = [
     {'id': 'all', 'name': 'All', 'icon': Icons.place},
@@ -23,88 +27,73 @@ class _ExplorePageState extends State<ExplorePage> {
     },
   ];
 
-  /// Make sure every destination has an `image` entry.
-  final destinations = [
-    {
-      'name': 'Fairy Meadows',
-      'location': 'Gilgit-Baltistan',
-      'category': 'nature',
-      'rating': 4.9,
-      'price': 'Rs 40,000',
-      'image':
-      'https://images.unsplash.com/photo-1614104072206-056aa80e59ff?auto=format&fit=crop&w=900&q=80',
-    },
-    {
-      'name': 'Skardu Valley',
-      'location': 'Gilgit-Baltistan',
-      'category': 'nature',
-      'rating': 4.8,
-      'price': 'Rs 45,000',
-      'image':
-      'https://images.unsplash.com/photo-1523987355523-c7b5b0dd90d2?auto=format&fit=crop&w=900&q=80',
-    },
-    {
-      'name': 'Mohenjo-daro',
-      'location': 'Sindh',
-      'category': 'history',
-      'rating': 4.6,
-      'price': 'Rs 20,000',
-      'image':
-      'https://images.unsplash.com/photo-1548013146-72479768bada?auto=format&fit=crop&w=900&q=80',
-    },
-    {
-      'name': 'Rohtas Fort',
-      'location': 'Punjab',
-      'category': 'history',
-      'rating': 4.5,
-      'price': 'Rs 15,000',
-      'image':
-      'https://images.unsplash.com/photo-1599661046289-3a4aaf9a4926?auto=format&fit=crop&w=900&q=80',
-    },
-    {
-      'name': 'Food Street Lahore',
-      'location': 'Punjab',
-      'category': 'food',
-      'rating': 4.7,
-      'price': 'Rs 5,000',
-      'image':
-      'https://images.unsplash.com/photo-1544027993-37dbfe43562a?auto=format&fit=crop&w=900&q=80',
-    },
-    {
-      'name': 'Burns Road Karachi',
-      'location': 'Sindh',
-      'category': 'food',
-      'rating': 4.8,
-      'price': 'Rs 4,000',
-      'image':
-      'https://images.unsplash.com/photo-1592861956120-e524fc739696?auto=format&fit=crop&w=900&q=80',
-    },
-    {
-      'name': 'K2 Base Camp',
-      'location': 'Gilgit-Baltistan',
-      'category': 'adventure',
-      'rating': 5.0,
-      'price': 'Rs 150,000',
-      'image':
-      'https://images.unsplash.com/photo-1526481280695-3c687fd543c0?auto=format&fit=crop&w=900&q=80',
-    },
-    {
-      'name': 'Chitral Valley Trek',
-      'location': 'Khyber Pakhtunkhwa',
-      'category': 'adventure',
-      'rating': 4.7,
-      'price': 'Rs 55,000',
-      'image':
-      'https://images.unsplash.com/photo-1518684079-3c830dcef090?auto=format&fit=crop&w=900&q=80',
-    },
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _fetchDestinations();
+  }
+
+  Future<void> _fetchDestinations() async {
+    setState(() {
+      isLoadingDestinations = true;
+      errorMessage = null;
+    });
+
+    try {
+      final response = await ApiService.getDestinations(
+        page: 1,
+        limit: 50,
+        // sortBy: 'rating',
+      );
+
+      if (response['success']) {
+        final data = response['data'];
+        final directDestinations = response['destinations'];
+        final fetchedDestinations = data is Map
+            ? (data['destinations'] as List? ?? const [])
+            : (directDestinations as List? ?? const []);
+
+        setState(() {
+          destinations = fetchedDestinations;
+          isLoadingDestinations = false;
+        });
+      } else {
+        setState(() {
+          errorMessage = response['message'] ?? 'Failed to load destinations';
+          isLoadingDestinations = false;
+        });
+        if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(errorMessage!)));
+        }
+      }
+    } catch (e) {
+      setState(() {
+        errorMessage = 'Error loading destinations: $e';
+        isLoadingDestinations = false;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading destinations: $e')),
+        );
+      }
+    }
+  }
+
+  double _parseRating(dynamic value) {
+    if (value is double) return value;
+    if (value is int) return value.toDouble();
+    if (value is String) return double.tryParse(value) ?? 0.0;
+    return 0.0;
+  }
 
   @override
   Widget build(BuildContext context) {
     final filteredDestinations = destinations.where((dest) {
       final matchesCategory =
           activeCategory == 'all' || dest['category'] == activeCategory;
-      final matchesSearch = (dest['name'] as String)
+      final matchesSearch = ((dest['name'] ?? 'Unknown') as String)
           .toLowerCase()
           .contains(searchQuery.toLowerCase());
       return matchesCategory && matchesSearch;
@@ -155,8 +144,7 @@ class _ExplorePageState extends State<ExplorePage> {
                   ),
                 ),
                 IconButton(
-                  icon:
-                  const Icon(Icons.filter_list, color: Color(0xFF1B5A6E)),
+                  icon: const Icon(Icons.filter_list, color: Color(0xFF1B5A6E)),
                   onPressed: () {
                     // TODO: implement filter
                   },
@@ -189,8 +177,8 @@ class _ExplorePageState extends State<ExplorePage> {
                       borderRadius: BorderRadius.circular(16),
                       gradient: isActive
                           ? const LinearGradient(
-                        colors: [Color(0xFFFDB913), Color(0xFF1B5A6E)],
-                      )
+                              colors: [Color(0xFFFDB913), Color(0xFF1B5A6E)],
+                            )
                           : null,
                       color: isActive ? null : Colors.white.withOpacity(0.1),
                     ),
@@ -219,180 +207,201 @@ class _ExplorePageState extends State<ExplorePage> {
           const SizedBox(height: 16),
 
           // Destinations Grid
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: filteredDestinations.length,
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              mainAxisSpacing: 12,
-              crossAxisSpacing: 12,
-              childAspectRatio: 0.70,
-            ),
-            itemBuilder: (context, index) {
-              final dest = filteredDestinations[index];
-
-              // SAFE image read: may be null
-              final String? imageUrl = dest['image'] as String?;
-              return Container(
-                decoration: BoxDecoration(
-                  color: Theme.of(context).cardColor,
-                  borderRadius: BorderRadius.circular(16),
+          if (isLoadingDestinations)
+            const Center(child: CircularProgressIndicator())
+          else if (destinations.isEmpty)
+            Container(
+              margin: const EdgeInsets.only(top: 16),
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: const Center(
+                child: Text(
+                  'No destinations found',
+                  style: TextStyle(color: Colors.grey),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // IMAGE (or placeholder if null)
-                    ClipRRect(
-                      borderRadius: const BorderRadius.vertical(
-                        top: Radius.circular(16),
-                      ),
-                      child: imageUrl != null
-                          ? Image.network(
-                        imageUrl,
-                        height: 90,
-                        width: double.infinity,
-                        fit: BoxFit.cover,
-                      )
-                          : Container(
-                        height: 90,
-                        width: double.infinity,
-                        color: Colors.grey.shade800,
-                        child: const Icon(
-                          Icons.landscape,
-                          color: Colors.white54,
+              ),
+            )
+          else
+            GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: filteredDestinations.length,
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                mainAxisSpacing: 12,
+                crossAxisSpacing: 12,
+                childAspectRatio: 0.70,
+              ),
+              itemBuilder: (context, index) {
+                final dest = filteredDestinations[index];
+
+                return Container(
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).cardColor,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // IMAGE (or placeholder if null)
+                      ClipRRect(
+                        borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(16),
+                        ),
+                        child: _buildDestinationImage(
+                          dest['image'] ??
+                              dest['image_url'] ??
+                              'https://via.placeholder.com/400',
                         ),
                       ),
-                    ),
 
-                    // CONTENT
-                    Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.all(8),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Name & Rating
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                    CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        dest['name'] as String,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w600,
-                                          color: Colors.white,
+                      // CONTENT
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.all(8),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Name & Rating
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          dest['name'] ?? 'Unknown',
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w600,
+                                            color: Colors.white,
+                                          ),
                                         ),
-                                      ),
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        dest['location'] as String,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(
-                                          fontSize: 10,
-                                          color: Colors.white70,
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          (dest['location'] ??
+                                                  dest['country'] ??
+                                                  'Unknown')
+                                              .toString(),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(
+                                            fontSize: 10,
+                                            color: Colors.white70,
+                                          ),
                                         ),
-                                      ),
-                                    ],
+                                      ],
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(width: 4),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 6,
-                                    vertical: 2,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: Colors.yellow.shade50,
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      const Icon(
-                                        Icons.star,
-                                        size: 12,
-                                        color: Colors.yellow,
-                                      ),
-                                      const SizedBox(width: 2),
-                                      Text(
-                                        '${dest['rating']}',
-                                        style: const TextStyle(
-                                          fontSize: 10,
-                                          color: Colors.black87,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-
-                            const Spacer(),
-
-                            // Price & Button
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  dest['price'] as String,
-                                  style: const TextStyle(
-                                    color: Color(0xFFFFC837),
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                InkWell(
-                                  onTap: () {
-                                    // TODO: open details
-                                  },
-                                  borderRadius: BorderRadius.circular(12),
-                                  child: Container(
+                                  const SizedBox(width: 4),
+                                  Container(
                                     padding: const EdgeInsets.symmetric(
-                                      horizontal: 10,
-                                      vertical: 6,
+                                      horizontal: 6,
+                                      vertical: 2,
                                     ),
                                     decoration: BoxDecoration(
-                                      gradient: const LinearGradient(
-                                        colors: [
-                                          Color(0xFFFDB913),
-                                          Color(0xFF1B5A6E),
-                                        ],
-                                        begin: Alignment.topLeft,
-                                        end: Alignment.bottomRight,
-                                      ),
-                                      borderRadius: BorderRadius.circular(12),
+                                      color: Colors.yellow.shade50,
+                                      borderRadius: BorderRadius.circular(8),
                                     ),
-                                    child: const Text(
-                                      'View Details',
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 11,
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        const Icon(
+                                          Icons.star,
+                                          size: 12,
+                                          color: Colors.yellow,
+                                        ),
+                                        const SizedBox(width: 2),
+                                        Text(
+                                          _parseRating(dest['rating'])
+                                              .toStringAsFixed(1),
+                                          style: const TextStyle(
+                                            fontSize: 10,
+                                            color: Colors.black87,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+
+                              const Spacer(),
+
+                              // Price & Button
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      dest['price'] ?? 'N/A',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        color: Color(0xFFFFC837),
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
                                       ),
                                     ),
                                   ),
-                                ),
-                              ],
-                            ),
-                          ],
+                                  const SizedBox(width: 6),
+                                  Flexible(
+                                    child: FittedBox(
+                                      fit: BoxFit.scaleDown,
+                                      alignment: Alignment.centerRight,
+                                      child: InkWell(
+                                        onTap: () {
+                                          // TODO: open details
+                                        },
+                                        borderRadius: BorderRadius.circular(12),
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 10,
+                                            vertical: 6,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            gradient: const LinearGradient(
+                                              colors: [
+                                                Color(0xFFFDB913),
+                                                Color(0xFF1B5A6E),
+                                              ],
+                                              begin: Alignment.topLeft,
+                                              end: Alignment.bottomRight,
+                                            ),
+                                            borderRadius: BorderRadius.circular(
+                                              12,
+                                            ),
+                                          ),
+                                          child: const Text(
+                                            'View Details',
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 11,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
+                    ],
+                  ),
+                );
+              },
+            ),
 
-          if (filteredDestinations.isEmpty)
+          if (filteredDestinations.isEmpty && !isLoadingDestinations)
             Container(
               margin: const EdgeInsets.only(top: 16),
               padding: const EdgeInsets.all(24),
@@ -410,5 +419,49 @@ class _ExplorePageState extends State<ExplorePage> {
         ],
       ),
     );
+  }
+
+  Widget _buildDestinationImage(String? imageSource) {
+    if (imageSource == null || imageSource.isEmpty) {
+      return Container(
+        height: 90,
+        width: double.infinity,
+        color: Colors.grey.shade800,
+        child: const Icon(Icons.landscape, color: Colors.white54),
+      );
+    }
+
+    final isNetworkImage =
+        imageSource.startsWith('http://') || imageSource.startsWith('https://');
+
+    return isNetworkImage
+        ? Image.network(
+            imageSource,
+            height: 90,
+            width: double.infinity,
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) {
+              return Container(
+                height: 90,
+                width: double.infinity,
+                color: Colors.grey.shade800,
+                child: const Icon(Icons.landscape, color: Colors.white54),
+              );
+            },
+          )
+        : Image.asset(
+            imageSource,
+            height: 90,
+            width: double.infinity,
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) {
+              return Container(
+                height: 90,
+                width: double.infinity,
+                color: Colors.grey.shade800,
+                child: const Icon(Icons.landscape, color: Colors.white54),
+              );
+            },
+          );
   }
 }

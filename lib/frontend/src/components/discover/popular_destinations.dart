@@ -1,76 +1,167 @@
 import 'package:flutter/material.dart';
+import '../../utils/api_service.dart';
 
 class Destination {
+  final int id;
   final String name;
-  final String country;
+  final String location;
   final String image;
   final double rating;
   final int reviews;
-  final String price;
+  final String? price;
+  final String? description;
+  final String? category;
 
   Destination({
+    required this.id,
     required this.name,
-    required this.country,
+    required this.location,
     required this.image,
     required this.rating,
     required this.reviews,
-    required this.price,
+    this.price,
+    this.description,
+    this.category,
   });
+
+  factory Destination.fromJson(Map<String, dynamic> json) {
+    final dynamic rawPrice = json['price'] ?? json['average_cost'];
+
+    return Destination(
+      id: _parseInt(json['id'] ?? json['destination_id']),
+      name: (json['name'] ?? 'Unknown').toString(),
+      location: (json['location'] ??
+              json['city'] ??
+              json['country'] ??
+              'Unknown')
+          .toString(),
+      image: (json['image'] ??
+              json['image_url'] ??
+              'https://via.placeholder.com/400')
+          .toString(),
+      rating: _parseDouble(json['rating']),
+      reviews: _parseInt(
+        json['reviews'] ?? json['numberOfReviews'] ?? json['review_count'],
+      ),
+      price: rawPrice != null ? rawPrice.toString() : null,
+      description: json['description'] != null
+          ? json['description'].toString()
+          : null,
+      category: json['category'] != null ? json['category'].toString() : null,
+    );
+  }
+
+  static int _parseInt(dynamic value) {
+    if (value is int) return value;
+    if (value is double) return value.toInt();
+    if (value is String) return int.tryParse(value) ?? 0;
+    return 0;
+  }
+
+  static double _parseDouble(dynamic value) {
+    if (value is double) return value;
+    if (value is int) return value.toDouble();
+    if (value is String) return double.tryParse(value) ?? 0.0;
+    return 0.0;
+  }
 }
 
-class PopularDestinations extends StatelessWidget {
-  PopularDestinations({super.key});
+class PopularDestinations extends StatefulWidget {
+  const PopularDestinations({Key? key}) : super(key: key);
 
-  final List<Destination> destinations = [
-    Destination(
-      name: 'Hunza Valley',
-      country: 'Gilgit-Baltistan',
-      image:
-          'https://images.unsplash.com/photo-1715338385730-2329158cf659?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxodW56YSUyMHZhbGxleSUyMHBha2lzdGFufGVufDF8fHx8MTc2NTUzNTQ4OHww&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral',
-      rating: 4.9,
-      reviews: 1253,
-      price: 'Rs 45,000',
-    ),
-    Destination(
-      name: 'Naran Kaghan',
-      country: 'Khyber Pakhtunkhwa',
-      image:
-          'https://images.unsplash.com/photo-1602076787354-a37cfebe0532?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtb3VudGFpbiUyMGxha2UlMjBsYW5kc2NhcGV8ZW58MXx8fHwxNzY1NDM1MTM3fDA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral',
-      rating: 4.8,
-      reviews: 987,
-      price: 'Rs 35,000',
-    ),
-    Destination(
-      name: 'Badshahi Mosque',
-      country: 'Lahore, Punjab',
-      image:
-          'https://images.unsplash.com/photo-1641236404776-a9827d938811?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxsYWhvcmUlMjBiYWRzaGFoaSUyMG1vc3F1ZXxlbnwxfHx8fDE3NjU1MzU0ODl8MA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral',
-      rating: 4.7,
-      reviews: 2145,
-      price: 'Rs 25,000',
-    ),
-    Destination(
-      name: 'Clifton Beach',
-      country: 'Karachi, Sindh',
-      image:
-          'https://images.unsplash.com/photo-1642709441467-6816f4dec4af?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxrYXJhY2hpJTIwYmVhY2glMjBwYWtpc3RhbnxlbnwxfHx8fDE3NjU1MzU0ODl8MA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral',
-      rating: 4.9,
-      reviews: 1876,
-      price: 'Rs 30,000',
-    ),
-  ];
+  @override
+  State<PopularDestinations> createState() => _PopularDestinationsState();
+}
+
+class _PopularDestinationsState extends State<PopularDestinations> {
+  List<Destination> destinations = <Destination>[];
+  bool isLoadingDestinations = false;
+  String? errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchDestinations();
+  }
+
+  Future<void> _fetchDestinations() async {
+    setState(() {
+      isLoadingDestinations = true;
+      errorMessage = null;
+    });
+
+    try {
+      final dynamic result = await ApiService.getDestinations(
+        page: 1,
+        limit: 10,
+      );
+
+      if (result is Map && result['success'] == true) {
+        final List<Destination> parsedDestinations =
+            _extractDestinations(result).map((dynamic item) {
+              return Destination.fromJson(Map<String, dynamic>.from(item));
+            }).toList();
+
+        if (!mounted) return;
+
+        setState(() {
+          destinations = parsedDestinations;
+        });
+      } else {
+        if (!mounted) return;
+
+        setState(() {
+          errorMessage = (result is Map && result['message'] != null)
+              ? result['message'].toString()
+              : 'Failed to load destinations';
+        });
+      }
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        errorMessage = 'Error: $e';
+      });
+
+      debugPrint('Error fetching destinations: $e');
+    } finally {
+      if (!mounted) return;
+
+      setState(() {
+        isLoadingDestinations = false;
+      });
+    }
+  }
+
+  List<dynamic> _extractDestinations(Map result) {
+    final dynamic data = result['data'];
+    final dynamic directDestinations = result['destinations'];
+
+    if (data is Map && data['destinations'] is List) {
+      return data['destinations'] as List<dynamic>;
+    }
+
+    if (directDestinations is List) {
+      return directDestinations as List<dynamic>;
+    }
+
+    if (data is List) {
+      return data as List<dynamic>;
+    }
+
+    return <dynamic>[];
+  }
 
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Header
+      children: <Widget>[
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
+            children: <Widget>[
               const Text(
                 'Popular Destinations',
                 style: TextStyle(
@@ -89,142 +180,217 @@ class PopularDestinations extends StatelessWidget {
             ],
           ),
         ),
+        _buildContent(),
+      ],
+    );
+  }
 
-        // Grid of Destinations
-        GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            childAspectRatio: 0.7,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
+  Widget _buildContent() {
+    if (isLoadingDestinations) {
+      return const Padding(
+        padding: EdgeInsets.all(32.0),
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (errorMessage != null) {
+      return Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Center(
+          child: Column(
+            children: <Widget>[
+              Text(
+                errorMessage!,
+                style: const TextStyle(color: Colors.red),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: _fetchDestinations,
+                child: const Text('Retry'),
+              ),
+            ],
           ),
-          itemCount: destinations.length,
-          itemBuilder: (context, index) {
-            final dest = destinations[index];
-            return GestureDetector(
-              onTap: () {}, // Optional: tap action
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 4,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
+        ),
+      );
+    }
+
+    if (destinations.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.all(32.0),
+        child: Center(
+          child: Text(
+            'No destinations found',
+            style: TextStyle(color: Colors.white70),
+          ),
+        ),
+      );
+    }
+
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        childAspectRatio: 0.7,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+      ),
+      itemCount: destinations.length,
+      itemBuilder: (BuildContext context, int index) {
+        final Destination dest = destinations[index];
+        return _buildDestinationCard(dest);
+      },
+    );
+  }
+
+  Widget _buildDestinationCard(Destination dest) {
+    return GestureDetector(
+      onTap: () {},
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: <BoxShadow>[
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Stack(
+              children: <Widget>[
+                ClipRRect(
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(20),
+                  ),
+                  child: Image.network(
+                    dest.image,
+                    height: 108,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                    errorBuilder:
+                        (
+                          BuildContext context,
+                          Object error,
+                          StackTrace? stackTrace,
+                        ) {
+                          return Container(
+                            height: 108,
+                            color: Colors.grey[800],
+                            child: const Center(
+                              child: Icon(Icons.image_not_supported),
+                            ),
+                          );
+                        },
+                  ),
                 ),
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.9),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.favorite_border,
+                      size: 18,
+                      color: Colors.red,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(8.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Image + Heart Button
-                    Stack(
-                      children: [
-                        ClipRRect(
-                          borderRadius: const BorderRadius.vertical(
-                            top: Radius.circular(20),
-                          ),
-                          child: Image.network(
-                            dest.image,
-                            height: 120,
-                            width: double.infinity,
-                            fit: BoxFit.cover,
-                          ),
-                        ),
-                        Positioned(
-                          top: 8,
-                          right: 8,
-                          child: Container(
-                            width: 32,
-                            height: 32,
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.9),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.favorite_border,
-                              size: 18,
-                              color: Colors.red,
-                            ),
-                          ),
-                        ),
-                      ],
+                  children: <Widget>[
+                    Text(
+                      dest.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
                     ),
-
-                    // Info
-                    Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            dest.name,
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            dest.country,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey,
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Row(
-                                children: [
-                                  const Icon(
-                                    Icons.star,
-                                    size: 16,
-                                    color: Colors.yellow,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    dest.rating.toString(),
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    '(${dest.reviews})',
-                                    style: const TextStyle(
-                                      color: Colors.grey,
-                                      fontSize: 10,
-                                    ),
-                                  ),
-                                ],
+                    const SizedBox(height: 2),
+                    Text(
+                      dest.location,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 12, color: Colors.grey),
+                    ),
+                    const Spacer(),
+                    Row(
+                      children: <Widget>[
+                        Expanded(
+                          child: Row(
+                            children: <Widget>[
+                              const Icon(
+                                Icons.star,
+                                size: 16,
+                                color: Colors.yellow,
                               ),
+                              const SizedBox(width: 4),
                               Text(
-                                dest.price,
+                                dest.rating.toStringAsFixed(1),
                                 style: const TextStyle(
-                                  color: Color(0xFF1B5A6E),
-                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              Flexible(
+                                child: Text(
+                                  '(${dest.reviews})',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    color: Colors.grey,
+                                    fontSize: 10,
+                                  ),
                                 ),
                               ),
                             ],
                           ),
-                        ],
-                      ),
+                        ),
+                        const SizedBox(width: 6),
+                        dest.price != null
+                            ? Flexible(
+                                child: FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  alignment: Alignment.centerRight,
+                                  child: Text(
+                                    dest.price!,
+                                    style: const TextStyle(
+                                      color: Color(0xFF1B5A6E),
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              )
+                            : const SizedBox.shrink(),
+                      ],
                     ),
                   ],
                 ),
               ),
-            );
-          },
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 }

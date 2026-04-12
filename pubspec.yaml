@@ -18,7 +18,7 @@ dependencies:
   flutter_vector_icons: ^2.0.0
   cupertino_icons: ^1.0.8
   flutter_native_splash: ^2.4.3
-  flutter_launcher_icons: ^0.13.1 
+  flutter_launcher_icons: ^0.13.1
   provider: ^6.0.5 # MVVM k liye state management
   google_fonts: ^4.0.4 # Acha font use karne ke liye
   flutter_svg: ^2.0.7 # SVG images (logo) use karne ke liye
@@ -44,6 +44,14 @@ flutter:
   uses-material-design: true
   assets:
     - assets/images/logo.png
+    - assets/explore_images/fairy_meadows.jpg
+    - assets/explore_images/skardu_valley.jpg
+    - assets/explore_images/mohenjo_daro.jpg
+    - assets/explore_images/rohtas_fort.jpg
+    - assets/explore_images/food_street_lahore.jpg
+    - assets/explore_images/burns_road_karachi.jpg
+    - assets/explore_images/k2_base_camp.jpg
+    - assets/explore_images/chitral_valley_trek.jpg
 
 flutter_native_splash:
   color: "#ffffff"
