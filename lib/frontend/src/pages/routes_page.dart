@@ -38,8 +38,13 @@ class RoutesPage extends StatelessWidget {
     },
   ];
 
-  Widget _buildInfoCard(String label, String value, Color bgColor) {
-    final theme = Theme.of(label is String ? null as BuildContext? : throw UnimplementedError());
+  Widget _buildInfoCard(
+    BuildContext context,
+    String label,
+    String value,
+    Color bgColor,
+  ) {
+    final theme = Theme.of(context);
     return Container(
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
@@ -69,7 +74,10 @@ class RoutesPage extends StatelessWidget {
     );
   }
 
-  Widget _buildSavedRouteCard(BuildContext context, Map<String, dynamic> route) {
+  Widget _buildSavedRouteCard(
+    BuildContext context,
+    Map<String, dynamic> route,
+  ) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     return Container(
@@ -162,10 +170,26 @@ class RoutesPage extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _buildInfoCard('Distance', route['distance'], Colors.amber[50]!),
-              _buildInfoCard('Duration', route['duration'], Colors.blue[50]!),
-              _buildInfoCard('Fuel', route['fuelCost'], Colors.green[50]!),
               _buildInfoCard(
+                context,
+                'Distance',
+                route['distance'],
+                Colors.amber[50]!,
+              ),
+              _buildInfoCard(
+                context,
+                'Duration',
+                route['duration'],
+                Colors.blue[50]!,
+              ),
+              _buildInfoCard(
+                context,
+                'Fuel',
+                route['fuelCost'],
+                Colors.green[50]!,
+              ),
+              _buildInfoCard(
+                context,
                 'Stops',
                 route['stops'].toString(),
                 Colors.orange[50]!,
@@ -208,9 +232,7 @@ class RoutesPage extends StatelessWidget {
                           SizedBox(height: 4),
                           Text(
                             'Saved and planned routes',
-                            style: TextStyle(
-                              fontSize: 12,
-                            ),
+                            style: TextStyle(fontSize: 12),
                           ),
                         ],
                       ),
@@ -219,7 +241,6 @@ class RoutesPage extends StatelessWidget {
                         width: double.infinity,
                         child: ElevatedButton.icon(
                           onPressed: () {},
-                          icon: const Icon(
                           icon: Icon(
                             Icons.add,
                             size: 16,
@@ -227,9 +248,7 @@ class RoutesPage extends StatelessWidget {
                           ),
                           label: Text(
                             'New Route',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                            ),
+                            style: TextStyle(fontWeight: FontWeight.w600),
                           ),
                           style: ElevatedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(
@@ -261,15 +280,12 @@ class RoutesPage extends StatelessWidget {
                           SizedBox(height: 4),
                           Text(
                             'Saved and planned routes',
-                            style: TextStyle(
-                              fontSize: 12,
-                            ),
+                            style: TextStyle(fontSize: 12),
                           ),
                         ],
                       ),
                       ElevatedButton.icon(
                         onPressed: () {},
-                        icon: const Icon(
                         icon: Icon(
                           Icons.add,
                           size: 16,
@@ -277,9 +293,7 @@ class RoutesPage extends StatelessWidget {
                         ),
                         label: Text(
                           'New Route',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                          ),
+                          style: TextStyle(fontWeight: FontWeight.w600),
                         ),
                         style: ElevatedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(
@@ -313,9 +327,12 @@ class RoutesPage extends StatelessWidget {
                       Container(
                         width: 40,
                         height: 40,
-                        decoration: const BoxDecoration(
+                        decoration: BoxDecoration(
                           gradient: LinearGradient(
-                            colors: [colorScheme.secondary, colorScheme.primary],
+                            colors: [
+                              colorScheme.secondary,
+                              colorScheme.primary,
+                            ],
                           ),
                           borderRadius: BorderRadius.all(Radius.circular(12)),
                         ),
@@ -330,9 +347,7 @@ class RoutesPage extends StatelessWidget {
                         children: [
                           Text(
                             'Active Route',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                            ),
+                            style: TextStyle(fontWeight: FontWeight.w600),
                           ),
                           Text(
                             'In Progress',
@@ -380,15 +395,10 @@ class RoutesPage extends StatelessWidget {
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: const [
-                                Text(
-                                  'Islamabad',
-                                  style: TextStyle(),
-                                ),
+                                Text('Islamabad', style: TextStyle()),
                                 Text(
                                   'Starting Point',
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                  ),
+                                  style: TextStyle(fontSize: 10),
                                 ),
                               ],
                             ),
@@ -418,15 +428,10 @@ class RoutesPage extends StatelessWidget {
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: const [
-                                Text(
-                                  'Murree',
-                                  style: TextStyle(),
-                                ),
+                                Text('Murree', style: TextStyle()),
                                 Text(
                                   'Destination • 45 min away',
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                  ),
+                                  style: TextStyle(fontSize: 10),
                                 ),
                               ],
                             ),
@@ -468,9 +473,24 @@ class RoutesPage extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      _buildInfoCard('Distance', '60 km', Colors.amber[50]!),
-                      _buildInfoCard('ETA', '45 min', Colors.blue[50]!),
-                      _buildInfoCard('Fuel', 'Rs 800', Colors.green[50]!),
+                      _buildInfoCard(
+                        context,
+                        'Distance',
+                        '60 km',
+                        Colors.amber[50]!,
+                      ),
+                      _buildInfoCard(
+                        context,
+                        'ETA',
+                        '45 min',
+                        Colors.blue[50]!,
+                      ),
+                      _buildInfoCard(
+                        context,
+                        'Fuel',
+                        'Rs 800',
+                        Colors.green[50]!,
+                      ),
                     ],
                   ),
                 ],
@@ -481,10 +501,7 @@ class RoutesPage extends StatelessWidget {
             // Saved Routes
             Text(
               'Saved Routes',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             SizedBox(height: padding * 0.75),
             Column(

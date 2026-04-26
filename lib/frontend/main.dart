@@ -15,7 +15,7 @@ import 'src/pages/wishlist_page.dart';
 import 'src/pages/profile_page.dart';
 import 'src/utils/local_database_service.dart';
 import 'src/utils/theme_controller.dart';
-import 'src/styles/app_theme.dart';
+import 'src/ui/app_theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

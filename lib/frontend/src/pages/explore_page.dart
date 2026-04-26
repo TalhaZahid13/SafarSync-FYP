@@ -267,6 +267,7 @@ class _ExplorePageState extends State<ExplorePage> {
                           top: Radius.circular(16),
                         ),
                         child: _buildDestinationImage(
+                          context,
                           dest['image'] ??
                               dest['image_url'] ??
                               'https://via.placeholder.com/400',
@@ -335,11 +336,13 @@ class _ExplorePageState extends State<ExplorePage> {
                                         ),
                                         const SizedBox(width: 2),
                                         Text(
-                                          _parseRating(dest['rating'])
-                                              .toStringAsFixed(1),
+                                          _parseRating(
+                                            dest['rating'],
+                                          ).toStringAsFixed(1),
                                           style: TextStyle(
                                             fontSize: 10,
-                                            color: colorScheme.onSecondaryContainer,
+                                            color: colorScheme
+                                                .onSecondaryContainer,
                                           ),
                                         ),
                                       ],
@@ -393,7 +396,6 @@ class _ExplorePageState extends State<ExplorePage> {
                                               12,
                                             ),
                                           ),
-                                          child: const Text(
                                           child: Text(
                                             'View Details',
                                             style: TextStyle(
@@ -437,7 +439,8 @@ class _ExplorePageState extends State<ExplorePage> {
     );
   }
 
-  Widget _buildDestinationImage(String? imageSource) {
+  Widget _buildDestinationImage(BuildContext context, String? imageSource) {
+    final theme = Theme.of(context);
     if (imageSource == null || imageSource.isEmpty) {
       return Container(
         height: 90,

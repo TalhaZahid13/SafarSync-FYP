@@ -5,6 +5,7 @@ import '../utils/pdf_export.dart'; // TripData, Destination, RouteData, Hotel, R
 import 'profile_settings.dart';
 import '../auth/login.dart';
 import '../utils/responsive.dart';
+import '../utils/theme_controller.dart';
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
@@ -266,7 +267,8 @@ class ProfilePage extends StatelessWidget {
                                         'Islamabad, Pakistan',
                                         style: TextStyle(
                                           fontSize: 12,
-                                          color: theme.textTheme.bodySmall?.color,
+                                          color:
+                                              theme.textTheme.bodySmall?.color,
                                         ),
                                       ),
                                     ],
@@ -370,7 +372,11 @@ class ProfilePage extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      Icon(LucideIcons.award, size: 24, color: colorScheme.secondary),
+                      Icon(
+                        LucideIcons.award,
+                        size: 24,
+                        color: colorScheme.secondary,
+                      ),
                       SizedBox(width: 8),
                       Text(
                         'Recent Achievements',
@@ -393,7 +399,6 @@ class ProfilePage extends StatelessWidget {
                       (index) => Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Icon(
                           Icon(
                             LucideIcons.award,
                             size: 32,
@@ -434,11 +439,9 @@ class ProfilePage extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Settings',
-                    style: TextStyle(fontSize: 16),
-                  ),
+                  const Text('Settings', style: TextStyle(fontSize: 16)),
                   SizedBox(height: padding * 0.5),
+
                   settingsButton(
                     context,
                     LucideIcons.settings,
@@ -522,6 +525,7 @@ class ProfilePage extends StatelessWidget {
     String label,
     VoidCallback onTap,
   ) {
+    final theme = Theme.of(context);
     final isLogout = label.contains('Log Out');
     return InkWell(
       onTap: onTap,
@@ -530,7 +534,6 @@ class ProfilePage extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
         child: Row(
           children: [
-            Icon(icon, size: 20, color: isLogout ? Colors.red : Colors.white70),
             Icon(
               icon,
               size: 20,
