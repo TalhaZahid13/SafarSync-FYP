@@ -15,55 +15,6 @@ class SearchBar extends StatefulWidget {
 class _SearchBarState extends State<SearchBar> {
   final TextEditingController _controller = TextEditingController();
 
-  // Demo data: tum baad mein isko apne actual data se replace kar sakte ho
-  final List<_SearchItem> _allItems = const [
-    // Places
-    _SearchItem(
-      type: _SearchType.place,
-      title: 'Hunza Valley',
-      subtitle: 'Gilgit-Baltistan • Place',
-    ),
-    _SearchItem(
-      type: _SearchType.place,
-      title: 'Skardu Valley',
-      subtitle: 'Gilgit-Baltistan • Place',
-    ),
-    _SearchItem(
-      type: _SearchType.place,
-      title: 'Fairy Meadows',
-      subtitle: 'Gilgit-Baltistan • Place',
-    ),
-    _SearchItem(
-      type: _SearchType.place,
-      title: 'Food Street Lahore',
-      subtitle: 'Punjab • Food Spot',
-    ),
-
-    // Routes
-    _SearchItem(
-      type: _SearchType.route,
-      title: 'Northern Pakistan Tour',
-      subtitle: 'Islamabad → Hunza Valley • Route',
-    ),
-    _SearchItem(
-      type: _SearchType.route,
-      title: 'Coastal Journey',
-      subtitle: 'Karachi → Gwadar • Route',
-    ),
-
-    // Wishlist
-    _SearchItem(
-      type: _SearchType.wishlist,
-      title: 'K2 Base Camp Trek',
-      subtitle: 'Wishlist • High Altitude Adventure',
-    ),
-    _SearchItem(
-      type: _SearchType.wishlist,
-      title: 'Chitral Valley Roadtrip',
-      subtitle: 'Wishlist • Scenic Route',
-    ),
-  ];
-
   Future<void> _handleSearch(String query) async {
     final trimmed = query.trim();
     if (trimmed.isEmpty) {
@@ -129,13 +80,12 @@ class _SearchBarState extends State<SearchBar> {
   }
 
   void _showSearchLoadingSheet(String query) {
+    final theme = Theme.of(context);
     showModalBottomSheet(
       context: context,
       isDismissible: false,
-      backgroundColor: const Color(0xFF1E1E1E),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
+      backgroundColor: theme.bottomSheetTheme.backgroundColor,
+      shape: theme.bottomSheetTheme.shape,
       builder: (context) {
         return SafeArea(
           child: Padding(
@@ -144,11 +94,11 @@ class _SearchBarState extends State<SearchBar> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 const SizedBox(height: 20),
-                const CircularProgressIndicator(),
+                CircularProgressIndicator(color: theme.colorScheme.primary),
                 const SizedBox(height: 16),
                 Text(
                   'Searching for "$query"...',
-                  style: const TextStyle(color: Colors.white70),
+                  style: TextStyle(color: theme.textTheme.bodySmall?.color),
                 ),
                 const SizedBox(height: 20),
               ],
@@ -164,12 +114,11 @@ class _SearchBarState extends State<SearchBar> {
     required List<_SearchItem> results,
     required String query,
   }) {
+    final theme = Theme.of(context);
     showModalBottomSheet(
       context: context,
-      backgroundColor: const Color(0xFF1E1E1E),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
+      backgroundColor: theme.bottomSheetTheme.backgroundColor,
+      shape: theme.bottomSheetTheme.shape,
       builder: (context) {
         return SafeArea(
           child: Padding(
@@ -186,14 +135,17 @@ class _SearchBarState extends State<SearchBar> {
                       results.isEmpty
                           ? 'No results for "$query"'
                           : 'Results for "$query"',
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: theme.textTheme.titleLarge?.color,
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.close, color: Colors.white70),
+                      icon: Icon(
+                        Icons.close,
+                        color: theme.textTheme.bodySmall?.color,
+                      ),
                       onPressed: () => Navigator.pop(context),
                     ),
                   ],
@@ -214,26 +166,26 @@ class _SearchBarState extends State<SearchBar> {
                       shrinkWrap: true,
                       itemCount: results.length,
                       separatorBuilder: (_, __) =>
-                          Divider(color: Colors.white10, height: 1),
+                          Divider(color: theme.dividerColor, height: 1),
                       itemBuilder: (context, index) {
                         final item = results[index];
                         return ListTile(
                           contentPadding: const EdgeInsets.symmetric(
                             vertical: 4,
                           ),
-                          leading: _buildTypeIcon(item.type),
+                          leading: _buildTypeIcon(context, item.type),
                           title: Text(
                             item.title,
-                            style: const TextStyle(
-                              color: Colors.white,
+                            style: TextStyle(
+                              color: theme.textTheme.bodyMedium?.color,
                               fontSize: 14,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
                           subtitle: Text(
                             item.subtitle,
-                            style: const TextStyle(
-                              color: Colors.white54,
+                            style: TextStyle(
+                              color: theme.textTheme.bodySmall?.color,
                               fontSize: 11,
                             ),
                           ),
@@ -256,7 +208,8 @@ class _SearchBarState extends State<SearchBar> {
     );
   }
 
-  Widget _buildTypeIcon(_SearchType type) {
+  Widget _buildTypeIcon(BuildContext context, _SearchType type) {
+    final theme = Theme.of(context);
     IconData icon;
     Color color;
 
@@ -279,7 +232,7 @@ class _SearchBarState extends State<SearchBar> {
       width: 36,
       height: 36,
       decoration: BoxDecoration(
-        color: Colors.white10,
+        color: theme.cardColor,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Icon(icon, color: color, size: 20),
@@ -288,23 +241,24 @@ class _SearchBarState extends State<SearchBar> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.08),
+        color: theme.cardColor,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Row(
         children: [
-          const Icon(Icons.search, color: Colors.white54, size: 20),
+          Icon(Icons.search, color: theme.iconTheme.color, size: 20),
           const SizedBox(width: 8),
           Expanded(
             child: TextField(
               controller: _controller,
-              style: const TextStyle(color: Colors.white),
-              decoration: const InputDecoration(
+              style: TextStyle(color: theme.textTheme.bodyMedium?.color),
+              decoration: InputDecoration(
                 hintText: 'Search places, routes, wishlist...',
-                hintStyle: TextStyle(color: Colors.white38),
+                hintStyle: TextStyle(color: theme.textTheme.bodySmall?.color),
                 border: InputBorder.none,
               ),
               textInputAction: TextInputAction.search,
@@ -312,7 +266,11 @@ class _SearchBarState extends State<SearchBar> {
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.search, color: Color(0xFFFDB913), size: 22),
+            icon: Icon(
+              Icons.search,
+              color: theme.colorScheme.primary,
+              size: 22,
+            ),
             onPressed: () => _handleSearch(_controller.text),
           ),
         ],

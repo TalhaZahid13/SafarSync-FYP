@@ -5,6 +5,8 @@ class AIRecommendations extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     final recommendations = [
       {
         'title': 'Mountain Trek Adventure',
@@ -36,7 +38,7 @@ class AIRecommendations extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 24),
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.1), // glass-card effect
+        color: theme.cardColor,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
@@ -44,23 +46,26 @@ class AIRecommendations extends StatelessWidget {
         children: [
           // Header
           Row(
-            children: const [
-              Icon(Icons.auto_awesome, color: Color(0xFF1B5A6E)),
+            children: [
+              Icon(Icons.auto_awesome, color: colorScheme.primary),
               SizedBox(width: 8),
               Text(
                 'Recommended For You',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: Colors.black87,
+                  color: theme.textTheme.bodyMedium?.color,
                 ),
               ),
             ],
           ),
           const SizedBox(height: 4),
-          const Text(
+          Text(
             'AI-curated trips based on your interests',
-            style: TextStyle(fontSize: 12, color: Colors.grey),
+            style: TextStyle(
+              fontSize: 12,
+              color: theme.textTheme.bodySmall?.color,
+            ),
           ),
           const SizedBox(height: 16),
 
@@ -87,7 +92,7 @@ class AIRecommendations extends StatelessWidget {
                 child: Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.5),
+                    color: theme.cardColor,
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Column(
@@ -107,7 +112,7 @@ class AIRecommendations extends StatelessWidget {
                         ),
                         child: Icon(
                           rec['icon'] as IconData? ?? Icons.help,
-                          color: Colors.white,
+                          color: colorScheme.onPrimary,
                         ),
                       ),
                       const SizedBox(height: 8),
@@ -115,10 +120,10 @@ class AIRecommendations extends StatelessWidget {
                         rec['title'] as String,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.bold,
-                          color: Colors.black87,
+                          color: theme.textTheme.bodyMedium?.color,
                         ),
                       ),
                       const SizedBox(height: 6),
@@ -135,14 +140,14 @@ class AIRecommendations extends StatelessWidget {
                                       horizontal: 8,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: Colors.amber[100],
+                                      color: colorScheme.secondaryContainer,
                                       borderRadius: BorderRadius.circular(12),
                                     ),
                                     child: Text(
                                       tag,
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         fontSize: 10,
-                                        color: Color(0xFF1B5A6E),
+                                        color: colorScheme.onSecondaryContainer,
                                       ),
                                     ),
                                   ),

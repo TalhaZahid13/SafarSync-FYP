@@ -1,7 +1,9 @@
 import 'package:flutter/foundation.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'local_database_service.dart';
 
 class ApiService {
   // Optional override: flutter run --dart-define=API_BASE_URL=http://192.168.1.10:5000/api
@@ -17,6 +19,7 @@ class ApiService {
   );
 
   static final String baseUrl = _resolveBaseUrl();
+  static final FirebaseAuth _auth = FirebaseAuth.instance;
 
   static String _resolveBaseUrl() {
     if (_baseUrlOverride.isNotEmpty) {
@@ -102,29 +105,42 @@ class ApiService {
     String? bloodGroup,
   }) async {
     try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/auth/signup'),
-        headers: await getHeaders(),
-        body: jsonEncode({
-          'email': email,
-          'password': password,
-          'name': fullName,
-          'phoneNumber': phoneNumber,
-          'bloodGroup': bloodGroup ?? 'Not specified',
-        }),
+      final credential = await _auth.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
       );
 
-      if (response.statusCode == 201) {
-        return {'success': true, 'message': 'User registered successfully'};
-      } else if (response.statusCode == 400) {
-        final error = jsonDecode(response.body);
-        return {
-          'success': false,
-          'message': error['message'] ?? 'Signup failed',
-        };
-      } else {
-        return {'success': false, 'message': 'Signup failed'};
+      await credential.user?.updateDisplayName(fullName);
+
+      final uid = credential.user?.uid;
+      if (uid != null) {
+        await LocalDatabaseService.upsertUserProfile(
+          uid: uid,
+          email: email,
+          fullName: fullName,
+          phoneNumber: phoneNumber,
+          bloodGroup: bloodGroup,
+        );
       }
+
+      return {'success': true, 'message': 'User registered successfully'};
+    } on FirebaseAuthException catch (e) {
+      String message;
+      switch (e.code) {
+        case 'email-already-in-use':
+          message = 'This email is already in use';
+          break;
+        case 'invalid-email':
+          message = 'Invalid email address';
+          break;
+        case 'weak-password':
+          message = 'Password is too weak';
+          break;
+        default:
+          message = 'Signup failed: ${e.code}';
+      }
+
+      return {'success': false, 'message': message};
     } catch (e) {
       return {'success': false, 'message': 'Error: $e'};
     }
@@ -136,24 +152,49 @@ class ApiService {
     required String password,
   }) async {
     try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/auth/login'),
-        headers: await getHeaders(),
-        body: jsonEncode({'email': email, 'password': password}),
+      final credential = await _auth.signInWithEmailAndPassword(
+        email: email,
+        password: password,
       );
 
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final token = data['token'];
-        await saveToken(token);
-        return {'success': true, 'token': token};
-      } else if (response.statusCode == 401) {
-        return {'success': false, 'message': 'Invalid email or password'};
-      } else if (response.statusCode == 404) {
-        return {'success': false, 'message': 'User not found'};
-      } else {
+      final user = credential.user;
+      if (user == null) {
         return {'success': false, 'message': 'Login failed'};
       }
+
+      await saveToken(user.uid);
+
+      final existingProfile = await LocalDatabaseService.getUserProfile(
+        user.uid,
+      );
+      if (existingProfile == null) {
+        await LocalDatabaseService.upsertUserProfile(
+          uid: user.uid,
+          email: user.email ?? email,
+          fullName: user.displayName,
+        );
+      }
+
+      return {'success': true, 'uid': user.uid};
+    } on FirebaseAuthException catch (e) {
+      String message;
+      switch (e.code) {
+        case 'invalid-credential':
+        case 'wrong-password':
+        case 'user-not-found':
+          message = 'Invalid email or password';
+          break;
+        case 'invalid-email':
+          message = 'Invalid email address';
+          break;
+        case 'user-disabled':
+          message = 'This account has been disabled';
+          break;
+        default:
+          message = 'Login failed: ${e.code}';
+      }
+
+      return {'success': false, 'message': message};
     } catch (e) {
       return {'success': false, 'message': 'Error: $e'};
     }
@@ -161,6 +202,7 @@ class ApiService {
 
   /// Logout user
   static Future<void> logout() async {
+    await _auth.signOut();
     await removeToken();
   }
 
@@ -169,17 +211,22 @@ class ApiService {
   /// Get current user profile
   static Future<Map<String, dynamic>> getCurrentUser() async {
     try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/users/me'),
-        headers: await getHeaders(needsAuth: true),
-      );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        return {'success': true, 'user': data['user']};
-      } else {
-        return {'success': false, 'message': 'Failed to fetch user'};
+      final user = _auth.currentUser;
+      if (user == null) {
+        return {'success': false, 'message': 'No authenticated user'};
       }
+
+      final profile = await LocalDatabaseService.getUserProfile(user.uid);
+      final localUser = {
+        'uid': user.uid,
+        'email': user.email,
+        'name': profile?['full_name'] ?? user.displayName,
+        'phoneNumber': profile?['phone_number'],
+        'bloodGroup': profile?['blood_group'],
+        'city': profile?['city'],
+      };
+
+      return {'success': true, 'user': localUser};
     } catch (e) {
       return {'success': false, 'message': 'Error: $e'};
     }
@@ -187,46 +234,33 @@ class ApiService {
 
   // ============ DESTINATION ENDPOINTS ============
 
-  /// Get all destinations
+  /// Get all destinations from local SQLite
   static Future<Map<String, dynamic>> getDestinations({
     int page = 1,
     int limit = 10,
     String? category,
   }) async {
     try {
-      String url = '$baseUrl/destinations?page=$page&limit=$limit';
-      if (category != null) url += '&category=$category';
-
-      final response = await http.get(
-        Uri.parse(url),
-        headers: await getHeaders(),
+      await LocalDatabaseService.ensureInitialized();
+      final destinations = await LocalDatabaseService.getDestinations(
+        page: page,
+        limit: limit,
+        category: category,
       );
 
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        return {'success': true, 'destinations': data['destinations']};
-      } else {
-        return {'success': false, 'message': 'Failed to fetch destinations'};
-      }
+      return {'success': true, 'destinations': destinations};
     } catch (e) {
       return {'success': false, 'message': 'Error: $e'};
     }
   }
 
-  /// Search destinations
+  /// Search destinations from local SQLite
   static Future<Map<String, dynamic>> searchDestinations(String query) async {
     try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/destinations/search?query=$query'),
-        headers: await getHeaders(),
-      );
+      await LocalDatabaseService.ensureInitialized();
+      final results = await LocalDatabaseService.searchDestinations(query);
 
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        return {'success': true, 'results': data['results']};
-      } else {
-        return {'success': false, 'message': 'Search failed'};
-      }
+      return {'success': true, 'results': results};
     } catch (e) {
       return {'success': false, 'message': 'Error: $e'};
     }

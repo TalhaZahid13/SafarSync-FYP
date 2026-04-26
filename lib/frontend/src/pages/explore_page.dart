@@ -90,6 +90,9 @@ class _ExplorePageState extends State<ExplorePage> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     final filteredDestinations = destinations.where((dest) {
       final matchesCategory =
           activeCategory == 'all' || dest['category'] == activeCategory;
@@ -104,18 +107,21 @@ class _ExplorePageState extends State<ExplorePage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Explore Pakistan',
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
-              color: Colors.white,
+              color: theme.textTheme.titleLarge?.color,
             ),
           ),
           const SizedBox(height: 4),
-          const Text(
+          Text(
             'Discover amazing places across the country',
-            style: TextStyle(fontSize: 12, color: Colors.white70),
+            style: TextStyle(
+              fontSize: 12,
+              color: theme.textTheme.bodySmall?.color,
+            ),
           ),
           const SizedBox(height: 16),
 
@@ -123,28 +129,30 @@ class _ExplorePageState extends State<ExplorePage> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.06),
+              color: theme.cardColor,
               borderRadius: BorderRadius.circular(16),
             ),
             child: Row(
               children: [
-                const Icon(Icons.search, color: Colors.grey),
+                Icon(Icons.search, color: theme.iconTheme.color),
                 const SizedBox(width: 8),
                 Expanded(
                   child: TextField(
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       hintText: 'Search destinations...',
                       border: InputBorder.none,
-                      hintStyle: TextStyle(color: Colors.grey),
+                      hintStyle: TextStyle(
+                        color: theme.textTheme.bodySmall?.color,
+                      ),
                     ),
-                    style: const TextStyle(color: Colors.white),
+                    style: TextStyle(color: theme.textTheme.bodyMedium?.color),
                     onChanged: (val) => setState(() {
                       searchQuery = val;
                     }),
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.filter_list, color: Color(0xFF1B5A6E)),
+                  icon: Icon(Icons.filter_list, color: colorScheme.primary),
                   onPressed: () {
                     // TODO: implement filter
                   },
@@ -176,25 +184,32 @@ class _ExplorePageState extends State<ExplorePage> {
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(16),
                       gradient: isActive
-                          ? const LinearGradient(
-                              colors: [Color(0xFFFDB913), Color(0xFF1B5A6E)],
+                          ? LinearGradient(
+                              colors: [
+                                colorScheme.secondary,
+                                colorScheme.primary,
+                              ],
                             )
                           : null,
-                      color: isActive ? null : Colors.white.withOpacity(0.1),
+                      color: isActive ? null : theme.cardColor,
                     ),
                     child: Row(
                       children: [
                         Icon(
                           category['icon'] as IconData,
                           size: 16,
-                          color: Colors.white,
+                          color: isActive
+                              ? colorScheme.onPrimary
+                              : theme.iconTheme.color,
                         ),
                         const SizedBox(width: 4),
                         Text(
                           category['name'] as String,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 12,
-                            color: Colors.white,
+                            color: isActive
+                                ? colorScheme.onPrimary
+                                : theme.textTheme.bodyMedium?.color,
                           ),
                         ),
                       ],
@@ -214,13 +229,13 @@ class _ExplorePageState extends State<ExplorePage> {
               margin: const EdgeInsets.only(top: 16),
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.1),
+                color: theme.cardColor,
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: const Center(
+              child: Center(
                 child: Text(
                   'No destinations found',
-                  style: TextStyle(color: Colors.grey),
+                  style: TextStyle(color: theme.textTheme.bodySmall?.color),
                 ),
               ),
             )
@@ -240,7 +255,7 @@ class _ExplorePageState extends State<ExplorePage> {
 
                 return Container(
                   decoration: BoxDecoration(
-                    color: Theme.of(context).cardColor,
+                    color: theme.cardColor,
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Column(
@@ -281,7 +296,7 @@ class _ExplorePageState extends State<ExplorePage> {
                                           style: const TextStyle(
                                             fontSize: 13,
                                             fontWeight: FontWeight.w600,
-                                            color: Colors.white,
+                                            color: null,
                                           ),
                                         ),
                                         const SizedBox(height: 2),
@@ -294,7 +309,7 @@ class _ExplorePageState extends State<ExplorePage> {
                                           overflow: TextOverflow.ellipsis,
                                           style: const TextStyle(
                                             fontSize: 10,
-                                            color: Colors.white70,
+                                            color: null,
                                           ),
                                         ),
                                       ],
@@ -307,7 +322,7 @@ class _ExplorePageState extends State<ExplorePage> {
                                       vertical: 2,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: Colors.yellow.shade50,
+                                      color: colorScheme.secondaryContainer,
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                     child: Row(
@@ -316,15 +331,15 @@ class _ExplorePageState extends State<ExplorePage> {
                                         const Icon(
                                           Icons.star,
                                           size: 12,
-                                          color: Colors.yellow,
+                                          color: Colors.amber,
                                         ),
                                         const SizedBox(width: 2),
                                         Text(
                                           _parseRating(dest['rating'])
                                               .toStringAsFixed(1),
-                                          style: const TextStyle(
+                                          style: TextStyle(
                                             fontSize: 10,
-                                            color: Colors.black87,
+                                            color: colorScheme.onSecondaryContainer,
                                           ),
                                         ),
                                       ],
@@ -344,7 +359,7 @@ class _ExplorePageState extends State<ExplorePage> {
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                       style: const TextStyle(
-                                        color: Color(0xFFFFC837),
+                                        color: null,
                                         fontSize: 12,
                                         fontWeight: FontWeight.w600,
                                       ),
@@ -366,10 +381,10 @@ class _ExplorePageState extends State<ExplorePage> {
                                             vertical: 6,
                                           ),
                                           decoration: BoxDecoration(
-                                            gradient: const LinearGradient(
+                                            gradient: LinearGradient(
                                               colors: [
-                                                Color(0xFFFDB913),
-                                                Color(0xFF1B5A6E),
+                                                colorScheme.secondary,
+                                                colorScheme.primary,
                                               ],
                                               begin: Alignment.topLeft,
                                               end: Alignment.bottomRight,
@@ -379,9 +394,10 @@ class _ExplorePageState extends State<ExplorePage> {
                                             ),
                                           ),
                                           child: const Text(
+                                          child: Text(
                                             'View Details',
                                             style: TextStyle(
-                                              color: Colors.white,
+                                              color: colorScheme.onPrimary,
                                               fontSize: 11,
                                             ),
                                           ),
@@ -406,13 +422,13 @@ class _ExplorePageState extends State<ExplorePage> {
               margin: const EdgeInsets.only(top: 16),
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.1),
+                color: theme.cardColor,
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: const Center(
+              child: Center(
                 child: Text(
                   'No destinations found',
-                  style: TextStyle(color: Colors.grey),
+                  style: TextStyle(color: theme.textTheme.bodySmall?.color),
                 ),
               ),
             ),
@@ -426,8 +442,8 @@ class _ExplorePageState extends State<ExplorePage> {
       return Container(
         height: 90,
         width: double.infinity,
-        color: Colors.grey.shade800,
-        child: const Icon(Icons.landscape, color: Colors.white54),
+        color: theme.cardColor,
+        child: Icon(Icons.landscape, color: theme.iconTheme.color),
       );
     }
 

@@ -24,9 +24,9 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
     final email = _emailController.text.trim();
 
     if (email.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter your email')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Please enter your email')));
       return;
     }
 
@@ -37,9 +37,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Password reset link sent to $email'),
-          ),
+          SnackBar(content: Text('Password reset link sent to $email')),
         );
         Navigator.pop(context);
       }
@@ -57,13 +55,13 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
           message = 'Error: ${e.code}';
       }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
     } catch (_) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Something went wrong')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Something went wrong')));
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -73,18 +71,21 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return Scaffold(
-      backgroundColor: const Color(0xFF121212),
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF121212),
+        backgroundColor: theme.scaffoldBackgroundColor,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          icon: Icon(Icons.arrow_back, color: theme.iconTheme.color),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
+        title: Text(
           'Forgot Password',
-          style: TextStyle(color: Colors.white),
+          style: TextStyle(color: theme.textTheme.titleLarge?.color),
         ),
       ),
       body: SafeArea(
@@ -98,32 +99,32 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                 Container(
                   width: 80,
                   height: 80,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFF2C2C2C),
+                  decoration: BoxDecoration(
+                    color: theme.cardColor,
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(
+                  child: Icon(
                     LucideIcons.keyRound,
                     size: 40,
-                    color: Colors.white,
+                    color: colorScheme.primary,
                   ),
                 ),
                 const SizedBox(height: 16),
 
-                const Text(
+                Text(
                   'Reset your password',
                   style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                    color: theme.textTheme.titleLarge?.color,
                   ),
                 ),
                 const SizedBox(height: 8),
-                const Text(
+                Text(
                   'Enter your email and we’ll send you a reset link.',
                   style: TextStyle(
                     fontSize: 14,
-                    color: Colors.white70,
+                    color: theme.textTheme.bodySmall?.color,
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -154,23 +155,23 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                     ),
                     child: _isLoading
                         ? const SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          Colors.black87,
-                        ),
-                      ),
-                    )
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.black87,
+                              ),
+                            ),
+                          )
                         : const Text(
-                      'Send Reset Link',
-                      style: TextStyle(
-                        color: Colors.black87,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
+                            'Send Reset Link',
+                            style: TextStyle(
+                              color: Colors.black87,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                   ),
                 ),
               ],
@@ -187,27 +188,28 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
     required IconData icon,
     required TextEditingController controller,
   }) {
+    final theme = Theme.of(context);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
-          style: const TextStyle(
-            color: Colors.white70,
+          style: TextStyle(
+            color: theme.textTheme.bodySmall?.color,
             fontSize: 12,
           ),
         ),
         const SizedBox(height: 6),
         TextField(
           controller: controller,
-          keyboardType: TextInputType.emailAddress,
-          style: const TextStyle(color: Colors.white),
+          style: TextStyle(color: theme.textTheme.bodyMedium?.color),
           decoration: InputDecoration(
-            prefixIcon: Icon(icon, color: Colors.white54, size: 20),
+            prefixIcon: Icon(icon, color: theme.iconTheme.color, size: 20),
             hintText: hint,
-            hintStyle: const TextStyle(color: Colors.white38),
+            hintStyle: TextStyle(color: theme.textTheme.bodySmall?.color),
             filled: true,
-            fillColor: const Color(0xFF2C2C2C),
+            fillColor: theme.cardColor,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide.none,

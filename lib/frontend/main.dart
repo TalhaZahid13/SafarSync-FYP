@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:provider/provider.dart';
 import 'src/auth/login.dart';
 import 'src/auth/signup.dart';
 import 'src/components/navigation/top_navigation.dart';
@@ -11,38 +13,49 @@ import 'src/pages/explore_page.dart';
 import 'src/pages/routes_page.dart';
 import 'src/pages/wishlist_page.dart';
 import 'src/pages/profile_page.dart';
-import 'src/utils/api_service.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'src/utils/local_database_service.dart';
+import 'src/utils/theme_controller.dart';
+import 'src/styles/app_theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   try {
     await Firebase.initializeApp();
+    await LocalDatabaseService.ensureInitialized();
   } catch (e) {
-    print('Firebase initialization error: $e');
+    debugPrint('Firebase initialization error: $e');
   }
-  runApp(const SafarSyncApp());
+  final themeController = ThemeController();
+  await themeController.loadThemeMode();
+  runApp(SafarSyncApp(themeController: themeController));
 }
 
 class SafarSyncApp extends StatelessWidget {
-  const SafarSyncApp({super.key});
+  final ThemeController themeController;
+
+  const SafarSyncApp({super.key, required this.themeController});
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'SafarSync',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        brightness: Brightness.dark,
-        scaffoldBackgroundColor: const Color(0xFF121212),
-        cardColor: const Color(0xFF2C2C2C),
+    return ChangeNotifierProvider.value(
+      value: themeController,
+      child: Consumer<ThemeController>(
+        builder: (context, controller, _) {
+          return MaterialApp(
+            title: 'SafarSync',
+            debugShowCheckedModeBanner: false,
+            theme: AppTheme.lightTheme(),
+            darkTheme: AppTheme.darkTheme(),
+            themeMode: controller.themeMode,
+            home: const AuthGate(),
+            routes: {
+              '/login': (context) => const LoginPage(),
+              '/signup': (context) => const SignupPage(),
+              '/home': (context) => const App(),
+            },
+          );
+        },
       ),
-      home: const AuthGate(),
-      routes: {
-        '/login': (context) => const LoginPage(),
-        '/signup': (context) => const SignupPage(),
-        '/home': (context) => const App(),
-      },
     );
   }
 }
@@ -65,11 +78,10 @@ class _AuthGateState extends State<AuthGate> {
   }
 
   Future<void> _checkAuthStatus() async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('jwt_token');
+    final user = FirebaseAuth.instance.currentUser;
 
     setState(() {
-      _isLoggedIn = token != null;
+      _isLoggedIn = user != null;
       _isChecking = false;
     });
   }

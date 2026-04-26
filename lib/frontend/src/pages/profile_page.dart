@@ -67,7 +67,9 @@ class ProfilePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cardColor = Theme.of(context).cardColor; // matches main.dart
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final cardColor = theme.cardColor;
     final padding = ResponsiveUtil.getResponsivePadding(context);
     final isMobile = ResponsiveUtil.isMobile(context);
 
@@ -76,10 +78,10 @@ class ProfilePage extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Profile',
             style: TextStyle(
-              color: Colors.white,
+              color: theme.textTheme.titleLarge?.color,
               fontSize: 24,
               fontWeight: FontWeight.bold,
             ),
@@ -103,31 +105,31 @@ class ProfilePage extends StatelessWidget {
                               width: 80,
                               height: 80,
                               decoration: BoxDecoration(
-                                gradient: const LinearGradient(
+                                gradient: LinearGradient(
                                   colors: [
-                                    Color(0xFFFDB913),
-                                    Color(0xFF1B5A6E),
+                                    colorScheme.secondary,
+                                    colorScheme.primary,
                                   ],
                                   begin: Alignment.topLeft,
                                   end: Alignment.bottomRight,
                                 ),
                                 borderRadius: BorderRadius.circular(40),
                               ),
-                              child: const Icon(
+                              child: Icon(
                                 LucideIcons.user,
-                                color: Colors.white,
+                                color: colorScheme.onPrimary,
                                 size: 40,
                               ),
                             ),
                             SizedBox(height: padding * 0.75),
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.center,
-                              children: const [
+                              children: [
                                 Text(
                                   'Muhammad Talha',
                                   style: TextStyle(
                                     fontSize: 18,
-                                    color: Colors.white,
+                                    color: theme.textTheme.bodyMedium?.color,
                                   ),
                                 ),
                                 SizedBox(height: 4),
@@ -136,7 +138,7 @@ class ProfilePage extends StatelessWidget {
                                   textAlign: TextAlign.center,
                                   style: TextStyle(
                                     fontSize: 14,
-                                    color: Colors.white70,
+                                    color: theme.textTheme.bodySmall?.color,
                                   ),
                                 ),
                                 SizedBox(height: 8),
@@ -146,14 +148,14 @@ class ProfilePage extends StatelessWidget {
                                     Icon(
                                       LucideIcons.mapPin,
                                       size: 16,
-                                      color: Color(0xFF1B5A6E),
+                                      color: colorScheme.primary,
                                     ),
                                     SizedBox(width: 4),
                                     Text(
                                       'Islamabad, Pakistan',
                                       style: TextStyle(
                                         fontSize: 12,
-                                        color: Colors.white70,
+                                        color: theme.textTheme.bodySmall?.color,
                                       ),
                                     ),
                                   ],
@@ -186,18 +188,18 @@ class ProfilePage extends StatelessWidget {
                                 ),
                                 child: ShaderMask(
                                   shaderCallback: (bounds) {
-                                    return const LinearGradient(
+                                    return LinearGradient(
                                       colors: [
-                                        Color(0xFFFDB913),
-                                        Color(0xFF1B5A6E),
+                                        colorScheme.secondary,
+                                        colorScheme.primary,
                                       ],
                                     ).createShader(bounds);
                                   },
-                                  child: const Text(
+                                  child: Text(
                                     'Edit Profile',
                                     style: TextStyle(
-                                      color: Colors.white,
                                       fontSize: 14,
+                                      color: theme.textTheme.bodyMedium?.color,
                                     ),
                                   ),
                                 ),
@@ -213,19 +215,19 @@ class ProfilePage extends StatelessWidget {
                               width: 80,
                               height: 80,
                               decoration: BoxDecoration(
-                                gradient: const LinearGradient(
+                                gradient: LinearGradient(
                                   colors: [
-                                    Color(0xFFFDB913),
-                                    Color(0xFF1B5A6E),
+                                    colorScheme.secondary,
+                                    colorScheme.primary,
                                   ],
                                   begin: Alignment.topLeft,
                                   end: Alignment.bottomRight,
                                 ),
                                 borderRadius: BorderRadius.circular(40),
                               ),
-                              child: const Icon(
+                              child: Icon(
                                 LucideIcons.user,
-                                color: Colors.white,
+                                color: colorScheme.onPrimary,
                                 size: 40,
                               ),
                             ),
@@ -235,12 +237,12 @@ class ProfilePage extends StatelessWidget {
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
-                                children: const [
+                                children: [
                                   Text(
                                     'Muhammad Talha',
                                     style: TextStyle(
                                       fontSize: 18,
-                                      color: Colors.white,
+                                      color: theme.textTheme.bodyMedium?.color,
                                     ),
                                   ),
                                   SizedBox(height: 4),
@@ -248,7 +250,7 @@ class ProfilePage extends StatelessWidget {
                                     'talhazahid710@email.com',
                                     style: TextStyle(
                                       fontSize: 14,
-                                      color: Colors.white70,
+                                      color: theme.textTheme.bodySmall?.color,
                                     ),
                                   ),
                                   SizedBox(height: 8),
@@ -257,14 +259,14 @@ class ProfilePage extends StatelessWidget {
                                       Icon(
                                         LucideIcons.mapPin,
                                         size: 16,
-                                        color: Color(0xFF1B5A6E),
+                                        color: colorScheme.primary,
                                       ),
                                       SizedBox(width: 4),
                                       Text(
                                         'Islamabad, Pakistan',
                                         style: TextStyle(
                                           fontSize: 12,
-                                          color: Colors.white70,
+                                          color: theme.textTheme.bodySmall?.color,
                                         ),
                                       ),
                                     ],
@@ -303,18 +305,18 @@ class ProfilePage extends StatelessWidget {
                                 ),
                                 child: ShaderMask(
                                   shaderCallback: (bounds) {
-                                    return const LinearGradient(
+                                    return LinearGradient(
                                       colors: [
-                                        Color(0xFFFDB913),
-                                        Color(0xFF1B5A6E),
+                                        colorScheme.secondary,
+                                        colorScheme.primary,
                                       ],
                                     ).createShader(bounds);
                                   },
-                                  child: const Text(
+                                  child: Text(
                                     'Edit Profile',
                                     style: TextStyle(
-                                      color: Colors.white,
                                       fontSize: 14,
+                                      color: theme.textTheme.bodyMedium?.color,
                                     ),
                                   ),
                                 ),
@@ -332,21 +334,21 @@ class ProfilePage extends StatelessWidget {
                         '24',
                         'Places Visited',
                         Colors.amber.shade200,
-                        const Color(0xFF1B5A6E),
+                        colorScheme.primary,
                       ),
                       SizedBox(width: padding * 0.5),
                       statCard(
                         '12',
                         'Badges Earned',
                         Colors.yellow.shade200,
-                        Colors.yellow.shade600,
+                        colorScheme.secondary,
                       ),
                       SizedBox(width: padding * 0.5),
                       statCard(
                         '8',
                         'Trips Planned',
                         Colors.blue.shade100,
-                        Colors.blue.shade600,
+                        colorScheme.primary,
                       ),
                     ],
                   ),
@@ -367,12 +369,15 @@ class ProfilePage extends StatelessWidget {
               child: Column(
                 children: [
                   Row(
-                    children: const [
-                      Icon(LucideIcons.award, size: 24, color: Colors.yellow),
+                    children: [
+                      Icon(LucideIcons.award, size: 24, color: colorScheme.secondary),
                       SizedBox(width: 8),
                       Text(
                         'Recent Achievements',
-                        style: TextStyle(fontSize: 16, color: Colors.white),
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: theme.textTheme.bodyMedium?.color,
+                        ),
                       ),
                     ],
                   ),
@@ -389,9 +394,10 @@ class ProfilePage extends StatelessWidget {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           const Icon(
+                          Icon(
                             LucideIcons.award,
                             size: 32,
-                            color: Colors.yellow,
+                            color: Colors.amber,
                           ),
                           SizedBox(height: padding * 0.25),
                           Text(
@@ -402,9 +408,9 @@ class ProfilePage extends StatelessWidget {
                               'Road Warrior',
                             ][index],
                             textAlign: TextAlign.center,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 10,
-                              color: Colors.white,
+                              color: theme.textTheme.bodyMedium?.color,
                             ),
                           ),
                         ],
@@ -430,7 +436,7 @@ class ProfilePage extends StatelessWidget {
                 children: [
                   const Text(
                     'Settings',
-                    style: TextStyle(fontSize: 16, color: Colors.white),
+                    style: TextStyle(fontSize: 16),
                   ),
                   SizedBox(height: padding * 0.5),
                   settingsButton(
@@ -525,12 +531,19 @@ class ProfilePage extends StatelessWidget {
         child: Row(
           children: [
             Icon(icon, size: 20, color: isLogout ? Colors.red : Colors.white70),
+            Icon(
+              icon,
+              size: 20,
+              color: isLogout ? Colors.red : theme.iconTheme.color,
+            ),
             const SizedBox(width: 8),
             Text(
               label,
               style: TextStyle(
                 fontSize: 14,
-                color: isLogout ? Colors.red : Colors.white,
+                color: isLogout
+                    ? Colors.red
+                    : theme.textTheme.bodyMedium?.color,
               ),
             ),
           ],

@@ -42,6 +42,8 @@ class WishlistPage extends StatelessWidget {
   }) {
     return LayoutBuilder(
       builder: (context, constraints) {
+        final theme = Theme.of(context);
+        final colorScheme = theme.colorScheme;
         final isTablet = constraints.maxWidth > 600;
         final gridColumns = isTablet ? 3 : 2;
 
@@ -53,12 +55,12 @@ class WishlistPage extends StatelessWidget {
               padding: const EdgeInsets.symmetric(vertical: 8.0),
               child: Row(
                 children: [
-                  Icon(icon, color: Colors.white),
+                  Icon(icon, color: colorScheme.primary),
                   const SizedBox(width: 8),
                   Text(
                     title,
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: theme.textTheme.titleLarge?.color,
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                     ),
@@ -70,12 +72,15 @@ class WishlistPage extends StatelessWidget {
                       vertical: 2,
                     ),
                     decoration: BoxDecoration(
-                      color: Colors.white24,
+                      color: theme.cardColor,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
                       '${items.length}',
-                      style: const TextStyle(color: Colors.white, fontSize: 12),
+                      style: TextStyle(
+                        color: theme.textTheme.bodyMedium?.color,
+                        fontSize: 12,
+                      ),
                     ),
                   ),
                 ],
@@ -98,11 +103,11 @@ class WishlistPage extends StatelessWidget {
                 return Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.5),
+                    color: theme.cardColor,
                     borderRadius: BorderRadius.circular(20),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black12,
+                        color: Colors.black.withOpacity(0.12),
                         blurRadius: 6,
                         offset: Offset(0, 3),
                       ),
@@ -120,9 +125,9 @@ class WishlistPage extends StatelessWidget {
                               item['name'],
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontWeight: FontWeight.bold,
-                                color: Colors.black87,
+                                color: theme.textTheme.bodyMedium?.color,
                               ),
                             ),
                           ),
@@ -140,10 +145,10 @@ class WishlistPage extends StatelessWidget {
                       const SizedBox(height: 4),
                       Row(
                         children: [
-                          const Icon(
+                          Icon(
                             Icons.location_on,
                             size: 14,
-                            color: Colors.grey,
+                            color: theme.textTheme.bodySmall?.color,
                           ),
                           const SizedBox(width: 4),
                           Flexible(
@@ -151,9 +156,9 @@ class WishlistPage extends StatelessWidget {
                               item['location'],
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 12,
-                                color: Colors.grey,
+                                color: theme.textTheme.bodySmall?.color,
                               ),
                             ),
                           ),
@@ -174,9 +179,9 @@ class WishlistPage extends StatelessWidget {
                                 const SizedBox(width: 2),
                                 Text(
                                   '${item['rating']}',
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 12,
-                                    color: Colors.black87,
+                                    color: theme.textTheme.bodyMedium?.color,
                                   ),
                                 ),
                               ],
@@ -189,9 +194,9 @@ class WishlistPage extends StatelessWidget {
                               alignment: Alignment.centerRight,
                               child: Text(
                                 item['price'],
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 12,
-                                  color: Color(0xFF1B5A6E),
+                                  color: colorScheme.primary,
                                 ),
                               ),
                             ),
@@ -211,21 +216,22 @@ class WishlistPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final padding = ResponsiveUtil.getResponsivePadding(context);
     return Scaffold(
-      backgroundColor: const Color(0xFF1B1B1B),
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: SingleChildScrollView(
         padding: EdgeInsets.all(padding),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Page Title
-            const Padding(
+            Padding(
               padding: EdgeInsets.only(bottom: 16),
               child: Text(
                 'My Wishlist',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: theme.textTheme.titleLarge?.color,
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
                 ),

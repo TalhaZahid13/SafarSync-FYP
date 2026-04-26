@@ -13,6 +13,7 @@ class BottomNavigation extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     // Navigation items
     final navItems = [
       {'id': 'home', 'icon': Icons.home, 'label': 'Home'},
@@ -35,10 +36,10 @@ class BottomNavigation extends StatelessWidget {
         child: Container(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(30),
-            color: Colors.white.withOpacity(0.1), // Glass effect base
+            color: theme.cardColor.withOpacity(0.95),
             boxShadow: [
               BoxShadow(
-                color: Colors.black26,
+                color: Colors.black.withOpacity(0.12),
                 blurRadius: 20,
                 offset: Offset(0, 10),
               ),
@@ -62,8 +63,11 @@ class BottomNavigation extends StatelessWidget {
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(20),
                     gradient: isActive
-                        ? const LinearGradient(
-                            colors: [Color(0xFFFDB913), Color(0xFF1B5A6E)],
+                        ? LinearGradient(
+                            colors: [
+                              theme.colorScheme.secondary,
+                              theme.colorScheme.primary,
+                            ],
                           )
                         : null,
                   ),
@@ -72,7 +76,9 @@ class BottomNavigation extends StatelessWidget {
                     children: [
                       Icon(
                         item['icon'] as IconData,
-                        color: isActive ? Colors.white : Colors.grey[600],
+                        color: isActive
+                            ? theme.colorScheme.onPrimary
+                            : theme.textTheme.bodySmall?.color,
                         size: isMobile ? 20 : 24,
                       ),
                       SizedBox(height: padding * 0.25),
@@ -80,7 +86,9 @@ class BottomNavigation extends StatelessWidget {
                         item['label'] as String,
                         style: TextStyle(
                           fontSize: 12,
-                          color: isActive ? Colors.white : Colors.grey[600],
+                          color: isActive
+                              ? theme.colorScheme.onPrimary
+                              : theme.textTheme.bodySmall?.color,
                         ),
                       ),
                     ],

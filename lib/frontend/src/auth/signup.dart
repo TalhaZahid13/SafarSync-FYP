@@ -18,6 +18,8 @@ class _SignupPageState extends State<SignupPage> {
   final _confirmPasswordController = TextEditingController();
 
   bool _isLoading = false;
+  bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
 
   @override
   void dispose() {
@@ -104,18 +106,21 @@ class _SignupPageState extends State<SignupPage> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return Scaffold(
-      backgroundColor: const Color(0xFF121212),
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF121212),
+        backgroundColor: theme.scaffoldBackgroundColor,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          icon: Icon(Icons.arrow_back, color: theme.iconTheme.color),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
+        title: Text(
           'Create Account',
-          style: TextStyle(color: Colors.white),
+          style: TextStyle(color: theme.textTheme.titleLarge?.color),
         ),
       ),
       body: SafeArea(
@@ -129,32 +134,35 @@ class _SignupPageState extends State<SignupPage> {
                 Container(
                   width: 80,
                   height: 80,
-                  decoration: const BoxDecoration(
+                  decoration: BoxDecoration(
                     gradient: LinearGradient(
-                      colors: [Color(0xFFFDB913), Color(0xFF1B5A6E)],
+                      colors: [colorScheme.secondary, colorScheme.primary],
                     ),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(
+                  child: Icon(
                     LucideIcons.userPlus,
                     size: 40,
-                    color: Colors.white,
+                    color: colorScheme.onPrimary,
                   ),
                 ),
                 const SizedBox(height: 16),
 
-                const Text(
+                Text(
                   'Join SafarSync',
                   style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                    color: theme.textTheme.titleLarge?.color,
                   ),
                 ),
                 const SizedBox(height: 4),
-                const Text(
+                Text(
                   'Create your account to start planning trips',
-                  style: TextStyle(fontSize: 14, color: Colors.white70),
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: theme.textTheme.bodySmall?.color,
+                  ),
                   textAlign: TextAlign.center,
                 ),
 
@@ -196,6 +204,12 @@ class _SignupPageState extends State<SignupPage> {
                   icon: LucideIcons.lock,
                   controller: _passwordController,
                   isPassword: true,
+                  obscureText: _obscurePassword,
+                  onToggleObscure: () {
+                    setState(() {
+                      _obscurePassword = !_obscurePassword;
+                    });
+                  },
                 ),
                 const SizedBox(height: 12),
 
@@ -206,6 +220,12 @@ class _SignupPageState extends State<SignupPage> {
                   icon: LucideIcons.lock,
                   controller: _confirmPasswordController,
                   isPassword: true,
+                  obscureText: _obscureConfirmPassword,
+                  onToggleObscure: () {
+                    setState(() {
+                      _obscureConfirmPassword = !_obscureConfirmPassword;
+                    });
+                  },
                 ),
 
                 const SizedBox(height: 24),
@@ -216,27 +236,26 @@ class _SignupPageState extends State<SignupPage> {
                   child: ElevatedButton(
                     onPressed: _isLoading ? null : _signup,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFFDB913),
+                      backgroundColor: colorScheme.primary,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),
                       ),
                     ),
                     child: _isLoading
-                        ? const SizedBox(
+                        ? SizedBox(
                             height: 20,
                             width: 20,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
                               valueColor: AlwaysStoppedAnimation<Color>(
-                                Colors.black87,
+                                colorScheme.onPrimary,
                               ),
                             ),
                           )
                         : const Text(
                             'Sign Up',
                             style: TextStyle(
-                              color: Colors.black87,
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
                             ),
@@ -257,31 +276,48 @@ class _SignupPageState extends State<SignupPage> {
     required IconData icon,
     required TextEditingController controller,
     bool isPassword = false,
+    bool obscureText = false,
+    VoidCallback? onToggleObscure,
     TextInputType keyboardType = TextInputType.text,
   }) {
+    final theme = Theme.of(context);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
-          style: const TextStyle(color: Colors.white70, fontSize: 12),
+          style: TextStyle(
+            color: theme.textTheme.bodySmall?.color,
+            fontSize: 12,
+          ),
         ),
         const SizedBox(height: 6),
         TextField(
           controller: controller,
-          obscureText: isPassword,
+          obscureText: isPassword ? obscureText : false,
           keyboardType: keyboardType,
-          style: const TextStyle(color: Colors.white),
+          style: TextStyle(color: theme.textTheme.bodyMedium?.color),
           decoration: InputDecoration(
-            prefixIcon: Icon(icon, color: Colors.white54, size: 20),
+            prefixIcon: Icon(icon, color: theme.iconTheme.color, size: 20),
             hintText: hint,
-            hintStyle: const TextStyle(color: Colors.white38),
+            hintStyle: TextStyle(color: theme.textTheme.bodySmall?.color),
             filled: true,
-            fillColor: const Color(0xFF2C2C2C),
+            fillColor: theme.cardColor,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide.none,
             ),
+            suffixIcon: isPassword
+                ? IconButton(
+                    onPressed: onToggleObscure,
+                    icon: Icon(
+                      obscureText ? Icons.visibility : Icons.visibility_off,
+                      color: theme.iconTheme.color,
+                      size: 20,
+                    ),
+                  )
+                : null,
           ),
         ),
       ],

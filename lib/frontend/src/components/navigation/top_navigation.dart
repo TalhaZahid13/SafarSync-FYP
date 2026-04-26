@@ -6,6 +6,7 @@ class TopNavigation extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final titleFontSize = ResponsiveUtil.getResponsiveFontSize(
       context,
       mobileSize: 18,
@@ -35,7 +36,7 @@ class TopNavigation extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    color: Colors.white,
+                    color: theme.textTheme.titleLarge?.color,
                     fontSize: titleFontSize,
                     fontWeight: FontWeight.bold,
                   ),
@@ -46,7 +47,7 @@ class TopNavigation extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    color: Colors.white70,
+                    color: theme.textTheme.bodySmall?.color,
                     fontSize: subtitleFontSize,
                   ),
                 ),
@@ -62,15 +63,11 @@ class TopNavigation extends StatelessWidget {
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
-                  color: Colors.white12,
+                  color: theme.cardColor,
                   borderRadius: BorderRadius.circular(22),
                 ),
                 child: IconButton(
-                  icon: const Icon(
-                    Icons.notifications_none,
-                    color: Colors.white,
-                    size: 20,
-                  ),
+                  icon: const Icon(Icons.notifications_none, size: 20),
                   onPressed: () {
                     // TODO: open notifications screen
                   },

@@ -39,6 +39,7 @@ class RoutesPage extends StatelessWidget {
   ];
 
   Widget _buildInfoCard(String label, String value, Color bgColor) {
+    final theme = Theme.of(label is String ? null as BuildContext? : throw UnimplementedError());
     return Container(
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
@@ -47,14 +48,20 @@ class RoutesPage extends StatelessWidget {
       ),
       child: Column(
         children: [
-          Text(label, style: const TextStyle(fontSize: 10, color: Colors.grey)),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 10,
+              color: theme.textTheme.bodySmall?.color,
+            ),
+          ),
           const SizedBox(height: 2),
           Text(
             value,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.bold,
-              color: Colors.black87,
+              color: theme.textTheme.bodyMedium?.color,
             ),
           ),
         ],
@@ -62,15 +69,17 @@ class RoutesPage extends StatelessWidget {
     );
   }
 
-  Widget _buildSavedRouteCard(Map<String, dynamic> route) {
+  Widget _buildSavedRouteCard(BuildContext context, Map<String, dynamic> route) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0xFF2C2C2C), // dark card
+        color: theme.cardColor,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.3),
+            color: Colors.black.withOpacity(0.12),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -88,28 +97,33 @@ class RoutesPage extends StatelessWidget {
                 children: [
                   Text(
                     route['name'],
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                      color: theme.textTheme.bodyMedium?.color,
                     ),
                   ),
                   Row(
                     children: [
                       Text(
                         route['from'],
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 12,
-                          color: Colors.white70,
+                          color: theme.textTheme.bodySmall?.color,
                         ),
                       ),
                       const SizedBox(width: 4),
-                      const Text('→', style: TextStyle(color: Colors.white54)),
+                      Text(
+                        '→',
+                        style: TextStyle(
+                          color: theme.textTheme.bodySmall?.color,
+                        ),
+                      ),
                       const SizedBox(width: 4),
                       Text(
                         route['to'],
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 12,
-                          color: Colors.white70,
+                          color: theme.textTheme.bodySmall?.color,
                         ),
                       ),
                     ],
@@ -131,13 +145,13 @@ class RoutesPage extends StatelessWidget {
                 ),
                 child: ShaderMask(
                   shaderCallback: (Rect bounds) {
-                    return const LinearGradient(
-                      colors: [Color(0xFFFDB913), Color(0xFF1B5A6E)],
+                    return LinearGradient(
+                      colors: [colorScheme.secondary, colorScheme.primary],
                     ).createShader(bounds);
                   },
-                  child: const Text(
+                  child: Text(
                     'Start',
-                    style: TextStyle(color: Colors.white),
+                    style: TextStyle(color: theme.textTheme.bodyMedium?.color),
                   ),
                 ),
               ),
@@ -165,10 +179,12 @@ class RoutesPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     final padding = ResponsiveUtil.getResponsivePadding(context);
     final isMobile = ResponsiveUtil.isMobile(context);
     return Scaffold(
-      backgroundColor: const Color(0xFF121212), // same as main.dart
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: SingleChildScrollView(
         padding: EdgeInsets.all(padding),
         child: Column(
@@ -185,7 +201,6 @@ class RoutesPage extends StatelessWidget {
                           Text(
                             'My Routes',
                             style: TextStyle(
-                              color: Colors.white,
                               fontSize: 24,
                               fontWeight: FontWeight.bold,
                             ),
@@ -194,7 +209,6 @@ class RoutesPage extends StatelessWidget {
                           Text(
                             'Saved and planned routes',
                             style: TextStyle(
-                              color: Colors.white70,
                               fontSize: 12,
                             ),
                           ),
@@ -206,14 +220,14 @@ class RoutesPage extends StatelessWidget {
                         child: ElevatedButton.icon(
                           onPressed: () {},
                           icon: const Icon(
+                          icon: Icon(
                             Icons.add,
                             size: 16,
-                            color: Colors.black87,
+                            color: colorScheme.onPrimary,
                           ),
-                          label: const Text(
+                          label: Text(
                             'New Route',
                             style: TextStyle(
-                              color: Colors.black87,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -222,7 +236,7 @@ class RoutesPage extends StatelessWidget {
                               horizontal: 16,
                               vertical: 12,
                             ),
-                            backgroundColor: const Color(0xFFFDB913),
+                            backgroundColor: colorScheme.primary,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
@@ -240,7 +254,6 @@ class RoutesPage extends StatelessWidget {
                           Text(
                             'My Routes',
                             style: TextStyle(
-                              color: Colors.white,
                               fontSize: 24,
                               fontWeight: FontWeight.bold,
                             ),
@@ -249,7 +262,6 @@ class RoutesPage extends StatelessWidget {
                           Text(
                             'Saved and planned routes',
                             style: TextStyle(
-                              color: Colors.white70,
                               fontSize: 12,
                             ),
                           ),
@@ -258,14 +270,14 @@ class RoutesPage extends StatelessWidget {
                       ElevatedButton.icon(
                         onPressed: () {},
                         icon: const Icon(
+                        icon: Icon(
                           Icons.add,
                           size: 16,
-                          color: Colors.black87,
+                          color: colorScheme.onPrimary,
                         ),
-                        label: const Text(
+                        label: Text(
                           'New Route',
                           style: TextStyle(
-                            color: Colors.black87,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -274,7 +286,7 @@ class RoutesPage extends StatelessWidget {
                             horizontal: 16,
                             vertical: 8,
                           ),
-                          backgroundColor: const Color(0xFFFDB913),
+                          backgroundColor: colorScheme.primary,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
@@ -288,9 +300,9 @@ class RoutesPage extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: const Color(0xFF2C2C2C),
+                color: theme.cardColor,
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: const Color(0xFFFFC837), width: 2),
+                border: Border.all(color: colorScheme.secondary, width: 2),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -303,30 +315,29 @@ class RoutesPage extends StatelessWidget {
                         height: 40,
                         decoration: const BoxDecoration(
                           gradient: LinearGradient(
-                            colors: [Color(0xFFFDB913), Color(0xFF1B5A6E)],
+                            colors: [colorScheme.secondary, colorScheme.primary],
                           ),
                           borderRadius: BorderRadius.all(Radius.circular(12)),
                         ),
-                        child: const Icon(
+                        child: Icon(
                           Icons.navigation,
-                          color: Colors.white,
+                          color: colorScheme.onPrimary,
                         ),
                       ),
                       const SizedBox(width: 8),
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
-                        children: const [
+                        children: [
                           Text(
                             'Active Route',
                             style: TextStyle(
-                              color: Colors.white,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
                           Text(
                             'In Progress',
                             style: TextStyle(
-                              color: Color(0xFFFFC837),
+                              color: colorScheme.secondary,
                               fontSize: 12,
                             ),
                           ),
@@ -340,8 +351,11 @@ class RoutesPage extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Colors.amberAccent, Colors.orangeAccent],
+                      gradient: LinearGradient(
+                        colors: [
+                          colorScheme.secondaryContainer,
+                          colorScheme.tertiaryContainer,
+                        ],
                       ),
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -368,12 +382,11 @@ class RoutesPage extends StatelessWidget {
                               children: const [
                                 Text(
                                   'Islamabad',
-                                  style: TextStyle(color: Colors.black87),
+                                  style: TextStyle(),
                                 ),
                                 Text(
                                   'Starting Point',
                                   style: TextStyle(
-                                    color: Colors.grey,
                                     fontSize: 10,
                                   ),
                                 ),
@@ -407,12 +420,11 @@ class RoutesPage extends StatelessWidget {
                               children: const [
                                 Text(
                                   'Murree',
-                                  style: TextStyle(color: Colors.black87),
+                                  style: TextStyle(),
                                 ),
                                 Text(
                                   'Destination • 45 min away',
                                   style: TextStyle(
-                                    color: Colors.grey,
                                     fontSize: 10,
                                   ),
                                 ),
@@ -432,7 +444,6 @@ class RoutesPage extends StatelessWidget {
                       const Text(
                         'Route progress',
                         style: TextStyle(
-                          color: Colors.white70,
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
                         ),
@@ -443,9 +454,9 @@ class RoutesPage extends StatelessWidget {
                         child: LinearProgressIndicator(
                           value: activeRouteProgress, // 0.0 - 1.0
                           minHeight: 8,
-                          backgroundColor: Colors.white.withOpacity(0.25),
-                          valueColor: const AlwaysStoppedAnimation(
-                            Color(0xFF1B5A6E),
+                          backgroundColor: theme.dividerColor,
+                          valueColor: AlwaysStoppedAnimation(
+                            colorScheme.primary,
                           ),
                         ),
                       ),
@@ -468,10 +479,9 @@ class RoutesPage extends StatelessWidget {
             SizedBox(height: padding),
 
             // Saved Routes
-            const Text(
+            Text(
               'Saved Routes',
               style: TextStyle(
-                color: Colors.white,
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
               ),
@@ -482,7 +492,7 @@ class RoutesPage extends StatelessWidget {
                   .map(
                     (route) => Padding(
                       padding: EdgeInsets.only(bottom: padding * 0.75),
-                      child: _buildSavedRouteCard(route),
+                      child: _buildSavedRouteCard(context, route),
                     ),
                   )
                   .toList(),
