@@ -24,15 +24,24 @@ class TopNavigation extends StatelessWidget {
     return Padding(
       padding: EdgeInsets.only(bottom: padding),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Greeting Text
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Assalam-o-Alaikum, Talha 👋',
+                  'SAFARSYNC',
+                  style: TextStyle(
+                    color: theme.colorScheme.primary,
+                    fontSize: 13,
+                    letterSpacing: 1.4,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                SizedBox(height: padding * 0.35),
+                Text(
+                  'Assalam-o-Alaikum, Ahmed 👋',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
@@ -54,8 +63,6 @@ class TopNavigation extends StatelessWidget {
               ],
             ),
           ),
-
-          // Notification Button ONLY
           SizedBox(width: padding * 0.5),
           Stack(
             children: [
@@ -63,8 +70,11 @@ class TopNavigation extends StatelessWidget {
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
-                  color: theme.cardColor,
+                  color: theme.cardColor.withOpacity(0.9),
                   borderRadius: BorderRadius.circular(22),
+                  border: Border.all(
+                    color: theme.colorScheme.primary.withOpacity(0.2),
+                  ),
                 ),
                 child: IconButton(
                   icon: const Icon(Icons.notifications_none, size: 20),
@@ -73,7 +83,6 @@ class TopNavigation extends StatelessWidget {
                   },
                 ),
               ),
-              // Red dot (unread notifications)
               Positioned(
                 top: 6,
                 right: 6,

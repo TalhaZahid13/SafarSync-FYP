@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../utils/api_service.dart';
 import '../../ui/app_theme.dart';
+import '../../pages/explore_page.dart';
 
 class Destination {
   final int id;
@@ -171,7 +172,16 @@ class _PopularDestinationsState extends State<PopularDestinations> {
                 ),
               ),
               TextButton(
-                onPressed: () {},
+                onPressed: () {
+                  // Navigate to the Explore Page when button is pressed
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) =>
+                          const ExplorePage(), // Navigate to ExplorePage
+                    ),
+                  );
+                },
                 child: const Text(
                   'View All →',
                   style: TextStyle(color: Colors.white70),
@@ -278,22 +288,23 @@ class _PopularDestinationsState extends State<PopularDestinations> {
                     height: 108,
                     width: double.infinity,
                     fit: BoxFit.cover,
-                    errorBuilder: (
-                      BuildContext context,
-                      Object error,
-                      StackTrace? stackTrace,
-                    ) {
-                      return Container(
-                        height: 108,
-                        color: AppTheme.navy,
-                        child: const Center(
-                          child: Icon(
-                            Icons.image_not_supported,
-                            color: Colors.white54,
-                          ),
-                        ),
-                      );
-                    },
+                    errorBuilder:
+                        (
+                          BuildContext context,
+                          Object error,
+                          StackTrace? stackTrace,
+                        ) {
+                          return Container(
+                            height: 108,
+                            color: AppTheme.navy,
+                            child: const Center(
+                              child: Icon(
+                                Icons.image_not_supported,
+                                color: Colors.white54,
+                              ),
+                            ),
+                          );
+                        },
                   ),
                 ),
 

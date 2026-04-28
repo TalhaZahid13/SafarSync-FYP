@@ -1,73 +1,73 @@
 import 'package:flutter/material.dart';
 
 class AppTheme {
-  static const Color navy = Color(0xFF0B1220);
-  static const Color navyGlass = Color(0xCC0F172A);
+  static const Color navy = Color(0xFF050C1E);
+  static const Color navyGlass = Color(0xCC050C1E);
 
-  static const Color lightBg = Color(0xFFF7FBFF);
+  static const Color lightBg = Color(0xFFFFFFFF);
   static const Color lightCard = Color(0xFFFFFFFF);
-  static const Color ink = Color(0xFF102A43);
+  static const Color ink = Color(0xFF030213);
   // Recommendation Section Colors
-  static const Color recommendationCardBg = Color(0xE60F172A);
-  static const Color recommendationBorder = Color(0xFF334155);
+  static const Color recommendationCardBg = Color(0xE6050C1E);
+  static const Color recommendationBorder = Color(0xFF00A5EF);
 
   // Filter / Category Gradients
   static const LinearGradient natureGradient = LinearGradient(
-    colors: [Color(0xFF10B981), Color(0xFF14B8A6)],
+    colors: [Color(0xFFFDB913), Color(0xFFFF6B35)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
 
   static const LinearGradient historyGradient = LinearGradient(
-    colors: [Color(0xFF8B5CF6), Color(0xFF9333EA)],
+    colors: [Color(0xFFFF6B35), Color(0xFFFF5733)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
 
   static const LinearGradient foodGradient = LinearGradient(
-    colors: [Color(0xFFFF006E), Color(0xFFFF3D7F)],
+    colors: [Color(0xFFFF5733), Color(0xFFFDB913)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
 
   static const LinearGradient adventureGradient = LinearGradient(
-    colors: [Color(0xFFFF7A1A), Color(0xFFFF5A00)],
+    colors: [Color(0xFF00A5EF), Color(0xFFFF6B35)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
 
   // Recommendation Card Backgrounds
-  static const Color natureCardBg = Color(0xCC063A4A);
-  static const Color historyCardBg = Color(0xCC1F1B5C);
-  static const Color foodCardBg = Color(0xCC32123F);
-  static const Color adventureCardBg = Color(0xCC3A2A2F);
+  static const Color natureCardBg = Color(0x4DFDB913);
+  static const Color historyCardBg = Color(0x4DFF6B35);
+  static const Color foodCardBg = Color(0x4DFF5733);
+  static const Color adventureCardBg = Color(0x4D00A5EF);
 
   // Recommendation Borders
-  static const Color natureBorder = Color(0xFF00BFA6);
-  static const Color historyBorder = Color(0xFF5B4BDB);
-  static const Color foodBorder = Color(0xFFFF2D75);
-  static const Color adventureBorder = Color(0xFFFF7A1A);
-  static const Color gold = Color(0xFFFFC83D);
-  static const Color coral = Color(0xFFFF6B4A);
-  static const Color cyan = Color(0xFF22D3EE);
-  static const Color emerald = Color(0xFF10B981);
-  static const Color violet = Color(0xFF8B5CF6);
-  static const Color glassStrong = Color(0xE60F172A);
-  static const Color rose = Color(0xFFFF3D7F);
-  static const Color teal = Color(0xFF14B8A6);
-  static const Color pink = Color(0xFFEC4899);
-  static const Color sky = Color(0xFF38BDF8);
-  static const Color purple = Color(0xFF9333EA);
-  static const Color Rose = Color(0xFFFF3D7F);
+  static const Color natureBorder = Color(0xFFFDB913);
+  static const Color historyBorder = Color(0xFFFF6B35);
+  static const Color foodBorder = Color(0xFFFF5733);
+  static const Color adventureBorder = Color(0xFF00A5EF);
+  static const Color gold = Color(0xFFFDB913);
+  static const Color coral = Color(0xFFFF6B35);
+  static const Color cyan = Color(0xFF00A5EF);
+  static const Color emerald = Color(0xFFFDB913);
+  static const Color violet = Color(0xFFFF6B35);
+  static const Color glassStrong = Color(0xE6050C1E);
+  static const Color rose = Color(0xFFFF5733);
+  static const Color teal = Color(0xFF00A5EF);
+  static const Color pink = Color(0xFFFF5733);
+  static const Color sky = Color(0xFF00A5EF);
+  static const Color purple = Color(0xFFFF6B35);
+  static const Color Rose = Color(0xFFFF5733);
 
   // ✅ Weather Card Colors
-  static const Color weatherCardStart = Color(0xFF0F1B3D);
-  static const Color weatherCardEnd = Color(0xFF0A1430);
+  static const Color weatherCardStart = Color(0xFF050C1E);
+  static const Color weatherCardEnd = Color(0xFF030213);
 
-  static const Color weatherBorder = Color(0xFF3B82F6);
+  static const Color weatherBorder = Color(0xFF00A5EF);
 
   static const Color weatherTextPrimary = Colors.white;
-  static const Color weatherTextSecondary = Color(0xFF9CA3AF);
+  static const Color weatherTextSecondary = Color(0xFFCCCCCC);
 
   // ✅ 🔥 Weather Gradient (NEW)
   static const LinearGradient weatherCardGradient = LinearGradient(
@@ -120,7 +120,7 @@ class AppTheme {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: lightCard,
-        hintStyle: const TextStyle(color: Color(0xFF64748B)),
+        hintStyle: const TextStyle(color: Color(0xFFCCCCCC)),
         labelStyle: const TextStyle(color: ink),
         prefixIconColor: coral,
         suffixIconColor: cyan,
@@ -136,7 +136,7 @@ class AppTheme {
       ),
       textTheme: const TextTheme(
         bodyMedium: TextStyle(color: ink),
-        bodySmall: TextStyle(color: Color(0xFF64748B)),
+        bodySmall: TextStyle(color: Color(0xFFCCCCCC)),
         titleLarge: TextStyle(color: ink, fontWeight: FontWeight.bold),
       ),
       iconTheme: const IconThemeData(color: coral),
@@ -152,7 +152,7 @@ class AppTheme {
           ),
         ),
       ),
-      dividerTheme: const DividerThemeData(color: Color(0xFFE2E8F0)),
+      dividerTheme: const DividerThemeData(color: Color(0x1A000000)),
     );
   }
 
@@ -212,7 +212,7 @@ class AppTheme {
           ),
         ),
       ),
-      dividerTheme: const DividerThemeData(color: Color(0xFF334155)),
+      dividerTheme: const DividerThemeData(color: Color(0x26FFFFFF)),
     );
   }
 }

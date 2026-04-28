@@ -26,11 +26,12 @@ class QuickAccessCards extends StatelessWidget {
         'gradient': [Colors.orange.shade400, Colors.yellow.shade400],
       },
       {
-        'icon': Icons.smart_toy,
+        'icon': Icons.computer,
         'title': 'Safar AI',
-        'subtitle': 'Chatbot',
-        'gradient': [const Color(0xFF6C2FD9), const Color(0xFF1B5A6E)],
-        'isSafarAi': true,
+        'subtitle': 'Digital Assistant',
+        'gradient': [const Color(0xFF13E8D0), const Color(0xFF72AEBC)],
+        'isSafarAi': false,
+        'page': const SafarAiChatPage(), // Add route screen here
       },
     ];
 
@@ -42,7 +43,7 @@ class QuickAccessCards extends StatelessWidget {
         crossAxisCount: 2,
         mainAxisSpacing: 12,
         crossAxisSpacing: 12,
-        childAspectRatio: 1.1,
+        childAspectRatio: 1.25,
       ),
       itemCount: cards.length,
       itemBuilder: (context, index) {
@@ -70,6 +71,15 @@ class QuickAccessCards extends StatelessWidget {
                   end: Alignment.bottomRight,
                 ),
                 borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: (card['gradient'] as List<Color>).first.withOpacity(
+                      0.3,
+                    ),
+                    blurRadius: 14,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
               ),
               padding: const EdgeInsets.all(16),
               child: Column(

@@ -1,7 +1,65 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
-class EmergencyICE extends StatelessWidget {
+import '../../utils/api_service.dart';
+
+class EmergencyICE extends StatefulWidget {
   const EmergencyICE({super.key});
+
+  @override
+  State<EmergencyICE> createState() => _EmergencyICEState();
+}
+
+class _EmergencyICEState extends State<EmergencyICE> {
+  String _locationCoordinates = 'Fetching location...';
+  String _locationCityCountry = 'Please wait';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLatestLocationFromBackend();
+  }
+
+  Future<void> _loadLatestLocationFromBackend() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) {
+      if (!mounted) return;
+      setState(() {
+        _locationCoordinates = 'Location unavailable';
+        _locationCityCountry = 'Login required';
+      });
+      return;
+    }
+
+    final result = await ApiService.getLatestLocation(userIdentifier: uid);
+    if (!mounted) return;
+
+    if (result['success'] != true || result['location'] == null) {
+      setState(() {
+        _locationCoordinates = 'Location unavailable';
+        _locationCityCountry = 'No backend location yet';
+      });
+      return;
+    }
+
+    final location = result['location'] as Map<String, dynamic>;
+    final lat = double.tryParse('${location['latitude'] ?? ''}');
+    final lng = double.tryParse('${location['longitude'] ?? ''}');
+    final city = '${location['city'] ?? ''}'.trim();
+    final country = '${location['country'] ?? ''}'.trim();
+
+    final coordText = (lat != null && lng != null)
+        ? '${lat.toStringAsFixed(4)}° N, ${lng.toStringAsFixed(4)}° E'
+        : 'Coordinates unavailable';
+    final cityCountryText = city.isNotEmpty && country.isNotEmpty
+        ? '$city, $country'
+        : (city.isNotEmpty ? city : 'Unknown city');
+
+    setState(() {
+      _locationCoordinates = coordText;
+      _locationCityCountry = cityCountryText;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -148,13 +206,13 @@ class EmergencyICE extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 4),
-                const Text(
-                  '33.6844° N, 73.0479° E',
-                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                Text(
+                  _locationCoordinates,
+                  style: const TextStyle(fontSize: 12, color: Colors.grey),
                 ),
-                const Text(
-                  'Islamabad, Pakistan',
-                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                Text(
+                  _locationCityCountry,
+                  style: const TextStyle(fontSize: 12, color: Colors.grey),
                 ),
               ],
             ),

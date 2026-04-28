@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
+import 'firebase_options.dart';
 import 'src/auth/login.dart';
 import 'src/auth/signup.dart';
 import 'src/components/navigation/top_navigation.dart';
@@ -16,18 +17,50 @@ import 'src/pages/profile_page.dart';
 import 'src/utils/local_database_service.dart';
 import 'src/utils/theme_controller.dart';
 import 'src/ui/app_theme.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter/foundation.dart'; // For checking if it's running on web
+import 'package:device_preview/device_preview.dart'; // For device preview in mobile
+
+FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+    FlutterLocalNotificationsPlugin();
+
+// Function to initialize notifications
+Future<void> _initializeNotifications() async {
+  const AndroidInitializationSettings initializationSettingsAndroid =
+      AndroidInitializationSettings('@mipmap/ic_launcher'); // Use your app icon
+
+  const InitializationSettings initializationSettings = InitializationSettings(
+    android: initializationSettingsAndroid,
+  );
+
+  await flutterLocalNotificationsPlugin.initialize(
+    settings: initializationSettings,
+  );
+}
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   try {
-    await Firebase.initializeApp();
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
     await LocalDatabaseService.ensureInitialized();
+    // Initialize local notifications after necessary services are ready
+    await _initializeNotifications();
   } catch (e) {
     debugPrint('Firebase initialization error: $e');
   }
   final themeController = ThemeController();
   await themeController.loadThemeMode();
-  runApp(SafarSyncApp(themeController: themeController));
+
+  // Run the app with or without Device Preview based on the platform
+  runApp(
+    DevicePreview(
+      builder: (context) => SafarSyncApp(themeController: themeController),
+      enabled:
+          !kIsWeb, // Disable DevicePreview only for actual devices (not web)
+    ),
+  );
 }
 
 class SafarSyncApp extends StatelessWidget {
@@ -53,6 +86,7 @@ class SafarSyncApp extends StatelessWidget {
               '/signup': (context) => const SignupPage(),
               '/home': (context) => const App(),
             },
+            builder: DevicePreview.appBuilder, // For device preview
           );
         },
       ),

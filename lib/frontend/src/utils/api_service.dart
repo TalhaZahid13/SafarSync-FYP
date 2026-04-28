@@ -330,6 +330,7 @@ class ApiService {
   }
 
   /// Get user's routes
+  ///
   static Future<Map<String, dynamic>> getUserRoutes({
     int page = 1,
     int limit = 10,
@@ -447,6 +448,27 @@ class ApiService {
 
   // ============ WEATHER ENDPOINTS ============
 
+  /// Get latest stored user location
+  static Future<Map<String, dynamic>> getLatestLocation({
+    required String userIdentifier,
+  }) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/location/latest?user_identifier=$userIdentifier'),
+        headers: await getHeaders(),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return {'success': true, 'location': data['location']};
+      }
+
+      return {'success': false, 'message': 'No location found'};
+    } catch (e) {
+      return {'success': false, 'message': 'Error: $e'};
+    }
+  }
+
   /// Get current weather
   static Future<Map<String, dynamic>> getWeather(double lat, double lng) async {
     try {
@@ -461,6 +483,29 @@ class ApiService {
       } else {
         return {'success': false, 'message': 'Failed to fetch weather'};
       }
+    } catch (e) {
+      return {'success': false, 'message': 'Error: $e'};
+    }
+  }
+
+  /// Get weather forecast
+  static Future<Map<String, dynamic>> getWeatherForecast(
+    double lat,
+    double lng, {
+    int days = 4,
+  }) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/weather/$lat/$lng/forecast?days=$days'),
+        headers: await getHeaders(),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return {'success': true, 'forecast': data['forecast']};
+      }
+
+      return {'success': false, 'message': 'Failed to fetch forecast'};
     } catch (e) {
       return {'success': false, 'message': 'Error: $e'};
     }

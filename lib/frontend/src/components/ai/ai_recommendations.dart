@@ -97,7 +97,7 @@ class AIRecommendations extends StatelessWidget {
             itemBuilder: (context, index) {
               final rec = recommendations[index];
               final gradient = rec['gradient'] as LinearGradient;
-              final accent = rec['accent'] as Color;
+              final accent = rec['borderColor'] as Color;
               final tags = rec['tags'] as List<String>;
 
               return GestureDetector(
@@ -143,6 +143,16 @@ class AIRecommendations extends StatelessWidget {
                           fontSize: 14,
                           fontWeight: FontWeight.bold,
                           color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        rec['subtitle'] as String,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: Colors.white70,
                         ),
                       ),
                       const SizedBox(height: 6),

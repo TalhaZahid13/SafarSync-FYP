@@ -117,7 +117,7 @@ class _ExplorePageState extends State<ExplorePage> {
           ),
           const SizedBox(height: 4),
           Text(
-            'Discover amazing places across the country',
+            'Discover amazing places across the Pakistan',
             style: TextStyle(
               fontSize: 12,
               color: theme.textTheme.bodySmall?.color,
@@ -150,12 +150,6 @@ class _ExplorePageState extends State<ExplorePage> {
                       searchQuery = val;
                     }),
                   ),
-                ),
-                IconButton(
-                  icon: Icon(Icons.filter_list, color: colorScheme.primary),
-                  onPressed: () {
-                    // TODO: implement filter
-                  },
                 ),
               ],
             ),

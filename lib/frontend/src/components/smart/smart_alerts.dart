@@ -31,14 +31,23 @@ class _SmartAlertsState extends State<SmartAlerts> {
       icon: LucideIcons.cloud,
       color: Colors.blue,
       title: 'Weather Update',
-      message: 'Rain expected in 2 hours at destination',
+      message: 'Rain expected in 2 hours near Murree - pack your rain gear!',
     ),
     AlertItem(
       id: 2,
       icon: LucideIcons.tag,
-      color: Colors.green,
+      color: Colors.orange,
       title: 'Nearby Deal',
-      message: '30% off at The Golden Fork restaurant',
+      message:
+          '30% off at The Golden Fork Restaurant, Islamabad - limited time!',
+    ),
+    AlertItem(
+      id: 3,
+      icon: LucideIcons.sparkles,
+      color: Colors.purple,
+      title: 'AI Travel Tip',
+      message:
+          'Best time to visit Hunza Valley: May-October. Book now for the season!',
     ),
   ];
 
@@ -57,14 +66,14 @@ class _SmartAlertsState extends State<SmartAlerts> {
         return Container(
           margin: const EdgeInsets.symmetric(vertical: 6),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.1), // glass effect
-            borderRadius: BorderRadius.circular(20),
-            border: Border(left: BorderSide(color: alert.color, width: 4)),
+            color: Colors.white.withOpacity(0.08),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: alert.color.withOpacity(0.35), width: 1),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 8,
-                offset: const Offset(0, 4),
+                color: alert.color.withOpacity(0.18),
+                blurRadius: 14,
+                offset: const Offset(0, 8),
               ),
             ],
           ),
@@ -93,9 +102,9 @@ class _SmartAlertsState extends State<SmartAlerts> {
                     children: [
                       Text(
                         alert.title,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 14,
-                          fontWeight: FontWeight.bold,
+                          fontWeight: FontWeight.w700,
                           color: Colors.white,
                         ),
                       ),
@@ -104,7 +113,7 @@ class _SmartAlertsState extends State<SmartAlerts> {
                         alert.message,
                         style: TextStyle(
                           fontSize: 12,
-                          color: Colors.grey.shade300,
+                          color: Colors.grey.shade200,
                         ),
                       ),
                     ],
