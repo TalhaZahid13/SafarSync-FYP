@@ -150,7 +150,14 @@ class _AppState extends State<App> {
   Widget renderPage() {
     switch (activeTab) {
       case 'home':
-        return HomePage(onPlanRoute: _goToRoutes);
+        return HomePage(
+          onPlanRoute: _goToRoutes,
+          onTabChange: (tab) {
+            setState(() {
+              activeTab = tab;
+            });
+          },
+        );
       case 'explore':
         return const ExplorePage();
       case 'routes':
@@ -160,7 +167,14 @@ class _AppState extends State<App> {
       case 'profile':
         return const ProfilePage();
       default:
-        return HomePage(onPlanRoute: _goToRoutes);
+        return HomePage(
+          onPlanRoute: _goToRoutes,
+          onTabChange: (tab) {
+            setState(() {
+              activeTab = tab;
+            });
+          },
+        );
     }
   }
 
