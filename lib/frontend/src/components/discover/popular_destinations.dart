@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../utils/api_service.dart';
+import '../../ui/app_theme.dart';
+import '../../pages/explore_page.dart';
 
 class Destination {
   final int id;
@@ -30,15 +32,14 @@ class Destination {
     return Destination(
       id: _parseInt(json['id'] ?? json['destination_id']),
       name: (json['name'] ?? 'Unknown').toString(),
-      location: (json['location'] ??
-              json['city'] ??
-              json['country'] ??
-              'Unknown')
-          .toString(),
-      image: (json['image'] ??
-              json['image_url'] ??
-              'https://via.placeholder.com/400')
-          .toString(),
+      location:
+          (json['location'] ?? json['city'] ?? json['country'] ?? 'Unknown')
+              .toString(),
+      image:
+          (json['image'] ??
+                  json['image_url'] ??
+                  'https://via.placeholder.com/400')
+              .toString(),
       rating: _parseDouble(json['rating']),
       reviews: _parseInt(
         json['reviews'] ?? json['numberOfReviews'] ?? json['review_count'],
@@ -171,7 +172,16 @@ class _PopularDestinationsState extends State<PopularDestinations> {
                 ),
               ),
               TextButton(
-                onPressed: () {},
+                onPressed: () {
+                  // Navigate to the Explore Page when button is pressed
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) =>
+                          const ExplorePage(), // Navigate to ExplorePage
+                    ),
+                  );
+                },
                 child: const Text(
                   'View All →',
                   style: TextStyle(color: Colors.white70),
@@ -250,13 +260,17 @@ class _PopularDestinationsState extends State<PopularDestinations> {
       onTap: () {},
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.1),
+          color: AppTheme.navyGlass,
           borderRadius: BorderRadius.circular(20),
-          boxShadow: <BoxShadow>[
+          border: Border.all(
+            color: AppTheme.violet.withOpacity(0.35),
+            width: 1,
+          ),
+          boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 4,
-              offset: const Offset(0, 2),
+              color: AppTheme.violet.withOpacity(0.18),
+              blurRadius: 18,
+              offset: const Offset(0, 8),
             ),
           ],
         ),
@@ -282,14 +296,37 @@ class _PopularDestinationsState extends State<PopularDestinations> {
                         ) {
                           return Container(
                             height: 108,
-                            color: Colors.grey[800],
+                            color: AppTheme.navy,
                             child: const Center(
-                              child: Icon(Icons.image_not_supported),
+                              child: Icon(
+                                Icons.image_not_supported,
+                                color: Colors.white54,
+                              ),
                             ),
                           );
                         },
                   ),
                 ),
+
+                // Gradient overlay on image
+                Positioned.fill(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(20),
+                      ),
+                      gradient: LinearGradient(
+                        colors: [
+                          Colors.transparent,
+                          AppTheme.navy.withOpacity(0.75),
+                        ],
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                      ),
+                    ),
+                  ),
+                ),
+
                 Positioned(
                   top: 8,
                   right: 8,
@@ -297,21 +334,26 @@ class _PopularDestinationsState extends State<PopularDestinations> {
                     width: 32,
                     height: 32,
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.9),
+                      color: AppTheme.glassStrong,
                       shape: BoxShape.circle,
+                      border: Border.all(
+                        color: AppTheme.rose.withOpacity(0.45),
+                        width: 1,
+                      ),
                     ),
                     child: const Icon(
                       Icons.favorite_border,
                       size: 18,
-                      color: Colors.red,
+                      color: AppTheme.rose,
                     ),
                   ),
                 ),
               ],
             ),
+
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.all(8.0),
+                padding: const EdgeInsets.all(10.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
@@ -330,7 +372,10 @@ class _PopularDestinationsState extends State<PopularDestinations> {
                       dest.location,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 12, color: Colors.grey),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Colors.white70,
+                      ),
                     ),
                     const Spacer(),
                     Row(
@@ -341,7 +386,7 @@ class _PopularDestinationsState extends State<PopularDestinations> {
                               const Icon(
                                 Icons.star,
                                 size: 16,
-                                color: Colors.yellow,
+                                color: AppTheme.gold,
                               ),
                               const SizedBox(width: 4),
                               Text(
@@ -358,7 +403,7 @@ class _PopularDestinationsState extends State<PopularDestinations> {
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: const TextStyle(
-                                    color: Colors.grey,
+                                    color: Colors.white54,
                                     fontSize: 10,
                                   ),
                                 ),
@@ -369,14 +414,27 @@ class _PopularDestinationsState extends State<PopularDestinations> {
                         const SizedBox(width: 6),
                         dest.price != null
                             ? Flexible(
-                                child: FittedBox(
-                                  fit: BoxFit.scaleDown,
-                                  alignment: Alignment.centerRight,
-                                  child: Text(
-                                    dest.price!,
-                                    style: const TextStyle(
-                                      color: Color(0xFF1B5A6E),
-                                      fontWeight: FontWeight.bold,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.gold.withOpacity(0.16),
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(
+                                      color: AppTheme.gold.withOpacity(0.45),
+                                    ),
+                                  ),
+                                  child: FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    alignment: Alignment.centerRight,
+                                    child: Text(
+                                      dest.price!,
+                                      style: const TextStyle(
+                                        color: AppTheme.gold,
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                     ),
                                   ),
                                 ),

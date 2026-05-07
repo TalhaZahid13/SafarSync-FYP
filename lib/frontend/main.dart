@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:provider/provider.dart';
+import 'firebase_options.dart';
 import 'src/auth/login.dart';
 import 'src/auth/signup.dart';
 import 'src/components/navigation/top_navigation.dart';
@@ -11,38 +14,82 @@ import 'src/pages/explore_page.dart';
 import 'src/pages/routes_page.dart';
 import 'src/pages/wishlist_page.dart';
 import 'src/pages/profile_page.dart';
-import 'src/utils/api_service.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'src/utils/local_database_service.dart';
+import 'src/utils/theme_controller.dart';
+import 'src/ui/app_theme.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter/foundation.dart'; // For checking if it's running on web
+import 'package:device_preview/device_preview.dart'; // For device preview in mobile
+
+FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+    FlutterLocalNotificationsPlugin();
+
+// Function to initialize notifications
+Future<void> _initializeNotifications() async {
+  const AndroidInitializationSettings initializationSettingsAndroid =
+      AndroidInitializationSettings('@mipmap/ic_launcher'); // Use your app icon
+
+  const InitializationSettings initializationSettings = InitializationSettings(
+    android: initializationSettingsAndroid,
+  );
+
+  await flutterLocalNotificationsPlugin.initialize(
+    settings: initializationSettings,
+  );
+}
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   try {
-    await Firebase.initializeApp();
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    await LocalDatabaseService.ensureInitialized();
+    // Initialize local notifications after necessary services are ready
+    await _initializeNotifications();
   } catch (e) {
-    print('Firebase initialization error: $e');
+    debugPrint('Firebase initialization error: $e');
   }
-  runApp(const SafarSyncApp());
+  final themeController = ThemeController();
+  await themeController.loadThemeMode();
+
+  // Run the app with or without Device Preview based on the platform
+  runApp(
+    DevicePreview(
+      builder: (context) => SafarSyncApp(themeController: themeController),
+      enabled:
+          !kIsWeb, // Disable DevicePreview only for actual devices (not web)
+    ),
+  );
 }
 
 class SafarSyncApp extends StatelessWidget {
-  const SafarSyncApp({super.key});
+  final ThemeController themeController;
+
+  const SafarSyncApp({super.key, required this.themeController});
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'SafarSync',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        brightness: Brightness.dark,
-        scaffoldBackgroundColor: const Color(0xFF121212),
-        cardColor: const Color(0xFF2C2C2C),
+    return ChangeNotifierProvider.value(
+      value: themeController,
+      child: Consumer<ThemeController>(
+        builder: (context, controller, _) {
+          return MaterialApp(
+            title: 'SafarSync',
+            debugShowCheckedModeBanner: false,
+            theme: AppTheme.lightTheme(),
+            darkTheme: AppTheme.darkTheme(),
+            themeMode: controller.themeMode,
+            home: const AuthGate(),
+            routes: {
+              '/login': (context) => const LoginPage(),
+              '/signup': (context) => const SignupPage(),
+              '/home': (context) => const App(),
+            },
+            builder: DevicePreview.appBuilder, // For device preview
+          );
+        },
       ),
-      home: const AuthGate(),
-      routes: {
-        '/login': (context) => const LoginPage(),
-        '/signup': (context) => const SignupPage(),
-        '/home': (context) => const App(),
-      },
     );
   }
 }
@@ -65,11 +112,10 @@ class _AuthGateState extends State<AuthGate> {
   }
 
   Future<void> _checkAuthStatus() async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('jwt_token');
+    final user = FirebaseAuth.instance.currentUser;
 
     setState(() {
-      _isLoggedIn = token != null;
+      _isLoggedIn = user != null;
       _isChecking = false;
     });
   }

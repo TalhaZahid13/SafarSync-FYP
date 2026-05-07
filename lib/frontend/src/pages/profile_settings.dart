@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import '../utils/theme_controller.dart';
 
 class ProfileSettingsPage extends StatefulWidget {
   const ProfileSettingsPage({super.key});
@@ -25,19 +27,19 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return Scaffold(
-      backgroundColor: const Color(0xFF121212),
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF121212),
+        backgroundColor: theme.scaffoldBackgroundColor,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          icon: Icon(Icons.arrow_back, color: theme.iconTheme.color),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
-          'Edit Profile',
-          style: TextStyle(color: Colors.white),
-        ),
+        title: const Text('Edit Profile'),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -51,16 +53,16 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
                   Container(
                     width: 100,
                     height: 100,
-                    decoration: const BoxDecoration(
+                    decoration: BoxDecoration(
                       gradient: LinearGradient(
-                        colors: [Color(0xFFFDB913), Color(0xFF1B5A6E)],
+                        colors: [colorScheme.secondary, colorScheme.primary],
                       ),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(
+                    child: Icon(
                       LucideIcons.user,
                       size: 48,
-                      color: Colors.white,
+                      color: colorScheme.onPrimary,
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -68,14 +70,18 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
                     onPressed: () {
                       // TODO: change avatar
                     },
-                    child: const Text(
+                    child: Text(
                       'Change Photo',
-                      style: TextStyle(color: Color(0xFFFDB913)),
+                      style: TextStyle(color: colorScheme.primary),
                     ),
                   ),
                 ],
               ),
             ),
+
+            const SizedBox(height: 24),
+
+            _buildThemeSelector(context),
 
             const SizedBox(height: 24),
 
@@ -97,7 +103,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
                   Navigator.pop(context);
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFFDB913),
+                  backgroundColor: colorScheme.secondary,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14),
@@ -105,11 +111,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
                 ),
                 child: const Text(
                   'Save Changes',
-                  style: TextStyle(
-                    color: Colors.black87,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                 ),
               ),
             ),
@@ -119,8 +121,65 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
     );
   }
 
+  Widget _buildThemeSelector(BuildContext context) {
+    final themeController = context.watch<ThemeController>();
+    final theme = Theme.of(context);
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Theme Mode',
+            style: TextStyle(
+              color: theme.textTheme.bodyMedium?.color,
+              fontSize: 12,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            decoration: BoxDecoration(
+              color: theme.cardColor,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<ThemeMode>(
+                value: themeController.themeMode,
+                dropdownColor: theme.cardColor,
+                icon: Icon(
+                  Icons.arrow_drop_down,
+                  color: theme.textTheme.bodyMedium?.color,
+                ),
+                style: TextStyle(color: theme.textTheme.bodyMedium?.color),
+                isExpanded: true,
+                items: const [
+                  DropdownMenuItem(
+                    value: ThemeMode.system,
+                    child: Text('System'),
+                  ),
+                  DropdownMenuItem(
+                    value: ThemeMode.light,
+                    child: Text('Light'),
+                  ),
+                  DropdownMenuItem(value: ThemeMode.dark, child: Text('Dark')),
+                ],
+                onChanged: (value) {
+                  if (value == null) return;
+                  themeController.setThemeMode(value);
+                },
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   /// Generic text field for most profile inputs
   Widget _inputField(String label, String initialValue) {
+    final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: Column(
@@ -128,21 +187,21 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
         children: [
           Text(
             label,
-            style: const TextStyle(
-              color: Colors.white70,
+            style: TextStyle(
+              color: theme.textTheme.bodySmall?.color,
               fontSize: 12,
             ),
           ),
           const SizedBox(height: 6),
           TextFormField(
             initialValue: initialValue,
-            style: const TextStyle(color: Colors.white),
+            style: TextStyle(color: theme.textTheme.bodyMedium?.color),
             keyboardType: label == 'Contact Number'
                 ? TextInputType.phone
                 : TextInputType.text,
             decoration: InputDecoration(
               filled: true,
-              fillColor: const Color(0xFF2C2C2C),
+              fillColor: theme.cardColor,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide.none,
@@ -156,31 +215,26 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
 
   /// Special field: Blood Group with dropdown
   Widget _buildBloodGroupDropdown() {
+    final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Blood Group',
-            style: TextStyle(
-              color: Colors.white70,
-              fontSize: 12,
-            ),
-          ),
+          const Text('Blood Group', style: TextStyle(fontSize: 12)),
           const SizedBox(height: 6),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12),
             decoration: BoxDecoration(
-              color: const Color(0xFF2C2C2C),
+              color: theme.cardColor,
               borderRadius: BorderRadius.circular(12),
             ),
             child: DropdownButtonHideUnderline(
               child: DropdownButton<String>(
                 value: selectedBloodGroup,
-                dropdownColor: const Color(0xFF2C2C2C),
-                icon: const Icon(Icons.arrow_drop_down, color: Colors.white70),
-                style: const TextStyle(color: Colors.white),
+                dropdownColor: theme.cardColor,
+                icon: Icon(Icons.arrow_drop_down, color: theme.iconTheme.color),
+                style: TextStyle(color: theme.textTheme.bodyMedium?.color),
                 isExpanded: true,
                 items: bloodGroups.map((group) {
                   return DropdownMenuItem<String>(

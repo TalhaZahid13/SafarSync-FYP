@@ -5,9 +5,23 @@ import '../utils/pdf_export.dart'; // TripData, Destination, RouteData, Hotel, R
 import 'profile_settings.dart';
 import '../auth/login.dart';
 import '../utils/responsive.dart';
+import '../utils/theme_controller.dart';
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
+
+  static const Color _bgTop = Color(0xFF070B2B);
+  static const Color _bgMid = Color(0xFF0A1140);
+  static const Color _bgBottom = Color(0xFF041834);
+  static const Color _cardBg = Color(0xD90A1547);
+  static const Color _cardOutline = Color(0x334B72D1);
+  static const Color _titleColor = Color(0xFFF8FAFC);
+  static const Color _mutedText = Color(0xFF94A3B8);
+  static const Color _gold = Color(0xFFFDB913);
+  static const Color _orange = Color(0xFFFF6B35);
+  static const Color _teal = Color(0xFF00D4C6);
+  static const Color _violet = Color(0xFFA855F7);
+  static const Color _cyan = Color(0xFF00B7FF);
 
   void handleExportPDF() {
     final tripData = TripData(
@@ -67,372 +81,260 @@ class ProfilePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cardColor = Theme.of(context).cardColor; // matches main.dart
     final padding = ResponsiveUtil.getResponsivePadding(context);
     final isMobile = ResponsiveUtil.isMobile(context);
 
-    return SingleChildScrollView(
-      padding: EdgeInsets.all(padding),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Profile',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          SizedBox(height: padding),
-
-          // User Info Card
-          Card(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-            ),
-            color: cardColor,
-            child: Padding(
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [_bgTop, _bgMid, _bgBottom],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: SingleChildScrollView(
+        padding: EdgeInsets.fromLTRB(padding, padding, padding, padding + 110),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _surfaceCard(
               padding: EdgeInsets.all(padding),
               child: Column(
                 children: [
                   isMobile
                       ? Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Container(
-                              width: 80,
-                              height: 80,
-                              decoration: BoxDecoration(
-                                gradient: const LinearGradient(
-                                  colors: [
-                                    Color(0xFFFDB913),
-                                    Color(0xFF1B5A6E),
-                                  ],
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                ),
-                                borderRadius: BorderRadius.circular(40),
-                              ),
-                              child: const Icon(
-                                LucideIcons.user,
-                                color: Colors.white,
-                                size: 40,
-                              ),
-                            ),
-                            SizedBox(height: padding * 0.75),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: const [
-                                Text(
-                                  'Muhammad Talha',
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                                SizedBox(height: 4),
-                                Text(
-                                  'talhazahid710@email.com',
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: Colors.white70,
-                                  ),
-                                ),
-                                SizedBox(height: 8),
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(
-                                      LucideIcons.mapPin,
-                                      size: 16,
-                                      color: Color(0xFF1B5A6E),
-                                    ),
-                                    SizedBox(width: 4),
-                                    Text(
-                                      'Islamabad, Pakistan',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.white70,
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                            Row(
+                              children: [
+                                _avatar(),
+                                const SizedBox(width: 10),
+                                Expanded(child: _profileMeta()),
+                                _editButton(context),
                               ],
-                            ),
-                            SizedBox(height: padding * 0.75),
-                            SizedBox(
-                              width: double.infinity,
-                              child: ElevatedButton(
-                                onPressed: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) =>
-                                          const ProfileSettingsPage(),
-                                    ),
-                                  );
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                    vertical: 8,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  backgroundColor: Colors.transparent,
-                                  shadowColor: Colors.transparent,
-                                ),
-                                child: ShaderMask(
-                                  shaderCallback: (bounds) {
-                                    return const LinearGradient(
-                                      colors: [
-                                        Color(0xFFFDB913),
-                                        Color(0xFF1B5A6E),
-                                      ],
-                                    ).createShader(bounds);
-                                  },
-                                  child: const Text(
-                                    'Edit Profile',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 14,
-                                    ),
-                                  ),
-                                ),
-                              ),
                             ),
                           ],
                         )
                       : Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // Avatar
-                            Container(
-                              width: 80,
-                              height: 80,
-                              decoration: BoxDecoration(
-                                gradient: const LinearGradient(
-                                  colors: [
-                                    Color(0xFFFDB913),
-                                    Color(0xFF1B5A6E),
-                                  ],
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                ),
-                                borderRadius: BorderRadius.circular(40),
-                              ),
-                              child: const Icon(
-                                LucideIcons.user,
-                                color: Colors.white,
-                                size: 40,
-                              ),
-                            ),
-                            SizedBox(width: padding),
-
-                            // Name + email + location
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: const [
-                                  Text(
-                                    'Muhammad Talha',
-                                    style: TextStyle(
-                                      fontSize: 18,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                  SizedBox(height: 4),
-                                  Text(
-                                    'talhazahid710@email.com',
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      color: Colors.white70,
-                                    ),
-                                  ),
-                                  SizedBox(height: 8),
-                                  Row(
-                                    children: [
-                                      Icon(
-                                        LucideIcons.mapPin,
-                                        size: 16,
-                                        color: Color(0xFF1B5A6E),
-                                      ),
-                                      SizedBox(width: 4),
-                                      Text(
-                                        'Islamabad, Pakistan',
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: Colors.white70,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
-
-                            SizedBox(width: padding * 0.5),
-
-                            // Edit Profile button (wrapped to avoid overflow)
-                            FittedBox(
-                              child: ElevatedButton(
-                                onPressed: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) =>
-                                          const ProfileSettingsPage(),
-                                    ),
-                                  );
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                    vertical: 8,
-                                  ),
-                                  minimumSize: Size.zero,
-                                  tapTargetSize:
-                                      MaterialTapTargetSize.shrinkWrap,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  backgroundColor: Colors.transparent,
-                                  shadowColor: Colors.transparent,
-                                ),
-                                child: ShaderMask(
-                                  shaderCallback: (bounds) {
-                                    return const LinearGradient(
-                                      colors: [
-                                        Color(0xFFFDB913),
-                                        Color(0xFF1B5A6E),
-                                      ],
-                                    ).createShader(bounds);
-                                  },
-                                  child: const Text(
-                                    'Edit Profile',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 14,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
+                            _avatar(),
+                            SizedBox(width: padding * 0.8),
+                            Expanded(child: _profileMeta()),
+                            _editButton(context),
                           ],
                         ),
-                  SizedBox(height: padding),
-
-                  // Stats
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      statCard(
-                        '24',
-                        'Places Visited',
-                        Colors.amber.shade200,
-                        const Color(0xFF1B5A6E),
-                      ),
-                      SizedBox(width: padding * 0.5),
-                      statCard(
-                        '12',
-                        'Badges Earned',
-                        Colors.yellow.shade200,
-                        Colors.yellow.shade600,
-                      ),
-                      SizedBox(width: padding * 0.5),
-                      statCard(
-                        '8',
-                        'Trips Planned',
-                        Colors.blue.shade100,
-                        Colors.blue.shade600,
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-          SizedBox(height: padding),
-
-          // Recent Badges
-          Card(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-            ),
-            color: cardColor,
-            child: Padding(
-              padding: EdgeInsets.all(padding),
-              child: Column(
-                children: [
-                  Row(
-                    children: const [
-                      Icon(LucideIcons.award, size: 24, color: Colors.yellow),
-                      SizedBox(width: 8),
-                      Text(
-                        'Recent Achievements',
-                        style: TextStyle(fontSize: 16, color: Colors.white),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: padding * 0.5),
-                  GridView.count(
-                    shrinkWrap: true,
-                    crossAxisCount: isMobile ? 2 : 4,
-                    crossAxisSpacing: 8,
-                    mainAxisSpacing: 8,
-                    physics: const NeverScrollableScrollPhysics(),
-                    children: List.generate(
-                      4,
-                      (index) => Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
+                  SizedBox(height: padding * 0.8),
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final statWidth = isMobile
+                          ? constraints.maxWidth
+                          : (constraints.maxWidth - 16) / 3;
+                      return Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
                         children: [
-                          const Icon(
-                            LucideIcons.award,
-                            size: 32,
-                            color: Colors.yellow,
+                          SizedBox(
+                            width: statWidth,
+                            child: statCard('24', 'Places Visited', _teal),
                           ),
-                          SizedBox(height: padding * 0.25),
-                          Text(
-                            const [
-                              'Adventurer',
-                              'Explorer',
-                              'Globetrotter',
-                              'Road Warrior',
-                            ][index],
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              fontSize: 10,
-                              color: Colors.white,
-                            ),
+                          SizedBox(
+                            width: statWidth,
+                            child: statCard('12', 'Badges Earned', _orange),
+                          ),
+                          SizedBox(
+                            width: statWidth,
+                            child: statCard('8', 'Trips Planned', _violet),
                           ),
                         ],
-                      ),
-                    ),
+                      );
+                    },
                   ),
                 ],
               ),
             ),
-          ),
-          SizedBox(height: padding),
-
-          // Settings Menu
-          Card(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-            ),
-            color: cardColor,
-            child: Padding(
+            SizedBox(height: padding * 0.8),
+            _surfaceCard(
               padding: EdgeInsets.all(padding),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    'Settings',
-                    style: TextStyle(fontSize: 16, color: Colors.white),
+                    'Explorer Progress',
+                    style: TextStyle(
+                      color: _titleColor,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                  SizedBox(height: padding * 0.5),
+                  SizedBox(height: padding * 0.45),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(999),
+                    child: Stack(
+                      children: [
+                        Container(
+                          height: 8,
+                          color: Colors.white.withOpacity(0.12),
+                        ),
+                        FractionallySizedBox(
+                          widthFactor: 0.68,
+                          child: Container(
+                            height: 8,
+                            decoration: const BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [_gold, _orange],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(height: padding * 0.3),
+                  Row(
+                    children: [
+                      const Expanded(
+                        child: Text(
+                          '320 XP to Level 13 • Keep exploring',
+                          style: TextStyle(fontSize: 11, color: _mutedText),
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0x33FDB913),
+                          borderRadius: BorderRadius.circular(999),
+                          border: Border.all(color: const Color(0x66FDB913)),
+                        ),
+                        child: const Text(
+                          '680 / 1000 XP',
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: _gold,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            SizedBox(height: padding * 0.8),
+            _surfaceCard(
+              padding: EdgeInsets.all(padding),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 22,
+                        height: 22,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(999),
+                          gradient: const LinearGradient(
+                            colors: [_gold, _orange],
+                          ),
+                        ),
+                        child: const Icon(
+                          LucideIcons.award,
+                          size: 12,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      const Text(
+                        'Recent Achievements',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: _titleColor,
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: padding * 0.55),
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final itemWidth = isMobile
+                          ? (constraints.maxWidth - 8) / 2
+                          : (constraints.maxWidth - 24) / 4;
+                      final labels = const [
+                        'Adventurer',
+                        'Explorer',
+                        'Globetrotter',
+                        'Road Warrior',
+                      ];
+                      final colors = const [_orange, _teal, _violet, _cyan];
+                      return Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: List.generate(labels.length, (index) {
+                          return SizedBox(
+                            width: itemWidth,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              decoration: BoxDecoration(
+                                color: const Color(0x1CFFFFFF),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: const Color(0x2DFFFFFF),
+                                ),
+                              ),
+                              child: Column(
+                                children: [
+                                  Container(
+                                    width: 28,
+                                    height: 28,
+                                    decoration: BoxDecoration(
+                                      color: colors[index],
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: const Icon(
+                                      LucideIcons.award,
+                                      size: 14,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    labels[index],
+                                    textAlign: TextAlign.center,
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      color: _mutedText,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        }),
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
+            SizedBox(height: padding * 0.8),
+            _surfaceCard(
+              padding: EdgeInsets.all(padding),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'SETTINGS & ACCOUNT',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: _mutedText,
+                      letterSpacing: 0.3,
+                    ),
+                  ),
+                  SizedBox(height: padding * 0.4),
                   settingsButton(
                     context,
                     LucideIcons.settings,
@@ -453,15 +355,15 @@ class ProfilePage extends StatelessWidget {
                   ),
                   settingsButton(
                     context,
-                    LucideIcons.fileDown,
-                    'Export Trip Data (PDF)',
-                    handleExportPDF,
-                  ),
-                  settingsButton(
-                    context,
                     LucideIcons.handHelping,
                     'Help & Support',
                     () {},
+                  ),
+                  settingsButton(
+                    context,
+                    LucideIcons.fileDown,
+                    'Export Trip Data (PDF)',
+                    handleExportPDF,
                   ),
                   settingsButton(context, LucideIcons.logOut, 'Log Out', () {
                     FirebaseAuth.instance.signOut();
@@ -474,38 +376,138 @@ class ProfilePage extends StatelessWidget {
                 ],
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
-  Widget statCard(String value, String label, Color bgColor, Color textColor) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: bgColor,
-          borderRadius: BorderRadius.circular(16),
+  Widget _avatar() {
+    return Container(
+      width: 58,
+      height: 58,
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(colors: [_gold, _orange]),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: const Icon(LucideIcons.userRound, color: Colors.white, size: 30),
+    );
+  }
+
+  Widget _profileMeta() {
+    return const Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Ahmed Khan',
+          style: TextStyle(
+            color: _titleColor,
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
+          ),
         ),
-        child: Column(
+        SizedBox(height: 2),
+        Text(
+          'ahmedkhan@email.com',
+          style: TextStyle(fontSize: 12, color: _mutedText),
+        ),
+        SizedBox(height: 4),
+        Row(
           children: [
+            Icon(LucideIcons.mapPin, size: 12, color: _mutedText),
+            SizedBox(width: 4),
             Text(
-              value,
-              style: TextStyle(
-                fontSize: 18,
-                color: textColor,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 12, color: Colors.grey),
+              'Islamabad, Pakistan',
+              style: TextStyle(fontSize: 11, color: _mutedText),
             ),
           ],
         ),
+        SizedBox(height: 3),
+        Row(
+          children: [
+            Icon(LucideIcons.star, size: 12, color: _gold),
+            SizedBox(width: 4),
+            Text(
+              'Explorer Level 12',
+              style: TextStyle(
+                fontSize: 11,
+                color: _gold,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _editButton(BuildContext context) {
+    return ElevatedButton(
+      onPressed: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const ProfileSettingsPage()),
+        );
+      },
+      style: ElevatedButton.styleFrom(
+        minimumSize: const Size(0, 30),
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        backgroundColor: _orange,
+        foregroundColor: Colors.white,
+        elevation: 0,
+      ),
+      child: const Text(
+        'Edit',
+        style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
+      ),
+    );
+  }
+
+  Widget _surfaceCard({required EdgeInsets padding, required Widget child}) {
+    return Container(
+      padding: padding,
+      decoration: BoxDecoration(
+        color: _cardBg,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: _cardOutline),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.18),
+            blurRadius: 14,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: child,
+    );
+  }
+
+  Widget statCard(String value, String label, Color valueColor) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+      decoration: BoxDecoration(
+        color: const Color(0x1CFFFFFF),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0x2DFFFFFF)),
+      ),
+      child: Column(
+        children: [
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 28,
+              color: valueColor,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 11, color: _mutedText),
+          ),
+        ],
       ),
     );
   }
@@ -517,20 +519,30 @@ class ProfilePage extends StatelessWidget {
     VoidCallback onTap,
   ) {
     final isLogout = label.contains('Log Out');
+    final isPdf = label.contains('PDF');
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(10),
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+        padding: const EdgeInsets.symmetric(vertical: 11, horizontal: 8),
         child: Row(
           children: [
-            Icon(icon, size: 20, color: isLogout ? Colors.red : Colors.white70),
-            const SizedBox(width: 8),
+            Icon(
+              icon,
+              size: 16,
+              color: isLogout
+                  ? const Color(0xFFFF4D6D)
+                  : (isPdf ? _gold : _mutedText),
+            ),
+            const SizedBox(width: 10),
             Text(
               label,
               style: TextStyle(
                 fontSize: 14,
-                color: isLogout ? Colors.red : Colors.white,
+                color: isLogout
+                    ? const Color(0xFFFF4D6D)
+                    : (isPdf ? _gold : _titleColor),
+                fontWeight: isPdf ? FontWeight.w600 : FontWeight.w400,
               ),
             ),
           ],

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../pages/safar_ai_chat_page.dart';
 
 class QuickAccessCards extends StatelessWidget {
   const QuickAccessCards({super.key});
@@ -25,11 +26,12 @@ class QuickAccessCards extends StatelessWidget {
         'gradient': [Colors.orange.shade400, Colors.yellow.shade400],
       },
       {
-        'icon': Icons.error,
-        'title': 'Emergency',
-        'subtitle': 'ICE',
-        'gradient': [Colors.red.shade500, Colors.red.shade600],
-        'isEmergency': true,
+        'icon': Icons.computer,
+        'title': 'Safar AI',
+        'subtitle': 'Digital Assistant',
+        'gradient': [const Color(0xFF13E8D0), const Color(0xFF72AEBC)],
+        'isSafarAi': false,
+        'page': const SafarAiChatPage(), // Add route screen here
       },
     ];
 
@@ -41,42 +43,64 @@ class QuickAccessCards extends StatelessWidget {
         crossAxisCount: 2,
         mainAxisSpacing: 12,
         crossAxisSpacing: 12,
-        childAspectRatio: 1.1,
+        childAspectRatio: 1.25,
       ),
       itemCount: cards.length,
       itemBuilder: (context, index) {
         final card = cards[index];
-        final bool isEmergency = (card['isEmergency'] as bool?) ?? false;
+        final bool isSafarAi = (card['isSafarAi'] as bool?) ?? false;
         return AnimatedPulseCard(
-          isEmergency: isEmergency,
-          child: Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: card['gradient'] as List<Color>,
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(card['icon'] as IconData, size: 32, color: Colors.white),
-                const SizedBox(height: 12),
-                Text(
-                  card['title'] as String,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
+          isPulse: isSafarAi,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(20),
+            onTap: isSafarAi
+                ? () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const SafarAiChatPage(),
+                      ),
+                    );
+                  }
+                : null,
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: card['gradient'] as List<Color>,
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: (card['gradient'] as List<Color>).first.withOpacity(
+                      0.3,
+                    ),
+                    blurRadius: 14,
+                    offset: const Offset(0, 8),
                   ),
-                ),
-                Text(
-                  card['subtitle'] as String,
-                  style: const TextStyle(color: Colors.white70, fontSize: 12),
-                ),
-              ],
+                ],
+              ),
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(card['icon'] as IconData, size: 32, color: Colors.white),
+                  const SizedBox(height: 12),
+                  Text(
+                    card['title'] as String,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Text(
+                    card['subtitle'] as String,
+                    style: const TextStyle(color: Colors.white70, fontSize: 12),
+                  ),
+                ],
+              ),
             ),
           ),
         );
@@ -85,15 +109,15 @@ class QuickAccessCards extends StatelessWidget {
   }
 }
 
-/// Widget to animate pulse glow for emergency cards
+/// Widget to animate pulse glow for highlighted cards (e.g. Safar AI)
 class AnimatedPulseCard extends StatefulWidget {
   final Widget child;
-  final bool isEmergency;
+  final bool isPulse;
 
   const AnimatedPulseCard({
     super.key,
     required this.child,
-    this.isEmergency = false,
+    this.isPulse = false,
   });
 
   @override
@@ -119,7 +143,7 @@ class _AnimatedPulseCardState extends State<AnimatedPulseCard>
       end: 1.1,
     ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
 
-    if (widget.isEmergency) {
+    if (widget.isPulse) {
       _controller.repeat(reverse: true);
     }
   }
@@ -132,7 +156,7 @@ class _AnimatedPulseCardState extends State<AnimatedPulseCard>
 
   @override
   Widget build(BuildContext context) {
-    if (!widget.isEmergency) return widget.child;
+    if (!widget.isPulse) return widget.child;
 
     return ScaleTransition(scale: _animation, child: widget.child);
   }

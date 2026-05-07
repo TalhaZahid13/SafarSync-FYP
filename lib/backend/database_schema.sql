@@ -199,6 +199,21 @@ CREATE TABLE IF NOT EXISTS weather_cache (
   INDEX idx_expires_at (expires_at)
 );
 
+-- User Location Updates Table
+CREATE TABLE IF NOT EXISTS user_location_updates (
+  location_update_id INT AUTO_INCREMENT PRIMARY KEY,
+  user_identifier VARCHAR(128),
+  latitude DECIMAL(10, 8) NOT NULL,
+  longitude DECIMAL(11, 8) NOT NULL,
+  city VARCHAR(100),
+  country VARCHAR(100),
+  accuracy_meters DECIMAL(10, 2),
+  captured_at DATETIME NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_user_identifier (user_identifier),
+  INDEX idx_captured_at (captured_at)
+);
+
 -- User Preferences Table
 CREATE TABLE IF NOT EXISTS user_preferences (
   preference_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -237,6 +252,12 @@ CREATE TABLE IF NOT EXISTS Traveler (
   name VARCHAR(255),
   phoneNumber VARCHAR(20),
   bloodGroup VARCHAR(10),
+  lastLocation VARCHAR(255),
+  last_location VARCHAR(255),
+  last_latitude DECIMAL(10, 8),
+  last_longitude DECIMAL(11, 8),
+  lastLocationUpdatedAt DATETIME,
+  last_location_updated_at DATETIME,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   INDEX idx_email (email)

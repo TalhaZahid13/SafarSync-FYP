@@ -160,6 +160,9 @@ class _AIAssistantState extends State<AIAssistant> {
   Widget build(BuildContext context) {
     if (!widget.isOpen) return const SizedBox.shrink();
 
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return Positioned(
       bottom: 96,
       right: 24,
@@ -167,7 +170,7 @@ class _AIAssistantState extends State<AIAssistant> {
         width: 380,
         height: 600,
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.2),
+          color: theme.cardColor,
           borderRadius: BorderRadius.circular(24),
           boxShadow: const [
             BoxShadow(
@@ -182,9 +185,9 @@ class _AIAssistantState extends State<AIAssistant> {
             // Header
             Container(
               padding: const EdgeInsets.all(16),
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [Color(0xFFFDB913), Color(0xFF1B5A6E)],
+                  colors: [colorScheme.secondary, colorScheme.primary],
                 ),
               ),
               child: Row(
@@ -196,17 +199,20 @@ class _AIAssistantState extends State<AIAssistant> {
                         width: 40,
                         height: 40,
                         decoration: BoxDecoration(
-                          color: Colors.white24,
+                          color: colorScheme.onPrimary.withOpacity(0.18),
                           shape: BoxShape.circle,
                         ),
-                        child: const Center(
-                          child: Icon(Icons.smart_toy, color: Colors.white),
+                        child: Center(
+                          child: Icon(
+                            Icons.smart_toy,
+                            color: colorScheme.onPrimary,
+                          ),
                         ),
                       ),
                       const SizedBox(width: 8),
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
-                        children: const [
+                        children: [
                           Text(
                             'AI Travel Assistant',
                             style: TextStyle(
@@ -217,7 +223,7 @@ class _AIAssistantState extends State<AIAssistant> {
                           Text(
                             'Online • Ready to help',
                             style: TextStyle(
-                              color: Colors.white70,
+                              color: colorScheme.onPrimary.withOpacity(0.85),
                               fontSize: 12,
                             ),
                           ),
@@ -227,7 +233,7 @@ class _AIAssistantState extends State<AIAssistant> {
                   ),
                   IconButton(
                     onPressed: widget.onClose,
-                    icon: const Icon(Icons.close, color: Colors.white),
+                    icon: Icon(Icons.close, color: colorScheme.onPrimary),
                   ),
                 ],
               ),
@@ -237,7 +243,7 @@ class _AIAssistantState extends State<AIAssistant> {
             Expanded(
               child: Container(
                 padding: const EdgeInsets.all(16),
-                color: Colors.white.withOpacity(0.5),
+                color: theme.scaffoldBackgroundColor,
                 child: ListView.builder(
                   itemCount: messages.length,
                   itemBuilder: (context, index) {
@@ -254,32 +260,32 @@ class _AIAssistantState extends State<AIAssistant> {
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(16),
                             gradient: msg.isUser
-                                ? const LinearGradient(
+                                ? LinearGradient(
                                     colors: [
-                                      Color(0xFFFDB913),
-                                      Color(0xFF1B5A6E),
+                                      colorScheme.secondary,
+                                      colorScheme.primary,
                                     ],
                                   )
                                 : null,
-                            color: msg.isUser ? null : Colors.white,
+                            color: msg.isUser ? null : theme.cardColor,
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               if (!msg.isUser)
                                 Row(
-                                  children: const [
+                                  children: [
                                     Icon(
                                       Icons.auto_awesome,
                                       size: 16,
-                                      color: Color(0xFF1B5A6E),
+                                      color: colorScheme.primary,
                                     ),
                                     SizedBox(width: 4),
                                     Text(
                                       'AI Assistant',
                                       style: TextStyle(
                                         fontSize: 12,
-                                        color: Color(0xFF1B5A6E),
+                                        color: colorScheme.primary,
                                       ),
                                     ),
                                   ],
@@ -288,8 +294,8 @@ class _AIAssistantState extends State<AIAssistant> {
                                 msg.text,
                                 style: TextStyle(
                                   color: msg.isUser
-                                      ? Colors.white
-                                      : Colors.black87,
+                                      ? colorScheme.onPrimary
+                                      : theme.textTheme.bodyMedium?.color,
                                   fontSize: 14,
                                 ),
                               ),
@@ -299,8 +305,8 @@ class _AIAssistantState extends State<AIAssistant> {
                                 style: TextStyle(
                                   fontSize: 10,
                                   color: msg.isUser
-                                      ? Colors.white70
-                                      : Colors.grey,
+                                      ? colorScheme.onPrimary.withOpacity(0.85)
+                                      : theme.textTheme.bodySmall?.color,
                                 ),
                               ),
                             ],
@@ -318,8 +324,8 @@ class _AIAssistantState extends State<AIAssistant> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.5),
-                  border: Border(top: BorderSide(color: Colors.grey.shade300)),
+                  color: theme.cardColor,
+                  border: Border(top: BorderSide(color: theme.dividerColor)),
                 ),
                 child: Wrap(
                   spacing: 6,
@@ -335,14 +341,14 @@ class _AIAssistantState extends State<AIAssistant> {
                           horizontal: 12,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.amber[100],
+                          color: colorScheme.secondaryContainer,
                           borderRadius: BorderRadius.circular(16),
                         ),
                         child: Text(
                           suggestion,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 12,
-                            color: Color(0xFF1B5A6E),
+                            color: colorScheme.onSecondaryContainer,
                           ),
                         ),
                       ),
@@ -355,8 +361,8 @@ class _AIAssistantState extends State<AIAssistant> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.white,
-                border: Border(top: BorderSide(color: Colors.grey.shade300)),
+                color: theme.cardColor,
+                border: Border(top: BorderSide(color: theme.dividerColor)),
               ),
               child: Row(
                 children: [
@@ -366,7 +372,7 @@ class _AIAssistantState extends State<AIAssistant> {
                       decoration: InputDecoration(
                         hintText: 'Ask me anything...',
                         filled: true,
-                        fillColor: Colors.grey[100],
+                        fillColor: theme.scaffoldBackgroundColor,
                         contentPadding: const EdgeInsets.symmetric(
                           vertical: 10,
                           horizontal: 16,
@@ -386,14 +392,14 @@ class _AIAssistantState extends State<AIAssistant> {
                       width: 40,
                       height: 40,
                       decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFFFDB913), Color(0xFF1B5A6E)],
+                        gradient: LinearGradient(
+                          colors: [colorScheme.secondary, colorScheme.primary],
                         ),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.send,
-                        color: Colors.white,
+                        color: colorScheme.onPrimary,
                         size: 20,
                       ),
                     ),

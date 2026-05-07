@@ -1,6 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../utils/api_service.dart';
+import '../utils/local_database_service.dart';
 import 'signup.dart';
 import 'forgot_password.dart';
 
@@ -14,6 +20,7 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _auth = FirebaseAuth.instance;
   bool _isLoading = false;
   bool _obscurePassword = true;
 
@@ -66,10 +73,151 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
+  Future<void> _persistLocalUser(User user) async {
+    await LocalDatabaseService.upsertUserProfile(
+      uid: user.uid,
+      email: user.email ?? '',
+      fullName: user.displayName,
+    );
+  }
+
+  Future<void> _loginWithGoogle() async {
+    setState(() => _isLoading = true);
+
+    try {
+      final googleSignIn = GoogleSignIn();
+      final googleUser = await googleSignIn.signIn();
+
+      if (googleUser == null) {
+        return;
+      }
+
+      final googleAuth = await googleUser.authentication;
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+
+      final userCredential = await _auth.signInWithCredential(credential);
+      final user = userCredential.user;
+
+      if (user != null) {
+        await _persistLocalUser(user);
+        if (mounted) {
+          Navigator.pushReplacementNamed(context, '/home');
+        }
+      }
+    } on FirebaseAuthException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Google sign-in failed: ${e.message ?? e.code}'),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Google sign-in failed: $e')));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  Future<void> _loginWithApple() async {
+    if (kIsWeb ||
+        !(defaultTargetPlatform == TargetPlatform.iOS ||
+            defaultTargetPlatform == TargetPlatform.macOS)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Apple sign-in is available on iPhone/iPad and Mac only',
+          ),
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      final appleCredential = await SignInWithApple.getAppleIDCredential(
+        scopes: [
+          AppleIDAuthorizationScopes.email,
+          AppleIDAuthorizationScopes.fullName,
+        ],
+      );
+
+      final idToken = appleCredential.identityToken;
+      if (idToken == null) {
+        throw FirebaseAuthException(
+          code: 'missing-apple-id-token',
+          message: 'Apple returned no identity token.',
+        );
+      }
+
+      final oauthCredential = OAuthProvider('apple.com').credential(
+        idToken: idToken,
+        accessToken: appleCredential.authorizationCode,
+      );
+
+      final userCredential = await _auth.signInWithCredential(oauthCredential);
+      final user = userCredential.user;
+
+      if (user != null) {
+        final displayName = [
+          appleCredential.givenName,
+          appleCredential.familyName,
+        ].whereType<String>().join(' ').trim();
+
+        if (displayName.isNotEmpty &&
+            (user.displayName == null || user.displayName!.isEmpty)) {
+          await user.updateDisplayName(displayName);
+        }
+
+        await _persistLocalUser(user);
+        if (mounted) {
+          Navigator.pushReplacementNamed(context, '/home');
+        }
+      }
+    } on SignInWithAppleAuthorizationException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Apple sign-in failed: ${e.message}')),
+        );
+      }
+    } on FirebaseAuthException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Apple sign-in failed: ${e.message ?? e.code}'),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Apple sign-in failed: $e')));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return Scaffold(
-      backgroundColor: const Color(0xFF121212),
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -81,7 +229,12 @@ class _LoginPageState extends State<LoginPage> {
                 Container(
                   width: 96,
                   height: 96,
-                  decoration: const BoxDecoration(shape: BoxShape.circle),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(
+                      colors: [colorScheme.secondary, colorScheme.primary],
+                    ),
+                  ),
                   child: ClipOval(
                     child: Image.asset(
                       'assets/images/logo.png',
@@ -90,18 +243,21 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                const Text(
+                Text(
                   'Welcome Back',
                   style: TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                    color: theme.textTheme.titleLarge?.color,
                   ),
                 ),
                 const SizedBox(height: 4),
-                const Text(
+                Text(
                   'Login to continue your journey',
-                  style: TextStyle(fontSize: 14, color: Colors.white70),
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: theme.textTheme.bodySmall?.color,
+                  ),
                 ),
 
                 const SizedBox(height: 32),
@@ -123,6 +279,12 @@ class _LoginPageState extends State<LoginPage> {
                   icon: LucideIcons.lock,
                   controller: _passwordController,
                   isPassword: true,
+                  obscureText: _obscurePassword,
+                  onToggleObscure: () {
+                    setState(() {
+                      _obscurePassword = !_obscurePassword;
+                    });
+                  },
                 ),
 
                 const SizedBox(height: 24),
@@ -133,27 +295,26 @@ class _LoginPageState extends State<LoginPage> {
                   child: ElevatedButton(
                     onPressed: _isLoading ? null : _login,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFFDB913),
+                      backgroundColor: colorScheme.primary,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),
                       ),
                     ),
                     child: _isLoading
-                        ? const SizedBox(
+                        ? SizedBox(
                             height: 20,
                             width: 20,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
                               valueColor: AlwaysStoppedAnimation<Color>(
-                                Colors.black87,
+                                colorScheme.onPrimary,
                               ),
                             ),
                           )
                         : const Text(
                             'Login',
                             style: TextStyle(
-                              color: Colors.black87,
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
                             ),
@@ -173,25 +334,54 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                     );
                   },
-                  child: const Text(
+                  child: Text(
                     'Forgot Password?',
-                    style: TextStyle(color: Color(0xFFFDB913)),
+                    style: TextStyle(color: colorScheme.primary),
                   ),
                 ),
                 const SizedBox(height: 24),
 
                 // Divider
                 Row(
-                  children: const [
-                    Expanded(child: Divider(color: Colors.white24)),
-                    Padding(
+                  children: [
+                    Expanded(child: Divider(color: theme.dividerColor)),
+                    const Padding(
                       padding: EdgeInsets.symmetric(horizontal: 8),
                       child: Text(
                         'OR',
                         style: TextStyle(color: Colors.white54),
                       ),
                     ),
-                    Expanded(child: Divider(color: Colors.white24)),
+                    Expanded(child: Divider(color: theme.dividerColor)),
+                  ],
+                ),
+
+                const SizedBox(height: 24),
+
+                // Social sign-in buttons
+                Row(
+                  children: [
+                    Expanded(
+                      child: _socialButton(
+                        label: 'Google',
+                        icon: FontAwesomeIcons.google,
+                        backgroundColor: theme.cardColor,
+                        foregroundColor:
+                            theme.textTheme.bodyMedium?.color ?? Colors.white,
+                        onPressed: _isLoading ? null : _loginWithGoogle,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _socialButton(
+                        label: 'Apple',
+                        icon: FontAwesomeIcons.apple,
+                        backgroundColor: theme.cardColor,
+                        foregroundColor:
+                            theme.textTheme.bodyMedium?.color ?? Colors.white,
+                        onPressed: _isLoading ? null : _loginWithApple,
+                      ),
+                    ),
                   ],
                 ),
 
@@ -212,9 +402,9 @@ class _LoginPageState extends State<LoginPage> {
                           MaterialPageRoute(builder: (_) => const SignupPage()),
                         );
                       },
-                      child: const Text(
+                      child: Text(
                         'Sign Up',
-                        style: TextStyle(color: Color(0xFFFDB913)),
+                        style: TextStyle(color: colorScheme.primary),
                       ),
                     ),
                   ],
@@ -234,34 +424,76 @@ class _LoginPageState extends State<LoginPage> {
     required IconData icon,
     required TextEditingController controller,
     bool isPassword = false,
+    bool obscureText = false,
+    VoidCallback? onToggleObscure,
     TextInputType keyboardType = TextInputType.text,
   }) {
+    final theme = Theme.of(context);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
-          style: const TextStyle(color: Colors.white70, fontSize: 12),
+          style: TextStyle(
+            color: theme.textTheme.bodySmall?.color,
+            fontSize: 12,
+          ),
         ),
         const SizedBox(height: 6),
         TextField(
           controller: controller,
-          obscureText: isPassword,
+          obscureText: isPassword ? obscureText : false,
           keyboardType: keyboardType,
-          style: const TextStyle(color: Colors.white),
+          style: TextStyle(color: theme.textTheme.bodyMedium?.color),
           decoration: InputDecoration(
-            prefixIcon: Icon(icon, color: Colors.white54, size: 20),
+            prefixIcon: Icon(icon, color: theme.iconTheme.color, size: 20),
             hintText: hint,
-            hintStyle: const TextStyle(color: Colors.white38),
+            hintStyle: TextStyle(color: theme.textTheme.bodySmall?.color),
             filled: true,
-            fillColor: const Color(0xFF2C2C2C),
+            fillColor: theme.cardColor,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide.none,
             ),
+            suffixIcon: isPassword
+                ? IconButton(
+                    onPressed: onToggleObscure,
+                    icon: Icon(
+                      obscureText ? Icons.visibility : Icons.visibility_off,
+                      color: theme.iconTheme.color,
+                      size: 20,
+                    ),
+                  )
+                : null,
           ),
         ),
       ],
+    );
+  }
+
+  Widget _socialButton({
+    required String label,
+    required IconData icon,
+    required Color backgroundColor,
+    required Color foregroundColor,
+    required VoidCallback? onPressed,
+  }) {
+    return SizedBox(
+      height: 52,
+      child: OutlinedButton.icon(
+        onPressed: onPressed,
+        style: OutlinedButton.styleFrom(
+          backgroundColor: backgroundColor,
+          foregroundColor: foregroundColor,
+          side: BorderSide(color: foregroundColor.withOpacity(0.15)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+        ),
+        icon: Icon(icon, size: 20),
+        label: Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
+      ),
     );
   }
 }

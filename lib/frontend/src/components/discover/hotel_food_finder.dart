@@ -8,7 +8,7 @@ class HotelFoodFinder extends StatelessWidget {
       'name': 'Serena Hotel Islamabad',
       'location': 'F-5, Islamabad',
       'image':
-      'https://images.unsplash.com/photo-1578683010236-d716f9a3f461?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxsdXh1cnklMjBob3RlbCUyMHJvb218ZW58MXx8fHwxNzY1NDE0OTcyfDA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral',
+          'https://images.unsplash.com/photo-1578683010236-d716f9a3f461?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxsdXh1cnklMjBob3RlbCUyMHJvb218ZW58MXx8fHwxNzY1NDE0OTcyfDA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral',
       'rating': 4.8,
       'price': 'Rs 25,000',
     },
@@ -16,7 +16,7 @@ class HotelFoodFinder extends StatelessWidget {
       'name': 'Pearl Continental Lahore',
       'location': 'Mall Road, Lahore',
       'image':
-      'https://images.unsplash.com/photo-1578683010236-d716f9a3f461?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxsdXh1cnklMjBob3RlbCUyMHJvb218ZW58MXx8fHwxNzY1NDE0OTcyfDA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral',
+          'https://images.unsplash.com/photo-1578683010236-d716f9a3f461?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxsdXh1cnklMjBob3RlbCUyMHJvb218ZW58MXx8fHwxNzY1NDE0OTcyfDA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral',
       'rating': 4.6,
       'price': 'Rs 18,000',
     },
@@ -27,7 +27,7 @@ class HotelFoodFinder extends StatelessWidget {
       'name': 'Monal Restaurant',
       'cuisine': 'Pakistani & Continental',
       'image':
-      'https://images.unsplash.com/photo-1651440204227-a9a5b9d19712?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxyZXN0YXVyYW50JTIwZm9vZCUyMGN1aXNpbmV8ZW58MXx8fHwxNzY1NTAzMDY2fDA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral',
+          'https://images.unsplash.com/photo-1651440204227-a9a5b9d19712?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxyZXN0YXVyYW50JTIwZm9vZCUyMGN1aXNpbmV8ZW58MXx8fHwxNzY1NTAzMDY2fDA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral',
       'rating': 4.9,
       'price': 'Rs 3,000',
     },
@@ -35,7 +35,7 @@ class HotelFoodFinder extends StatelessWidget {
       'name': 'Bundu Khan',
       'cuisine': 'Traditional BBQ',
       'image':
-      'https://images.unsplash.com/photo-1651440204227-a9a5b9d19712?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxyZXN0YXVyYW50JTIwZm9vZCUyMGN1aXNpbmV8ZW58MXx8fHwxNzY1NTAzMDY2fDA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral',
+          'https://images.unsplash.com/photo-1651440204227-a9a5b9d19712?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxyZXN0YXVyYW50JTIwZm9vZCUyMGN1aXNpbmV8ZW58MXx8fHwxNzY1NTAzMDY2fDA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral',
       'rating': 4.7,
       'price': 'Rs 2,000',
     },
@@ -101,7 +101,9 @@ class HotelFoodFinder extends StatelessWidget {
     required List<Map<String, dynamic>> items,
     required bool isHotel,
   }) {
-    final Color cardBg = Theme.of(context).cardColor; // from dark theme
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final Color cardBg = theme.cardColor;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -110,7 +112,7 @@ class HotelFoodFinder extends StatelessWidget {
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.3),
+            color: Colors.black.withOpacity(0.12),
             blurRadius: 12,
             offset: const Offset(0, 6),
           ),
@@ -122,10 +124,10 @@ class HotelFoodFinder extends StatelessWidget {
           // Column Title
           Text(
             title,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
-              color: Colors.white,
+              color: theme.textTheme.titleLarge?.color,
             ),
           ),
           const SizedBox(height: 16),
@@ -137,7 +139,9 @@ class HotelFoodFinder extends StatelessWidget {
                 margin: const EdgeInsets.only(bottom: 12),
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.18),
+                  color: theme.colorScheme.surfaceContainerHighest.withOpacity(
+                    0.45,
+                  ),
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Row(
@@ -166,20 +170,20 @@ class HotelFoodFinder extends StatelessWidget {
                               Expanded(
                                 child: Text(
                                   item['name'],
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w600,
-                                    color: Colors.white,
+                                    color: theme.textTheme.bodyMedium?.color,
                                   ),
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ),
                               GestureDetector(
                                 onTap: () {},
-                                child: const Icon(
+                                child: Icon(
                                   Icons.favorite_border,
                                   size: 16,
-                                  color: Colors.white70,
+                                  color: theme.textTheme.bodySmall?.color,
                                 ),
                               ),
                             ],
@@ -189,9 +193,9 @@ class HotelFoodFinder extends StatelessWidget {
                           // Location / Cuisine
                           Text(
                             isHotel ? item['location'] : item['cuisine'],
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12,
-                              color: Colors.white70,
+                              color: theme.textTheme.bodySmall?.color,
                             ),
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -212,9 +216,9 @@ class HotelFoodFinder extends StatelessWidget {
                                   const SizedBox(width: 2),
                                   Text(
                                     item['rating'].toString(),
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontSize: 12,
-                                      color: Colors.white,
+                                      color: theme.textTheme.bodyMedium?.color,
                                     ),
                                   ),
                                 ],
@@ -227,7 +231,7 @@ class HotelFoodFinder extends StatelessWidget {
                                     fontSize: 12,
                                     fontWeight: FontWeight.bold,
                                     color: isHotel
-                                        ? const Color(0xFFFFC837)
+                                        ? colorScheme.secondary
                                         : Colors.orange[300],
                                   ),
                                   textAlign: TextAlign.right,
