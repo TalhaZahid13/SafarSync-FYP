@@ -15,8 +15,9 @@ import '../ui/app_theme.dart';
 
 class HomePage extends StatelessWidget {
   final VoidCallback onPlanRoute; // 👈 important
+  final Function(String)? onTabChange; // New callback for search navigation
 
-  const HomePage({super.key, required this.onPlanRoute});
+  const HomePage({super.key, required this.onPlanRoute, this.onTabChange});
 
   @override
   Widget build(BuildContext context) {
@@ -37,7 +38,7 @@ class HomePage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const SearchBar(),
+            SearchBar(onTabChange: onTabChange),
             SizedBox(height: padding),
             const SmartAlerts(),
             const SizedBox(height: 16),

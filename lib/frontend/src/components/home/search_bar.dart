@@ -1,12 +1,17 @@
 import 'package:flutter/material.dart';
 import '../../utils/api_service.dart';
+import '../../ui/app_theme.dart';
 
 /// Home screen search bar:
 /// - UI app ki theme ke mutabiq
 /// - Places, Routes, Wishlist mein simple text-based search
 /// - Result ek bottom sheet mein dikhaye jaate hain
+/// - Result par click karne se appropriate tab par navigate hota hai
 class SearchBar extends StatefulWidget {
-  const SearchBar({super.key});
+  final Function(String)?
+  onTabChange; // Optional callback for parent navigation
+
+  const SearchBar({super.key, this.onTabChange});
 
   @override
   State<SearchBar> createState() => _SearchBarState();
@@ -109,6 +114,51 @@ class _SearchBarState extends State<SearchBar> {
     );
   }
 
+  void _handleResultTap(_SearchItem item) {
+    // Navigate to appropriate tab based on result type
+    switch (item.type) {
+      case _SearchType.place:
+        // Navigate to Explore tab
+        if (mounted) {
+          widget.onTabChange?.call('explore');
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('📍 ${item.title}'),
+              duration: const Duration(milliseconds: 1200),
+              backgroundColor: AppTheme.turquoise,
+            ),
+          );
+        }
+        break;
+      case _SearchType.route:
+        // Navigate to Routes tab
+        if (mounted) {
+          widget.onTabChange?.call('routes');
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('🗺️ ${item.title}'),
+              duration: const Duration(milliseconds: 1200),
+              backgroundColor: AppTheme.turquoise,
+            ),
+          );
+        }
+        break;
+      case _SearchType.wishlist:
+        // Navigate to Wishlist tab
+        if (mounted) {
+          widget.onTabChange?.call('wishlist');
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('❤️ ${item.title}'),
+              duration: const Duration(milliseconds: 1200),
+              backgroundColor: AppTheme.turquoise,
+            ),
+          );
+        }
+        break;
+    }
+  }
+
   void _showResultsSheet({
     required String title,
     required List<_SearchItem> results,
@@ -190,11 +240,8 @@ class _SearchBarState extends State<SearchBar> {
                             ),
                           ),
                           onTap: () {
-                            // TODO: yahan se tum navigate kar sakte ho:
-                            // - Place -> Explore tab
-                            // - Route -> Routes tab
-                            // - Wishlist -> Wishlist tab
                             Navigator.pop(context);
+                            _handleResultTap(item);
                           },
                         );
                       },
@@ -216,15 +263,15 @@ class _SearchBarState extends State<SearchBar> {
     switch (type) {
       case _SearchType.place:
         icon = Icons.place;
-        color = Colors.lightBlueAccent;
+        color = AppTheme.turquoise;
         break;
       case _SearchType.route:
         icon = Icons.alt_route;
-        color = Colors.amberAccent;
+        color = AppTheme.turquoise;
         break;
       case _SearchType.wishlist:
         icon = Icons.favorite_border;
-        color = Colors.pinkAccent;
+        color = AppTheme.turquoise;
         break;
     }
 
@@ -232,8 +279,9 @@ class _SearchBarState extends State<SearchBar> {
       width: 36,
       height: 36,
       decoration: BoxDecoration(
-        color: theme.cardColor,
+        color: color.withOpacity(0.15),
         borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.3)),
       ),
       child: Icon(icon, color: color, size: 20),
     );

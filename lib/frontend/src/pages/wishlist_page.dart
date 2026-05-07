@@ -1,17 +1,18 @@
 import 'package:flutter/material.dart';
 import '../utils/responsive.dart';
+import '../ui/app_theme.dart';
 
 class WishlistPage extends StatelessWidget {
   WishlistPage({super.key});
 
-  static const Color _bgTop = Color(0xFF070B2B);
-  static const Color _bgMid = Color(0xFF0A1140);
-  static const Color _bgBottom = Color(0xFF041834);
-  static const Color _cardBg = Color(0xD90A1547);
-  static const Color _primaryText = Color(0xFFF8FAFC);
-  static const Color _secondaryText = Color(0xFF94A3B8);
-  static const Color _priceColor = Color(0xFFFDB913);
-  static const Color _surfaceOutline = Color(0x334B72D1);
+  static const Color _bgTop = AppTheme.pureWhite;
+  static const Color _bgMid = AppTheme.offWhite;
+  static const Color _bgBottom = AppTheme.pureWhite;
+  static const Color _cardBg = AppTheme.pureWhite;
+  static const Color _primaryText = AppTheme.darkSlate;
+  static const Color _secondaryText = AppTheme.mediumGray;
+  static const Color _priceColor = AppTheme.turquoise;
+  static const Color _surfaceOutline = AppTheme.veryLightGray;
 
   final wishlistItems = {
     'destinations': [
@@ -369,24 +370,24 @@ class WishlistPage extends StatelessWidget {
               _buildSection(
                 title: 'Destinations',
                 icon: Icons.place_outlined,
-                accent: const Color(0xFF00D4C6),
-                ctaGradient: const [Color(0xFF00D4C6), Color(0xFF00AFA2)],
+                accent: AppTheme.turquoise,
+                ctaGradient: const [AppTheme.turquoise, AppTheme.lightGray],
                 items: wishlistItems['destinations']!,
               ),
               SizedBox(height: padding * 0.9),
               _buildSection(
                 title: 'Hotels',
                 icon: Icons.apartment_rounded,
-                accent: const Color(0xFFFFA62B),
-                ctaGradient: const [Color(0xFFFFC43A), Color(0xFFFF6B35)],
+                accent: AppTheme.turquoise,
+                ctaGradient: const [AppTheme.turquoise, AppTheme.mediumGray],
                 items: wishlistItems['hotels']!,
               ),
               SizedBox(height: padding * 0.9),
               _buildSection(
                 title: 'Restaurants',
                 icon: Icons.restaurant_rounded,
-                accent: const Color(0xFFFF2D8A),
-                ctaGradient: const [Color(0xFF7E1A7B), Color(0xFFAA1B83)],
+                accent: AppTheme.turquoise,
+                ctaGradient: const [AppTheme.turquoise, AppTheme.darkSlate],
                 items: wishlistItems['restaurants']!,
               ),
             ],

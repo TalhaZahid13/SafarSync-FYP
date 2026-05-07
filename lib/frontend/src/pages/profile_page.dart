@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../utils/pdf_export.dart'; // TripData, Destination, RouteData, Hotel, Restaurant, TripStats
+import '../ui/app_theme.dart';
 import 'profile_settings.dart';
 import '../auth/login.dart';
 import '../utils/responsive.dart';
@@ -10,18 +11,18 @@ import '../utils/theme_controller.dart';
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
 
-  static const Color _bgTop = Color(0xFF070B2B);
-  static const Color _bgMid = Color(0xFF0A1140);
-  static const Color _bgBottom = Color(0xFF041834);
-  static const Color _cardBg = Color(0xD90A1547);
-  static const Color _cardOutline = Color(0x334B72D1);
-  static const Color _titleColor = Color(0xFFF8FAFC);
-  static const Color _mutedText = Color(0xFF94A3B8);
-  static const Color _gold = Color(0xFFFDB913);
-  static const Color _orange = Color(0xFFFF6B35);
-  static const Color _teal = Color(0xFF00D4C6);
-  static const Color _violet = Color(0xFFA855F7);
-  static const Color _cyan = Color(0xFF00B7FF);
+  static const Color _bgTop = AppTheme.pureWhite;
+  static const Color _bgMid = AppTheme.offWhite;
+  static const Color _bgBottom = AppTheme.pureWhite;
+  static const Color _cardBg = AppTheme.pureWhite;
+  static const Color _cardOutline = AppTheme.veryLightGray;
+  static const Color _titleColor = AppTheme.darkSlate;
+  static const Color _mutedText = AppTheme.mediumGray;
+  static const Color _gold = AppTheme.turquoise;
+  static const Color _orange = AppTheme.turquoise;
+  static const Color _teal = AppTheme.turquoise;
+  static const Color _violet = AppTheme.lightGray;
+  static const Color _cyan = AppTheme.turquoise;
 
   void handleExportPDF() {
     final tripData = TripData(
@@ -473,7 +474,7 @@ class ProfilePage extends StatelessWidget {
         border: Border.all(color: _cardOutline),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.18),
+            color: Colors.black.withOpacity(0.06),
             blurRadius: 14,
             offset: const Offset(0, 6),
           ),

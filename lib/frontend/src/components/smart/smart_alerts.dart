@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import '../../ui/app_theme.dart';
 
 class AlertItem {
   final int id;
@@ -29,14 +30,14 @@ class _SmartAlertsState extends State<SmartAlerts> {
     AlertItem(
       id: 1,
       icon: LucideIcons.cloud,
-      color: Colors.blue,
+      color: AppTheme.turquoise,
       title: 'Weather Update',
       message: 'Rain expected in 2 hours near Murree - pack your rain gear!',
     ),
     AlertItem(
       id: 2,
       icon: LucideIcons.tag,
-      color: Colors.orange,
+      color: AppTheme.turquoise,
       title: 'Nearby Deal',
       message:
           '30% off at The Golden Fork Restaurant, Islamabad - limited time!',
@@ -44,7 +45,7 @@ class _SmartAlertsState extends State<SmartAlerts> {
     AlertItem(
       id: 3,
       icon: LucideIcons.sparkles,
-      color: Colors.purple,
+      color: AppTheme.turquoise,
       title: 'AI Travel Tip',
       message:
           'Best time to visit Hunza Valley: May-October. Book now for the season!',
@@ -66,12 +67,12 @@ class _SmartAlertsState extends State<SmartAlerts> {
         return Container(
           margin: const EdgeInsets.symmetric(vertical: 6),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.08),
+            color: alert.color.withOpacity(0.15),
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: alert.color.withOpacity(0.35), width: 1),
+            border: Border.all(color: alert.color.withOpacity(0.3), width: 1),
             boxShadow: [
               BoxShadow(
-                color: alert.color.withOpacity(0.18),
+                color: alert.color.withOpacity(0.08),
                 blurRadius: 14,
                 offset: const Offset(0, 8),
               ),
@@ -87,7 +88,7 @@ class _SmartAlertsState extends State<SmartAlerts> {
                   width: 40,
                   height: 40,
                   decoration: BoxDecoration(
-                    color: alert.color.withOpacity(0.2),
+                    color: alert.color.withOpacity(0.3),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Center(
@@ -102,18 +103,18 @@ class _SmartAlertsState extends State<SmartAlerts> {
                     children: [
                       Text(
                         alert.title,
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w700,
-                          color: Colors.white,
+                          color: AppTheme.darkSlate,
                         ),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         alert.message,
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 12,
-                          color: Colors.grey.shade200,
+                          color: AppTheme.mediumGray,
                         ),
                       ),
                     ],
@@ -122,9 +123,9 @@ class _SmartAlertsState extends State<SmartAlerts> {
                 // Dismiss button
                 GestureDetector(
                   onTap: () => dismissAlert(alert.id),
-                  child: Icon(
+                  child: const Icon(
                     LucideIcons.x,
-                    color: Colors.grey.shade400,
+                    color: AppTheme.mediumGray,
                     size: 18,
                   ),
                 ),
