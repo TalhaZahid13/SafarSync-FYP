@@ -30,14 +30,14 @@ class _SmartAlertsState extends State<SmartAlerts> {
     AlertItem(
       id: 1,
       icon: LucideIcons.cloud,
-      color: AppTheme.turquoise,
+      color: const Color(0xFF4A90E2), // weather blue
       title: 'Weather Update',
       message: 'Rain expected in 2 hours near Murree - pack your rain gear!',
     ),
     AlertItem(
       id: 2,
       icon: LucideIcons.tag,
-      color: AppTheme.turquoise,
+      color: const Color(0xFFFF8F00), // deal amber
       title: 'Nearby Deal',
       message:
           '30% off at The Golden Fork Restaurant, Islamabad - limited time!',
@@ -45,7 +45,7 @@ class _SmartAlertsState extends State<SmartAlerts> {
     AlertItem(
       id: 3,
       icon: LucideIcons.sparkles,
-      color: AppTheme.turquoise,
+      color: const Color(0xFF7B61FF), // AI purple
       title: 'AI Travel Tip',
       message:
           'Best time to visit Hunza Valley: May-October. Book now for the season!',

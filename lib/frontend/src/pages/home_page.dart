@@ -27,7 +27,7 @@ class HomePage extends StatelessWidget {
         gradient: LinearGradient(
           colors: [
             Theme.of(context).scaffoldBackgroundColor,
-            Theme.of(context).cardColor.withOpacity(0.65),
+            Theme.of(context).cardColor.withValues(alpha: 0.65),
           ],
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
@@ -80,10 +80,10 @@ class ResponsiveWeatherEmergency extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: AppTheme.homeGradient,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppTheme.gold.withOpacity(0.45), width: 1),
+        border: Border.all(color: AppTheme.turquoise.withValues(alpha: 0.45), width: 1),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.coral.withOpacity(0.20),
+            color: AppTheme.turquoise.withValues(alpha: 0.20),
             blurRadius: 18,
             offset: const Offset(0, 8),
           ),

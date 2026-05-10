@@ -49,12 +49,12 @@ class AIRecommendations extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 24),
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: AppTheme.navyGlass,
+        color: const Color(0xFF1B3A4C),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppTheme.cyan.withOpacity(0.25), width: 1),
+        border: Border.all(color: AppTheme.turquoise.withValues(alpha: 0.3), width: 1),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.cyan.withOpacity(0.12),
+            color: AppTheme.turquoise.withValues(alpha: 0.12),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -105,15 +105,15 @@ class AIRecommendations extends StatelessWidget {
                 child: Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: AppTheme.glassStrong,
+                    color: Colors.white.withValues(alpha: 0.07),
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
-                      color: accent.withOpacity(0.35),
+                      color: accent.withValues(alpha: 0.35),
                       width: 1,
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: accent.withOpacity(0.16),
+                        color: accent.withValues(alpha: 0.16),
                         blurRadius: 16,
                         offset: const Offset(0, 8),
                       ),
@@ -168,10 +168,10 @@ class AIRecommendations extends StatelessWidget {
                                   horizontal: 8,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: accent.withOpacity(0.16),
+                                  color: accent.withValues(alpha: 0.16),
                                   borderRadius: BorderRadius.circular(12),
                                   border: Border.all(
-                                    color: accent.withOpacity(0.35),
+                                    color: accent.withValues(alpha: 0.35),
                                   ),
                                 ),
                                 child: Text(

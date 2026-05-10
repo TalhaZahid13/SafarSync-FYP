@@ -15,27 +15,47 @@ class FloatingEmergencyButton extends StatefulWidget {
 }
 
 class _FloatingEmergencyButtonState extends State<FloatingEmergencyButton>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _pulseAnimation;
+    with TickerProviderStateMixin {
+  // Blink: opacity 1.0 ↔ 0.25 at 600 ms
+  late AnimationController _blinkController;
+  late Animation<double> _blinkOpacity;
+
+  // Ring: expands from button edge outward and fades at 1.4 s
+  late AnimationController _ringController;
+  late Animation<double> _ringScale;
+  late Animation<double> _ringOpacity;
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
+
+    _blinkController = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 1),
+      duration: const Duration(milliseconds: 600),
     )..repeat(reverse: true);
 
-    _pulseAnimation = Tween<double>(
-      begin: 1.0,
-      end: 1.1,
-    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+    _blinkOpacity = Tween<double>(begin: 1.0, end: 0.25).animate(
+      CurvedAnimation(parent: _blinkController, curve: Curves.easeInOut),
+    );
+
+    _ringController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1400),
+    )..repeat();
+
+    _ringScale = Tween<double>(begin: 1.0, end: 2.2).animate(
+      CurvedAnimation(parent: _ringController, curve: Curves.easeOut),
+    );
+
+    _ringOpacity = Tween<double>(begin: 0.7, end: 0.0).animate(
+      CurvedAnimation(parent: _ringController, curve: Curves.easeOut),
+    );
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _blinkController.dispose();
+    _ringController.dispose();
     super.dispose();
   }
 
@@ -160,37 +180,70 @@ class _FloatingEmergencyButtonState extends State<FloatingEmergencyButton>
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 74, right: 8),
-      child: ScaleTransition(
-        scale: _pulseAnimation,
-        child: GestureDetector(
-          onTap: _handleEmergencyTap,
-          child: Container(
-            width: 64,
-            height: 64,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: const LinearGradient(
-                colors: [Color(0xFFF44336), Color(0xFFB71C1C)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.red.withOpacity(0.6),
-                  blurRadius: 20,
-                  spreadRadius: 1,
+      child: AnimatedBuilder(
+        animation: Listenable.merge([_blinkController, _ringController]),
+        builder: (context, child) {
+          return SizedBox(
+            width: 80,
+            height: 80,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                // Radiating ring
+                Opacity(
+                  opacity: _ringOpacity.value,
+                  child: Transform.scale(
+                    scale: _ringScale.value,
+                    child: Container(
+                      width: 64,
+                      height: 64,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: Colors.red,
+                          width: 2,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                // Blinking button
+                GestureDetector(
+                  onTap: _handleEmergencyTap,
+                  child: Opacity(
+                    opacity: _blinkOpacity.value,
+                    child: Container(
+                      width: 64,
+                      height: 64,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFFF44336), Color(0xFFB71C1C)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.red.withValues(alpha: 0.6),
+                            blurRadius: 20,
+                            spreadRadius: 1,
+                          ),
+                        ],
+                      ),
+                      child: const Center(
+                        child: Icon(
+                          Icons.warning_amber_rounded,
+                          color: Colors.white,
+                          size: 32,
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
               ],
             ),
-            child: const Center(
-              child: Icon(
-                Icons.warning_amber_rounded,
-                color: Colors.white,
-                size: 32,
-              ),
-            ),
-          ),
-        ),
+          );
+        },
       ),
     );
   }

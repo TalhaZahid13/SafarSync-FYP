@@ -19,6 +19,14 @@ class ApiService {
   );
 
   static final String baseUrl = _resolveBaseUrl();
+
+  /// Socket.io server URL (same host, no /api path)
+  static String get socketUrl {
+    if (baseUrl.endsWith('/api')) {
+      return baseUrl.substring(0, baseUrl.length - 4);
+    }
+    return baseUrl;
+  }
   static final FirebaseAuth _auth = FirebaseAuth.instance;
 
   static String _resolveBaseUrl() {
@@ -509,6 +517,30 @@ class ApiService {
     } catch (e) {
       return {'success': false, 'message': 'Error: $e'};
     }
+  }
+
+  /// Push live GPS position to backend (fire-and-forget)
+  static Future<void> updateLocation({
+    required double latitude,
+    required double longitude,
+    double? accuracy,
+    String? city,
+    String? country,
+  }) async {
+    try {
+      await http.post(
+        Uri.parse('$baseUrl/location/update'),
+        headers: await getHeaders(needsAuth: true),
+        body: jsonEncode({
+          'latitude': latitude,
+          'longitude': longitude,
+          if (accuracy != null) 'accuracy': accuracy,
+          if (city != null) 'city': city,
+          if (country != null) 'country': country,
+          'captured_at': DateTime.now().toIso8601String(),
+        }),
+      );
+    } catch (_) {}
   }
 
   // ============ AI ENDPOINTS ============
