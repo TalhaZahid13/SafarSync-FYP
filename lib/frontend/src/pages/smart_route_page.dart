@@ -1,10 +1,83 @@
 import 'package:flutter/material.dart';
+import 'package:geocoding/geocoding.dart';
+import 'package:latlong2/latlong.dart';
 import '../components/smart/smart_route_planner.dart';
 import '../ui/app_theme.dart';
 import 'live_map_page.dart';
 
-class SmartRoutePage extends StatelessWidget {
+class SmartRoutePage extends StatefulWidget {
   const SmartRoutePage({super.key});
+
+  @override
+  State<SmartRoutePage> createState() => _SmartRoutePageState();
+}
+
+class _SmartRoutePageState extends State<SmartRoutePage> {
+  final TextEditingController _fromCtrl = TextEditingController();
+  final TextEditingController _toCtrl = TextEditingController();
+  bool _loading = false;
+
+  @override
+  void dispose() {
+    _fromCtrl.dispose();
+    _toCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _planRoute() async {
+    final fromText = _fromCtrl.text.trim();
+    final toText = _toCtrl.text.trim();
+
+    if (fromText.isEmpty || toText.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Please enter both From and To locations'),
+          backgroundColor: Colors.red.shade600,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+      return;
+    }
+
+    setState(() => _loading = true);
+
+    try {
+      final fromQuery = fromText.contains(',') ? fromText : '$fromText, Pakistan';
+      final toQuery = toText.contains(',') ? toText : '$toText, Pakistan';
+
+      final fromLocs = await locationFromAddress(fromQuery);
+      final toLocs = await locationFromAddress(toQuery);
+
+      if (!mounted) return;
+
+      final origin = LatLng(fromLocs.first.latitude, fromLocs.first.longitude);
+      final destination = LatLng(toLocs.first.latitude, toLocs.first.longitude);
+
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => LiveMapPage(
+            routeOrigin: origin,
+            routeDestination: destination,
+            destinationName: toText,
+          ),
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Could not find location — check spelling and try again'),
+          backgroundColor: Colors.red.shade600,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -31,7 +104,6 @@ class SmartRoutePage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Subtitle
             const Text(
               'Plan your journey with real-time weather & traffic data',
               style: TextStyle(color: Colors.white70, fontSize: 13),
@@ -85,20 +157,12 @@ class SmartRoutePage extends StatelessWidget {
             ),
             const SizedBox(height: 20),
 
-            // Route planner component
+            // Route planner component with live controllers
             SmartRoutePlanner(
-              onPlanRoute: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: const Text('Route planning started!'),
-                    backgroundColor: AppTheme.turquoise,
-                    behavior: SnackBarBehavior.floating,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                );
-              },
+              fromController: _fromCtrl,
+              toController: _toCtrl,
+              isLoading: _loading,
+              onPlanRoute: _planRoute,
             ),
 
             const SizedBox(height: 20),
@@ -161,6 +225,46 @@ class _RecentRouteCard extends StatelessWidget {
     required this.color,
   });
 
+  Future<void> _reuseRoute(BuildContext context) async {
+    final scaffold = ScaffoldMessenger.of(context);
+    scaffold.showSnackBar(
+      SnackBar(
+        content: Text('Loading route $from → $to…'),
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 10),
+      ),
+    );
+
+    try {
+      final fromLocs = await locationFromAddress('$from, Pakistan');
+      final toLocs = await locationFromAddress('$to, Pakistan');
+      scaffold.hideCurrentSnackBar();
+      if (!context.mounted) return;
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => LiveMapPage(
+            routeOrigin:
+                LatLng(fromLocs.first.latitude, fromLocs.first.longitude),
+            routeDestination:
+                LatLng(toLocs.first.latitude, toLocs.first.longitude),
+            destinationName: to,
+          ),
+        ),
+      );
+    } catch (_) {
+      scaffold.hideCurrentSnackBar();
+      if (!context.mounted) return;
+      scaffold.showSnackBar(
+        SnackBar(
+          content: const Text('Could not resolve locations — try again'),
+          backgroundColor: Colors.red.shade600,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -206,7 +310,7 @@ class _RecentRouteCard extends StatelessWidget {
           ),
           IconButton(
             icon: const Icon(Icons.replay, color: Colors.white54, size: 20),
-            onPressed: () {},
+            onPressed: () => _reuseRoute(context),
             tooltip: 'Reuse route',
           ),
         ],

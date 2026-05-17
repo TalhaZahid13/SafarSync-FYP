@@ -1,15 +1,28 @@
 import 'dart:async';
+import 'dart:convert';
+import 'package:flutter/foundation.dart' show compute;
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
+import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
 import 'package:socket_io_client/socket_io_client.dart' as io;
 import '../ui/app_theme.dart';
 import '../utils/api_service.dart';
+import '../utils/route_session.dart';
 
 class LiveMapPage extends StatefulWidget {
-  const LiveMapPage({super.key});
+  final LatLng? routeOrigin;
+  final LatLng? routeDestination;
+  final String? destinationName;
+
+  const LiveMapPage({
+    super.key,
+    this.routeOrigin,
+    this.routeDestination,
+    this.destinationName,
+  });
 
   @override
   State<LiveMapPage> createState() => _LiveMapPageState();
@@ -28,9 +41,27 @@ class _LiveMapPageState extends State<LiveMapPage> {
   bool _mapReady = false;
   String? _error;
 
+  // Route navigation state
+  List<LatLng> _routePoints = [];
+  double _remainingDistM = 0;
+  double _totalDurS = 0;
+  double _totalDistM = 0;
+  bool _fetchingRoute = false;
+  bool _routeFetched = false;
+
+  // Session-restored route (when no constructor params given)
+  LatLng? _sessionDest;
+  LatLng? _sessionOrigin;
+  String? _sessionDestName;
+
   StreamSubscription<Position>? _posStream;
   Timer? _geocodeDebounce;
   Timer? _backendDebounce;
+
+  LatLng? get _effectiveDest => widget.routeDestination ?? _sessionDest;
+  LatLng? get _effectiveOrigin => widget.routeOrigin ?? _sessionOrigin;
+  String? get _effectiveDestName => widget.destinationName ?? _sessionDestName;
+  bool get _hasRoute => _effectiveDest != null;
 
   @override
   void initState() {
@@ -43,6 +74,26 @@ class _LiveMapPageState extends State<LiveMapPage> {
       _isLoading = true;
       _error = null;
     });
+
+    // Restore active route from session if no route was passed via constructor.
+    if (widget.routeDestination == null) {
+      final session = await RouteSession.getActive();
+      if (session != null && mounted) {
+        final endLat = (session['end_lat'] as num?)?.toDouble();
+        final endLng = (session['end_lng'] as num?)?.toDouble();
+        final startLat = (session['start_lat'] as num?)?.toDouble();
+        final startLng = (session['start_lng'] as num?)?.toDouble();
+        if (endLat != null && endLng != null) {
+          setState(() {
+            _sessionDest = LatLng(endLat, endLng);
+            _sessionDestName = session['to_name'] as String?;
+            if (startLat != null && startLng != null) {
+              _sessionOrigin = LatLng(startLat, startLng);
+            }
+          });
+        }
+      }
+    }
 
     if (!await _ensurePermission()) return;
     _connectSocket();
@@ -67,7 +118,12 @@ class _LiveMapPageState extends State<LiveMapPage> {
   }
 
   void _setError(String msg) {
-    if (mounted) setState(() { _error = msg; _isLoading = false; });
+    if (mounted) {
+      setState(() {
+        _error = msg;
+        _isLoading = false;
+      });
+    }
   }
 
   void _connectSocket() {
@@ -82,7 +138,6 @@ class _LiveMapPageState extends State<LiveMapPage> {
     _socket!.connect();
     _socket!.onConnect((_) => debugPrint('LiveMap: socket connected'));
     _socket!.onConnectError((e) => debugPrint('LiveMap: socket error $e'));
-    // Listen for other users' location events (future group tracking)
     _socket!.on('location:updated', (data) => debugPrint('LiveMap: remote $data'));
   }
 
@@ -92,9 +147,7 @@ class _LiveMapPageState extends State<LiveMapPage> {
       distanceFilter: 3,
     );
 
-    _posStream = Geolocator.getPositionStream(
-      locationSettings: settings,
-    ).listen(
+    _posStream = Geolocator.getPositionStream(locationSettings: settings).listen(
       (Position pos) {
         final latlng = LatLng(pos.latitude, pos.longitude);
         if (mounted) {
@@ -107,17 +160,30 @@ class _LiveMapPageState extends State<LiveMapPage> {
           });
         }
 
+        // Fetch route once we have an initial GPS fix
+        if (_hasRoute && !_routeFetched && !_fetchingRoute) {
+          final origin = _effectiveOrigin ?? latlng;
+          _fetchRoute(origin, _effectiveDest!);
+        }
+
+        // Update remaining distance to destination
+        if (_effectiveDest != null) {
+          final dist = Geolocator.distanceBetween(
+            pos.latitude, pos.longitude,
+            _effectiveDest!.latitude, _effectiveDest!.longitude,
+          );
+          if (mounted) setState(() => _remainingDistM = dist);
+        }
+
         if (_autoFollow && _mapReady) {
           _mapController.move(latlng, _mapController.camera.zoom);
         }
 
-        // Reverse geocode — at most once every 6 s
         _geocodeDebounce?.cancel();
         _geocodeDebounce = Timer(const Duration(seconds: 6), () {
           _reverseGeocode(pos.latitude, pos.longitude);
         });
 
-        // Sync to backend — at most once every 10 s
         _backendDebounce?.cancel();
         _backendDebounce = Timer(const Duration(seconds: 10), () {
           ApiService.updateLocation(
@@ -131,6 +197,78 @@ class _LiveMapPageState extends State<LiveMapPage> {
     );
   }
 
+  Future<void> _fetchRoute(LatLng from, LatLng to) async {
+    if (_fetchingRoute) return;
+    if (mounted) setState(() => _fetchingRoute = true);
+
+    try {
+      final uri = Uri.parse(
+        'https://router.project-osrm.org/route/v1/driving/'
+        '${from.longitude},${from.latitude};'
+        '${to.longitude},${to.latitude}'
+        '?overview=full&geometries=geojson',
+      );
+
+      final response = await http.get(uri).timeout(const Duration(seconds: 20));
+      if (!mounted) return;
+
+      if (response.statusCode == 200) {
+        final data = await compute(
+          (String body) => jsonDecode(body) as Map<String, dynamic>,
+          response.body,
+        );
+
+        final routes = data['routes'] as List?;
+        if (routes != null && routes.isNotEmpty) {
+          final route = routes[0] as Map<String, dynamic>;
+          final coords = (route['geometry']['coordinates'] as List)
+              .map((c) => LatLng(
+                    (c[1] as num).toDouble(),
+                    (c[0] as num).toDouble(),
+                  ))
+              .toList();
+
+          final dist = (route['distance'] as num).toDouble();
+          final dur = (route['duration'] as num).toDouble();
+
+          if (!mounted) return;
+          setState(() {
+            _routePoints = coords;
+            _totalDistM = dist;
+            _totalDurS = dur;
+            _remainingDistM = dist;
+            _fetchingRoute = false;
+            _routeFetched = true;
+          });
+
+          // Fit the camera to show the full route after map is ready
+          if (_mapReady && coords.length >= 2) {
+            _fitRoute(coords);
+          }
+        }
+      }
+    } catch (_) {
+      if (mounted) setState(() => _fetchingRoute = false);
+    }
+  }
+
+  void _fitRoute(List<LatLng> points) {
+    if (points.length < 2) return;
+    final bounds = LatLngBounds.fromPoints(points);
+    _mapController.fitCamera(
+      CameraFit.bounds(
+        bounds: bounds,
+        padding: const EdgeInsets.fromLTRB(40, 120, 40, 180),
+      ),
+    );
+  }
+
+  // ETA in seconds, scaled to remaining distance
+  double get _remainingDurS {
+    if (_totalDistM <= 0) return _totalDurS;
+    return _totalDurS * (_remainingDistM / _totalDistM);
+  }
+
   Future<void> _reverseGeocode(double lat, double lng) async {
     try {
       final marks = await placemarkFromCoordinates(lat, lng);
@@ -138,11 +276,13 @@ class _LiveMapPageState extends State<LiveMapPage> {
         final p = marks.first;
         final parts = <String>[
           if (p.street != null && p.street!.isNotEmpty) p.street!,
-          if (p.locality != null && p.locality!.isNotEmpty) p.locality!
-          else if (p.subAdministrativeArea != null) p.subAdministrativeArea!,
+          if (p.locality != null && p.locality!.isNotEmpty)
+            p.locality!
+          else if (p.subAdministrativeArea != null)
+            p.subAdministrativeArea!,
           if (p.country != null && p.country!.isNotEmpty) p.country!,
         ];
-        setState(() => _address = parts.join(', '));
+        if (mounted) setState(() => _address = parts.join(', '));
       }
     } catch (_) {}
   }
@@ -164,12 +304,42 @@ class _LiveMapPageState extends State<LiveMapPage> {
       appBar: AppBar(
         backgroundColor: const Color(0xFF1B3A4C),
         elevation: 0,
-        title: const Text(
-          'Live Location',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        title: Text(
+          _hasRoute ? 'Navigation' : 'Live Location',
+          style: const TextStyle(
+              color: Colors.white, fontWeight: FontWeight.bold),
         ),
         iconTheme: const IconThemeData(color: Colors.white),
         actions: [
+          if (_fetchingRoute)
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16),
+              child: SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  color: Colors.white,
+                  strokeWidth: 2,
+                ),
+              ),
+            ),
+          if (_hasRoute)
+            IconButton(
+              tooltip: 'Stop navigation',
+              icon: const Icon(Icons.stop_circle_outlined, color: Colors.redAccent),
+              onPressed: () async {
+                await RouteSession.clear();
+                if (!mounted) return;
+                setState(() {
+                  _sessionDest = null;
+                  _sessionOrigin = null;
+                  _sessionDestName = null;
+                  _routePoints = [];
+                  _routeFetched = false;
+                  _remainingDistM = 0;
+                });
+              },
+            ),
           IconButton(
             tooltip: _autoFollow ? 'Auto-follow ON' : 'Auto-follow OFF',
             icon: Icon(
@@ -184,7 +354,8 @@ class _LiveMapPageState extends State<LiveMapPage> {
           ? _ErrorView(error: _error!, onRetry: _start)
           : _isLoading
               ? const Center(
-                  child: CircularProgressIndicator(color: AppTheme.turquoise),
+                  child: CircularProgressIndicator(
+                      color: AppTheme.turquoise),
                 )
               : Stack(
                   children: [
@@ -193,9 +364,15 @@ class _LiveMapPageState extends State<LiveMapPage> {
                       options: MapOptions(
                         initialCenter:
                             _position ?? const LatLng(33.6844, 73.0479),
-                        initialZoom: 16,
-                        onMapReady: () => _mapReady = true,
-                        onTap: (_, __) {
+                        initialZoom: 15,
+                        onMapReady: () {
+                          _mapReady = true;
+                          // Fit route if already fetched when map becomes ready
+                          if (_routePoints.length >= 2) {
+                            _fitRoute(_routePoints);
+                          }
+                        },
+                        onTap: (_, _) {
                           if (_autoFollow) {
                             setState(() => _autoFollow = false);
                           }
@@ -208,6 +385,21 @@ class _LiveMapPageState extends State<LiveMapPage> {
                           userAgentPackageName: 'com.safarsync.app',
                           maxZoom: 19,
                         ),
+
+                        // Route polyline
+                        if (_routePoints.isNotEmpty)
+                          PolylineLayer(
+                            polylines: [
+                              Polyline(
+                                points: _routePoints,
+                                strokeWidth: 6,
+                                color: const Color(0xFF3B82F6),
+                                borderStrokeWidth: 2,
+                                borderColor: const Color(0xFF1D4ED8),
+                              ),
+                            ],
+                          ),
+
                         if (_position != null) ...[
                           // Accuracy radius ring
                           CircleLayer(
@@ -216,10 +408,10 @@ class _LiveMapPageState extends State<LiveMapPage> {
                                 point: _position!,
                                 radius: _accuracy,
                                 useRadiusInMeter: true,
-                                color:
-                                    AppTheme.turquoise.withValues(alpha: 0.12),
-                                borderColor:
-                                    AppTheme.turquoise.withValues(alpha: 0.5),
+                                color: AppTheme.turquoise
+                                    .withValues(alpha: 0.12),
+                                borderColor: AppTheme.turquoise
+                                    .withValues(alpha: 0.5),
                                 borderStrokeWidth: 1.5,
                               ),
                             ],
@@ -256,8 +448,57 @@ class _LiveMapPageState extends State<LiveMapPage> {
                             ],
                           ),
                         ],
+
+                        // Destination marker
+                        if (_effectiveDest != null)
+                          MarkerLayer(
+                            markers: [
+                              Marker(
+                                point: _effectiveDest!,
+                                width: 48,
+                                height: 60,
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(7),
+                                      decoration: const BoxDecoration(
+                                        color: Color(0xFFEF4444),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: const Icon(
+                                        Icons.flag,
+                                        color: Colors.white,
+                                        size: 18,
+                                      ),
+                                    ),
+                                    // Pin stem
+                                    Container(
+                                      width: 3,
+                                      height: 12,
+                                      color: const Color(0xFFEF4444),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
                       ],
                     ),
+
+                    // Navigation top bar (only when a route is active)
+                    if (_hasRoute && _routePoints.isNotEmpty)
+                      Positioned(
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        child: _NavigationBar(
+                          destName: _effectiveDestName ?? 'Destination',
+                          distanceM: _remainingDistM,
+                          durationS: _remainingDurS,
+                        ),
+                      ),
+
                     // Bottom info panel
                     Positioned(
                       bottom: 16,
@@ -288,6 +529,106 @@ class _LiveMapPageState extends State<LiveMapPage> {
     );
   }
 }
+
+// ─── Navigation top bar ───────────────────────────────────────────────────────
+
+class _NavigationBar extends StatelessWidget {
+  final String destName;
+  final double distanceM;
+  final double durationS;
+
+  const _NavigationBar({
+    required this.destName,
+    required this.distanceM,
+    required this.durationS,
+  });
+
+  String _formatDist(double m) {
+    if (m >= 1000) return '${(m / 1000).toStringAsFixed(1)} km';
+    return '${m.toStringAsFixed(0)} m';
+  }
+
+  String _formatDur(double s) {
+    final mins = (s / 60).round();
+    if (mins >= 60) return '${mins ~/ 60}h ${mins % 60}m';
+    return '${mins}min';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1B3A4C),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.35),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: const Color(0xFF3B82F6).withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(Icons.turn_right,
+                color: Color(0xFF3B82F6), size: 22),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  destName,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '${_formatDist(distanceM)} · ETA ${_formatDur(durationS)}',
+                  style: const TextStyle(
+                      color: Colors.white70, fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                _formatDist(distanceM),
+                style: const TextStyle(
+                  color: Color(0xFF3B82F6),
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              Text(
+                _formatDur(durationS),
+                style: const TextStyle(
+                    color: Colors.white54, fontSize: 11),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Bottom info panel ────────────────────────────────────────────────────────
 
 class _InfoPanel extends StatelessWidget {
   final String address;
@@ -401,10 +742,12 @@ class _ErrorView extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.location_off, size: 64, color: Colors.white38),
+            const Icon(Icons.location_off,
+                size: 64, color: Colors.white38),
             const SizedBox(height: 16),
             Text(error,
-                style: const TextStyle(color: Colors.white70, fontSize: 14),
+                style:
+                    const TextStyle(color: Colors.white70, fontSize: 14),
                 textAlign: TextAlign.center),
             const SizedBox(height: 24),
             ElevatedButton.icon(

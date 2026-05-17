@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../utils/api_service.dart';
+import 'smart_route_page.dart';
 
 class ExplorePage extends StatefulWidget {
   const ExplorePage({super.key});
@@ -30,7 +31,9 @@ class _ExplorePageState extends State<ExplorePage> {
   @override
   void initState() {
     super.initState();
-    _fetchDestinations();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _fetchDestinations();
+    });
   }
 
   Future<void> _fetchDestinations() async {
@@ -86,6 +89,228 @@ class _ExplorePageState extends State<ExplorePage> {
     if (value is int) return value.toDouble();
     if (value is String) return double.tryParse(value) ?? 0.0;
     return 0.0;
+  }
+
+  void _showDestinationDetails(
+    BuildContext context,
+    Map<String, dynamic> dest,
+  ) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => DraggableScrollableSheet(
+        initialChildSize: 0.75,
+        minChildSize: 0.5,
+        maxChildSize: 0.95,
+        expand: false,
+        builder: (sheetCtx, scrollController) => Container(
+          decoration: BoxDecoration(
+            color: theme.scaffoldBackgroundColor,
+            borderRadius:
+                const BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: SingleChildScrollView(
+            controller: scrollController,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Drag handle
+                Center(
+                  child: Container(
+                    margin: const EdgeInsets.only(top: 12, bottom: 8),
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                // Hero image
+                ClipRRect(
+                  child: _buildDestinationImage(
+                    sheetCtx,
+                    dest['image'] ?? dest['image_url'],
+                    height: 220,
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Name + category
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              dest['name'] ?? 'Unknown',
+                              style: theme.textTheme.headlineSmall
+                                  ?.copyWith(fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: colorScheme.primaryContainer,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              (dest['category'] ?? 'General')
+                                  .toString()
+                                  .toUpperCase(),
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: colorScheme.onPrimaryContainer,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      // Location + rating
+                      Row(
+                        children: [
+                          const Icon(Icons.location_on,
+                              size: 14, color: Colors.grey),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              (dest['location'] ??
+                                      dest['country'] ??
+                                      'Unknown')
+                                  .toString(),
+                              style: const TextStyle(
+                                  color: Colors.grey, fontSize: 13),
+                            ),
+                          ),
+                          const Icon(Icons.star,
+                              size: 14, color: Colors.amber),
+                          const SizedBox(width: 4),
+                          Text(
+                            _parseRating(dest['rating']).toStringAsFixed(1),
+                            style: const TextStyle(
+                                fontSize: 13, fontWeight: FontWeight.w600),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      // Description
+                      if ((dest['description'] ?? '').toString().isNotEmpty)
+                        ...[
+                          Text(
+                            dest['description'].toString(),
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: theme.textTheme.bodyMedium?.color,
+                              height: 1.5,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                        ],
+                      // Price chip
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: colorScheme.secondaryContainer
+                              .withValues(alpha: 0.5),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.payments_outlined,
+                                size: 16, color: colorScheme.secondary),
+                            const SizedBox(width: 8),
+                            Text(
+                              dest['price']?.toString() ?? 'N/A',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                color: colorScheme.secondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      // Action buttons
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: () async {
+                                final rawId =
+                                    dest['id'] ?? dest['destination_id'];
+                                final id = int.tryParse('$rawId');
+                                if (id == null) return;
+                                Navigator.pop(sheetCtx);
+                                final res = await ApiService.addToWishlist(
+                                  destinationId: id,
+                                );
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        res['success'] == true
+                                            ? 'Added to wishlist!'
+                                            : res['message'] ??
+                                                'Already in wishlist',
+                                      ),
+                                    ),
+                                  );
+                                }
+                              },
+                              icon: const Icon(Icons.favorite_border),
+                              label: const Text('Wishlist'),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            flex: 2,
+                            child: ElevatedButton.icon(
+                              onPressed: () {
+                                Navigator.pop(sheetCtx);
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const SmartRoutePage(),
+                                  ),
+                                );
+                              },
+                              icon: const Icon(Icons.map_outlined,
+                                  color: Colors.white),
+                              label: const Text(
+                                'Plan Route',
+                                style: TextStyle(color: Colors.white),
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: colorScheme.primary,
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -162,7 +387,7 @@ class _ExplorePageState extends State<ExplorePage> {
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               itemCount: categories.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 8),
+              separatorBuilder: (_, _) => const SizedBox(width: 8),
               itemBuilder: (context, index) {
                 final category = categories[index];
                 final isActive = category['id'] == activeCategory;
@@ -368,9 +593,10 @@ class _ExplorePageState extends State<ExplorePage> {
                                       fit: BoxFit.scaleDown,
                                       alignment: Alignment.centerRight,
                                       child: InkWell(
-                                        onTap: () {
-                                          // TODO: open details
-                                        },
+                                        onTap: () => _showDestinationDetails(
+                                          context,
+                                          dest,
+                                        ),
                                         borderRadius: BorderRadius.circular(12),
                                         child: Container(
                                           padding: const EdgeInsets.symmetric(
@@ -433,11 +659,15 @@ class _ExplorePageState extends State<ExplorePage> {
     );
   }
 
-  Widget _buildDestinationImage(BuildContext context, String? imageSource) {
+  Widget _buildDestinationImage(
+    BuildContext context,
+    String? imageSource, {
+    double height = 90,
+  }) {
     final theme = Theme.of(context);
     if (imageSource == null || imageSource.isEmpty) {
       return Container(
-        height: 90,
+        height: height,
         width: double.infinity,
         color: theme.cardColor,
         child: Icon(Icons.landscape, color: theme.iconTheme.color),
@@ -450,31 +680,27 @@ class _ExplorePageState extends State<ExplorePage> {
     return isNetworkImage
         ? Image.network(
             imageSource,
-            height: 90,
+            height: height,
             width: double.infinity,
             fit: BoxFit.cover,
-            errorBuilder: (context, error, stackTrace) {
-              return Container(
-                height: 90,
-                width: double.infinity,
-                color: Colors.grey.shade800,
-                child: const Icon(Icons.landscape, color: Colors.white54),
-              );
-            },
+            errorBuilder: (_, _, _) => Container(
+              height: height,
+              width: double.infinity,
+              color: Colors.grey.shade800,
+              child: const Icon(Icons.landscape, color: Colors.white54),
+            ),
           )
         : Image.asset(
             imageSource,
-            height: 90,
+            height: height,
             width: double.infinity,
             fit: BoxFit.cover,
-            errorBuilder: (context, error, stackTrace) {
-              return Container(
-                height: 90,
-                width: double.infinity,
-                color: Colors.grey.shade800,
-                child: const Icon(Icons.landscape, color: Colors.white54),
-              );
-            },
+            errorBuilder: (_, _, _) => Container(
+              height: height,
+              width: double.infinity,
+              color: Colors.grey.shade800,
+              child: const Icon(Icons.landscape, color: Colors.white54),
+            ),
           );
   }
 }

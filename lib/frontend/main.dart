@@ -19,7 +19,7 @@ import 'src/utils/theme_controller.dart';
 import 'src/ui/app_theme.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter/foundation.dart'; // For checking if it's running on web
-import 'package:device_preview/device_preview.dart'; // For device preview in mobile
+// DevicePreview removed
 
 FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
     FlutterLocalNotificationsPlugin();
@@ -53,14 +53,8 @@ void main() async {
   final themeController = ThemeController();
   await themeController.loadThemeMode();
 
-  // Run the app with or without Device Preview based on the platform
-  runApp(
-    DevicePreview(
-      builder: (context) => SafarSyncApp(themeController: themeController),
-      enabled:
-          !kIsWeb, // Disable DevicePreview only for actual devices (not web)
-    ),
-  );
+  // Run the app
+  runApp(SafarSyncApp(themeController: themeController));
 }
 
 class SafarSyncApp extends StatelessWidget {
@@ -86,7 +80,7 @@ class SafarSyncApp extends StatelessWidget {
               '/signup': (context) => const SignupPage(),
               '/home': (context) => const App(),
             },
-            builder: DevicePreview.appBuilder, // For device preview
+            // No custom builder
           );
         },
       ),

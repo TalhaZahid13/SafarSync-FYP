@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show compute;
 import 'package:flutter/material.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
@@ -32,7 +33,11 @@ class _WeatherWidgetState extends State<WeatherWidget> {
   @override
   void initState() {
     super.initState();
-    _resolveLocationAndSync();
+    // Defer past the first frame so the home page can paint before
+    // GPS + network calls begin, preventing main-thread frame skipping.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _resolveLocationAndSync();
+    });
   }
 
   Future<void> _tryLoadLocationFromBackend() async {
@@ -91,6 +96,7 @@ class _WeatherWidgetState extends State<WeatherWidget> {
 
       final position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
+        timeLimit: const Duration(seconds: 15),
       );
 
       String city = 'Unknown city';
@@ -109,9 +115,7 @@ class _WeatherWidgetState extends State<WeatherWidget> {
               : city;
           country = place.country ?? '';
         }
-      } catch (_) {
-        // Keep fallback city when reverse geocoding is unavailable.
-      }
+      } catch (_) {}
 
       if (!mounted) return;
 
@@ -123,13 +127,14 @@ class _WeatherWidgetState extends State<WeatherWidget> {
         _isFetchingLocation = false;
       });
 
-      await _syncLocationToBackend(
+      // Fire-and-forget — backend sync errors must not affect weather loading.
+      _syncLocationToBackend(
         latitude: position.latitude,
         longitude: position.longitude,
         city: city,
         country: country,
         accuracy: position.accuracy,
-      );
+      ).ignore();
 
       await _loadWeatherForCoordinates(position.latitude, position.longitude);
     } catch (_) {
@@ -139,55 +144,96 @@ class _WeatherWidgetState extends State<WeatherWidget> {
 
   Future<void> _loadWeatherForCoordinates(double lat, double lng) async {
     try {
-      // Fetch the current weather data and forecast
-      final currentResult = await ApiService.getWeather(lat, lng);
-      final forecastResult = await ApiService.getWeatherForecast(
-        lat,
-        lng,
-        days: 4,
+      // Use Open-Meteo directly — free, no API key, correct field names.
+      final uri = Uri.parse(
+        'https://api.open-meteo.com/v1/forecast'
+        '?latitude=$lat&longitude=$lng'
+        '&current=temperature_2m,relative_humidity_2m,apparent_temperature,'
+        'wind_speed_10m,weather_code'
+        '&daily=temperature_2m_max,weather_code'
+        '&timezone=auto'
+        '&forecast_days=5',
       );
 
-      // Check if the widget is still mounted before calling setState
+      final response = await http.get(uri);
       if (!mounted) return;
 
-      // Extract current weather data
-      final currentWeather = currentResult['weather'] as Map<String, dynamic>?;
-      final forecastList = (forecastResult['forecast'] as List<dynamic>? ?? [])
-          .whereType<Map>()
-          .map((item) => Map<String, dynamic>.from(item))
+      if (response.statusCode != 200) {
+        setState(() {
+          _condition = 'Unavailable';
+          _temperature = null;
+          _humidity = null;
+          _windSpeed = null;
+          _feelsLike = null;
+          _weatherCode = -1;
+          _forecast = [];
+        });
+        return;
+      }
+
+      final data = await compute(
+        (String body) => jsonDecode(body) as Map<String, dynamic>,
+        response.body,
+      );
+      final current = data['current'] as Map<String, dynamic>;
+      final daily = data['daily'] as Map<String, dynamic>;
+
+      final times = (daily['time'] as List).cast<String>();
+      final maxTemps = (daily['temperature_2m_max'] as List)
+          .map((e) => (e as num).round())
+          .toList();
+      final codes = (daily['weather_code'] as List)
+          .map((e) => (e as num).toInt())
           .toList();
 
-      setState(() {
-        // Handle current weather data if available
-        if (currentResult['success'] == true && currentWeather != null) {
-          _temperature = (currentWeather['temperature'] as num?)?.round() ?? 0;
-          _humidity = (currentWeather['humidity'] as num?)?.round() ?? 0;
-          _windSpeed = (currentWeather['wind_speed'] as num?)?.round() ?? 0;
-          _feelsLike = (currentWeather['feels_like'] as num?)?.round() ?? 0;
-          _condition = currentWeather['condition'] ?? 'Unknown';
-          _weatherCode =
-              (currentWeather['weather_code'] as num?)?.toInt() ?? -1;
-        } else {
-          // Set fallback values in case weather data is not available
-          _temperature = 0;
-          _humidity = 0;
-          _windSpeed = 0;
-          _feelsLike = 0;
-          _condition = 'Unavailable';
-          _weatherCode = -1;
-        }
+      // Skip today (index 0), show next 4 days.
+      final forecastList = List.generate(
+        (times.length - 1).clamp(0, 4),
+        (i) => {
+          'date': times[i + 1],
+          'high_temp': maxTemps[i + 1],
+          'weather_code': codes[i + 1],
+        },
+      );
 
-        // Handle the weather forecast data if available
-        _forecast = forecastList.isNotEmpty ? forecastList : [];
-      });
-    } catch (e) {
-      print('Error loading weather data: $e');
-      // Handle any errors that occur during the API requests
+      final weatherCode = (current['weather_code'] as num).toInt();
+
+      if (!mounted) return;
       setState(() {
-        _condition = 'Error fetching data';
+        _temperature = (current['temperature_2m'] as num).round();
+        _humidity = (current['relative_humidity_2m'] as num).round();
+        _windSpeed = (current['wind_speed_10m'] as num).round();
+        _feelsLike = (current['apparent_temperature'] as num).round();
+        _weatherCode = weatherCode;
+        _condition = _conditionFromCode(weatherCode);
+        _forecast = forecastList;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _condition = 'Unavailable';
+        _temperature = null;
+        _humidity = null;
+        _windSpeed = null;
+        _feelsLike = null;
+        _weatherCode = -1;
         _forecast = [];
       });
     }
+  }
+
+  String _conditionFromCode(int code) {
+    if (code == 0) return 'Clear';
+    if (code <= 2) return 'Partly Cloudy';
+    if (code == 3) return 'Overcast';
+    if (code <= 48) return 'Foggy';
+    if (code <= 55) return 'Drizzle';
+    if (code <= 65) return 'Rainy';
+    if (code <= 77) return 'Snowy';
+    if (code <= 82) return 'Showers';
+    if (code <= 86) return 'Snow';
+    if (code <= 99) return 'Thunderstorm';
+    return 'Cloudy';
   }
 
   IconData _iconFromWeatherCode(int code) {
@@ -272,7 +318,7 @@ class _WeatherWidgetState extends State<WeatherWidget> {
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: theme.cardColor.withOpacity(0.92),
+            color: theme.cardColor.withValues(alpha: 0.92),
             borderRadius: BorderRadius.circular(18),
           ),
           child: Column(
@@ -306,12 +352,15 @@ class _WeatherWidgetState extends State<WeatherWidget> {
                         const SizedBox(height: 8),
                         Row(
                           children: [
-                            Text(
-                              '$_condition ${_temperature ?? '--'}°',
-                              style: TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.w800,
-                                color: theme.textTheme.bodyMedium?.color,
+                            Flexible(
+                              child: Text(
+                                '$_condition ${_temperature ?? '--'}°',
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.w800,
+                                  color: theme.textTheme.bodyMedium?.color,
+                                ),
                               ),
                             ),
                             const SizedBox(width: 8),
@@ -388,7 +437,7 @@ class _WeatherWidgetState extends State<WeatherWidget> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.06),
+        color: Colors.black.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(999),
       ),
       child: Row(

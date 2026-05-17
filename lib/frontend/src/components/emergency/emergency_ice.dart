@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:geocoding/geocoding.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../utils/api_service.dart';
 
@@ -13,14 +17,71 @@ class EmergencyICE extends StatefulWidget {
 class _EmergencyICEState extends State<EmergencyICE> {
   String _locationCoordinates = 'Fetching location...';
   String _locationCityCountry = 'Please wait';
+  double? _rawLat;
+  double? _rawLng;
 
   @override
   void initState() {
     super.initState();
-    _loadLatestLocationFromBackend();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _loadLocation();
+    });
   }
 
-  Future<void> _loadLatestLocationFromBackend() async {
+  Future<void> _loadLocation() async {
+    // Try live GPS first for accurate emergency location.
+    try {
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (serviceEnabled) {
+        var permission = await Geolocator.checkPermission();
+        if (permission == LocationPermission.denied) {
+          permission = await Geolocator.requestPermission();
+        }
+
+        if (permission != LocationPermission.denied &&
+            permission != LocationPermission.deniedForever) {
+          final position = await Geolocator.getCurrentPosition(
+            desiredAccuracy: LocationAccuracy.high,
+            timeLimit: const Duration(seconds: 15),
+          );
+
+          String city = '';
+          String country = '';
+          try {
+            final placemarks = await placemarkFromCoordinates(
+              position.latitude,
+              position.longitude,
+            );
+            if (placemarks.isNotEmpty) {
+              final place = placemarks.first;
+              city = (place.locality?.isNotEmpty ?? false)
+                  ? place.locality!
+                  : (place.subAdministrativeArea ?? '');
+              country = place.country ?? '';
+            }
+          } catch (_) {}
+
+          if (!mounted) return;
+          setState(() {
+            _rawLat = position.latitude;
+            _rawLng = position.longitude;
+            _locationCoordinates =
+                '${position.latitude.toStringAsFixed(4)}° N, '
+                '${position.longitude.toStringAsFixed(4)}° E';
+            _locationCityCountry = city.isNotEmpty && country.isNotEmpty
+                ? '$city, $country'
+                : (city.isNotEmpty ? city : 'Unknown city');
+          });
+          return;
+        }
+      }
+    } catch (_) {}
+
+    // Fallback: load last known location from backend.
+    await _loadLocationFromBackend();
+  }
+
+  Future<void> _loadLocationFromBackend() async {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) {
       if (!mounted) return;
@@ -37,7 +98,7 @@ class _EmergencyICEState extends State<EmergencyICE> {
     if (result['success'] != true || result['location'] == null) {
       setState(() {
         _locationCoordinates = 'Location unavailable';
-        _locationCityCountry = 'No backend location yet';
+        _locationCityCountry = 'Enable GPS for location';
       });
       return;
     }
@@ -48,16 +109,15 @@ class _EmergencyICEState extends State<EmergencyICE> {
     final city = '${location['city'] ?? ''}'.trim();
     final country = '${location['country'] ?? ''}'.trim();
 
-    final coordText = (lat != null && lng != null)
-        ? '${lat.toStringAsFixed(4)}° N, ${lng.toStringAsFixed(4)}° E'
-        : 'Coordinates unavailable';
-    final cityCountryText = city.isNotEmpty && country.isNotEmpty
-        ? '$city, $country'
-        : (city.isNotEmpty ? city : 'Unknown city');
-
     setState(() {
-      _locationCoordinates = coordText;
-      _locationCityCountry = cityCountryText;
+      _rawLat = lat;
+      _rawLng = lng;
+      _locationCoordinates = (lat != null && lng != null)
+          ? '${lat.toStringAsFixed(4)}° N, ${lng.toStringAsFixed(4)}° E'
+          : 'Coordinates unavailable';
+      _locationCityCountry = city.isNotEmpty && country.isNotEmpty
+          ? '$city, $country'
+          : (city.isNotEmpty ? city : 'Unknown city');
     });
   }
 
@@ -67,7 +127,7 @@ class _EmergencyICEState extends State<EmergencyICE> {
       margin: const EdgeInsets.only(bottom: 24),
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.1), // glass-card
+        color: Colors.white.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: Colors.red.shade200, width: 2),
       ),
@@ -93,23 +153,29 @@ class _EmergencyICEState extends State<EmergencyICE> {
                 ),
               ),
               const SizedBox(width: 12),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
-                  Text(
-                    'Emergency ICE Panel',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: const [
+                    Text(
+                      'Emergency ICE Panel',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                  ),
-                  SizedBox(height: 4),
-                  Text(
-                    'Quick access to emergency services',
-                    style: TextStyle(fontSize: 12, color: Colors.grey),
-                  ),
-                ],
+                    SizedBox(height: 4),
+                    Text(
+                      'Quick access to emergency services',
+                      style: TextStyle(fontSize: 12, color: Colors.grey),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
@@ -121,8 +187,12 @@ class _EmergencyICEState extends State<EmergencyICE> {
             children: [
               Expanded(
                 child: ElevatedButton(
-                  onPressed: () {
-                    // TODO: implement emergency call
+                  onPressed: () async {
+                    final uri = Uri(scheme: 'tel', path: '15');
+                    if (!await launchUrl(uri,
+                        mode: LaunchMode.externalApplication)) {
+                      await launchUrl(uri);
+                    }
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.red,
@@ -151,7 +221,22 @@ class _EmergencyICEState extends State<EmergencyICE> {
               Expanded(
                 child: ElevatedButton(
                   onPressed: () {
-                    // TODO: implement share location
+                    final lat = _rawLat;
+                    final lng = _rawLng;
+
+                    final mapsUrl = (lat != null && lng != null)
+                        ? 'https://maps.google.com/?q=$lat,$lng'
+                        : null;
+
+                    final message = [
+                      '🚨 Emergency! I need help!',
+                      '',
+                      '📍 $_locationCityCountry',
+                      '📌 $_locationCoordinates',
+                      if (mapsUrl != null) '🗺️ $mapsUrl',
+                    ].join('\n');
+
+                    Share.share(message, subject: 'Emergency Location');
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.orange,

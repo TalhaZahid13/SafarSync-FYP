@@ -1,9 +1,18 @@
 import 'package:flutter/material.dart';
 
 class SmartRoutePlanner extends StatelessWidget {
-  final VoidCallback onPlanRoute; // 👈 required callback
+  final VoidCallback onPlanRoute;
+  final TextEditingController? fromController;
+  final TextEditingController? toController;
+  final bool isLoading;
 
-  const SmartRoutePlanner({super.key, required this.onPlanRoute});
+  const SmartRoutePlanner({
+    super.key,
+    required this.onPlanRoute,
+    this.fromController,
+    this.toController,
+    this.isLoading = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -79,7 +88,7 @@ class SmartRoutePlanner extends StatelessWidget {
                   fit: BoxFit.scaleDown,
                   alignment: Alignment.centerRight,
                   child: InkWell(
-                    onTap: onPlanRoute, // 👈 yahan se App ka callback chalega
+                    onTap: isLoading ? null : onPlanRoute,
                     borderRadius: BorderRadius.circular(16),
                     child: Container(
                       padding: const EdgeInsets.symmetric(
@@ -92,10 +101,19 @@ class SmartRoutePlanner extends StatelessWidget {
                         ),
                         borderRadius: BorderRadius.circular(16),
                       ),
-                      child: const Text(
-                        'Plan Route',
-                        style: TextStyle(color: Colors.white),
-                      ),
+                      child: isLoading
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Text(
+                              'Plan Route',
+                              style: TextStyle(color: Colors.white),
+                            ),
                     ),
                   ),
                 ),
@@ -192,7 +210,7 @@ class SmartRoutePlanner extends StatelessWidget {
                     const SizedBox(height: 24),
                     // Start Point
                     Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         Container(
                           width: 32,
@@ -208,24 +226,26 @@ class SmartRoutePlanner extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(width: 8),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: const [
-                            Text(
-                              'Islamabad, Pakistan',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.black87,
-                              ),
-                            ),
-                            Text(
-                              'Starting Point • Now',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey,
-                              ),
-                            ),
-                          ],
+                        Expanded(
+                          child: fromController != null
+                              ? TextField(
+                                  controller: fromController,
+                                  decoration: const InputDecoration(
+                                    hintText: 'From — city or address',
+                                    hintStyle: TextStyle(
+                                        fontSize: 12, color: Colors.grey),
+                                    isDense: true,
+                                    border: InputBorder.none,
+                                    contentPadding: EdgeInsets.zero,
+                                  ),
+                                  style: const TextStyle(
+                                      fontSize: 14, color: Colors.black87),
+                                )
+                              : const Text(
+                                  'Islamabad, Pakistan',
+                                  style: TextStyle(
+                                      fontSize: 14, color: Colors.black87),
+                                ),
                         ),
                       ],
                     ),
@@ -273,7 +293,7 @@ class SmartRoutePlanner extends StatelessWidget {
                     ),
                     // Destination Point
                     Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         Container(
                           width: 32,
@@ -289,24 +309,26 @@ class SmartRoutePlanner extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(width: 8),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: const [
-                            Text(
-                              'Murree, Punjab',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.black87,
-                              ),
-                            ),
-                            Text(
-                              'Destination • 1h 30min',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey,
-                              ),
-                            ),
-                          ],
+                        Expanded(
+                          child: toController != null
+                              ? TextField(
+                                  controller: toController,
+                                  decoration: const InputDecoration(
+                                    hintText: 'To — city or address',
+                                    hintStyle: TextStyle(
+                                        fontSize: 12, color: Colors.grey),
+                                    isDense: true,
+                                    border: InputBorder.none,
+                                    contentPadding: EdgeInsets.zero,
+                                  ),
+                                  style: const TextStyle(
+                                      fontSize: 14, color: Colors.black87),
+                                )
+                              : const Text(
+                                  'Murree, Punjab',
+                                  style: TextStyle(
+                                      fontSize: 14, color: Colors.black87),
+                                ),
                         ),
                       ],
                     ),

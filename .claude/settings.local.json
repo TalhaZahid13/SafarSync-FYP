@@ -5,7 +5,13 @@
       "Bash(Get-ChildItem -Recurse -Directory -Path \"d:\\\\University\\\\8th Semester\\\\Final Year Project - 2\\\\safarsync_mobileapp\" -Filter \"*routes*\")",
       "Bash(Select-Object -ExpandProperty FullName)",
       "Bash(flutter pub *)",
-      "Bash(npm install *)"
+      "Bash(npm install *)",
+      "Bash(Test-Path \"d:\\\\University\\\\8th Semester\\\\Final Year Project - 2\\\\safarsync_mobileapp\\\\android\\\\app\\\\google-services.json\" -PathType Leaf)",
+      "Bash(xargs grep -l \"Geolocator\\\\|geolocator\\\\|getCurrentPosition\\\\|getPositionStream\")",
+      "Bash(Get-ChildItem -Path \"d:\\\\University\\\\8th Semester\\\\Final Year Project - 2\\\\safarsync_mobileapp\\\\lib\" -Recurse -Filter \"*.dart\")",
+      "Bash(Select-Object -ExpandProperty Name)",
+      "Bash(Sort-Object)",
+      "Bash(python -c ' *)"
     ]
   }
 }
