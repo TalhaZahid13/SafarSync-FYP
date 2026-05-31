@@ -36,10 +36,10 @@ class BottomNavigation extends StatelessWidget {
         child: Container(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(30),
-            color: theme.cardColor.withOpacity(0.95),
+            color: theme.cardColor.withValues(alpha:0.95),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.12),
+                color: Colors.black.withValues(alpha:0.12),
                 blurRadius: 20,
                 offset: Offset(0, 10),
               ),

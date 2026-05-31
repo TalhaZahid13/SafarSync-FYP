@@ -279,9 +279,9 @@ class _SearchBarState extends State<SearchBar> {
       width: 36,
       height: 36,
       decoration: BoxDecoration(
-        color: color.withOpacity(0.15),
+        color: color.withValues(alpha:0.15),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withValues(alpha:0.3)),
       ),
       child: Icon(icon, color: color, size: 20),
     );

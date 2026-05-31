@@ -94,7 +94,50 @@ class _SmartRoutePageState extends State<SmartRoutePage> {
         actions: [
           IconButton(
             icon: const Icon(Icons.history, color: Colors.white70),
-            onPressed: () {},
+            onPressed: () {
+              showModalBottomSheet(
+                context: context,
+                backgroundColor: const Color(0xFF1B3A5C),
+                shape: const RoundedRectangleBorder(
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                ),
+                builder: (_) => Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Route History',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      for (final entry in [
+                        ('Islamabad', 'Murree', '60 km', '1h 30m', 'Today'),
+                        ('Lahore', 'Nathiagali', '180 km', '3h 15m', 'Yesterday'),
+                        ('Karachi', 'Hyderabad', '163 km', '2h 45m', '3 days ago'),
+                      ])
+                        ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: const Icon(Icons.route, color: Colors.white54),
+                          title: Text(
+                            '${entry.$1} → ${entry.$2}',
+                            style: const TextStyle(color: Colors.white, fontSize: 14),
+                          ),
+                          subtitle: Text(
+                            '${entry.$3} · ${entry.$4} · ${entry.$5}',
+                            style: const TextStyle(color: Colors.white54, fontSize: 12),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              );
+            },
             tooltip: 'Route History',
           ),
         ],

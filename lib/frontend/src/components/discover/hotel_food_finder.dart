@@ -112,7 +112,7 @@ class HotelFoodFinder extends StatelessWidget {
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.12),
+            color: Colors.black.withValues(alpha:0.12),
             blurRadius: 12,
             offset: const Offset(0, 6),
           ),
@@ -139,7 +139,7 @@ class HotelFoodFinder extends StatelessWidget {
                 margin: const EdgeInsets.only(bottom: 12),
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.surfaceContainerHighest.withOpacity(
+                  color: theme.colorScheme.surfaceContainerHighest.withValues(alpha:
                     0.45,
                   ),
                   borderRadius: BorderRadius.circular(16),

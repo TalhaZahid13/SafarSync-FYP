@@ -68,7 +68,9 @@ class Destination {
 }
 
 class PopularDestinations extends StatefulWidget {
-  const PopularDestinations({Key? key}) : super(key: key);
+  final List<String> activeFilters;
+
+  const PopularDestinations({Key? key, this.activeFilters = const []}) : super(key: key);
 
   @override
   State<PopularDestinations> createState() => _PopularDestinationsState();
@@ -267,6 +269,26 @@ class _PopularDestinationsState extends State<PopularDestinations> {
       );
     }
 
+    final List<Destination> filtered = widget.activeFilters.isEmpty
+        ? destinations
+        : destinations.where((d) {
+            final cat = (d.category ?? '').toLowerCase();
+            return widget.activeFilters.any((f) => f.toLowerCase() == cat);
+          }).toList();
+
+    if (filtered.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.all(32.0),
+        child: Center(
+          child: Text(
+            'No destinations match the selected filters',
+            style: TextStyle(color: Colors.white70),
+            textAlign: TextAlign.center,
+          ),
+        ),
+      );
+    }
+
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -277,9 +299,9 @@ class _PopularDestinationsState extends State<PopularDestinations> {
         crossAxisSpacing: 12,
         mainAxisSpacing: 12,
       ),
-      itemCount: destinations.length,
+      itemCount: filtered.length,
       itemBuilder: (BuildContext context, int index) {
-        final Destination dest = destinations[index];
+        final Destination dest = filtered[index];
         return _buildDestinationCard(dest);
       },
     );

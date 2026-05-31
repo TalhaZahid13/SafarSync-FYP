@@ -67,12 +67,12 @@ class _SmartAlertsState extends State<SmartAlerts> {
         return Container(
           margin: const EdgeInsets.symmetric(vertical: 6),
           decoration: BoxDecoration(
-            color: alert.color.withOpacity(0.15),
+            color: alert.color.withValues(alpha:0.15),
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: alert.color.withOpacity(0.3), width: 1),
+            border: Border.all(color: alert.color.withValues(alpha:0.3), width: 1),
             boxShadow: [
               BoxShadow(
-                color: alert.color.withOpacity(0.08),
+                color: alert.color.withValues(alpha:0.08),
                 blurRadius: 14,
                 offset: const Offset(0, 8),
               ),
@@ -88,7 +88,7 @@ class _SmartAlertsState extends State<SmartAlerts> {
                   width: 40,
                   height: 40,
                   decoration: BoxDecoration(
-                    color: alert.color.withOpacity(0.3),
+                    color: alert.color.withValues(alpha:0.3),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Center(

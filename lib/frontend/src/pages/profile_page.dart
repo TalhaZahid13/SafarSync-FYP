@@ -174,7 +174,7 @@ class ProfilePage extends StatelessWidget {
                       children: [
                         Container(
                           height: 8,
-                          color: Colors.white.withOpacity(0.12),
+                          color: Colors.white.withValues(alpha: 0.12),
                         ),
                         FractionallySizedBox(
                           widthFactor: 0.68,
@@ -340,7 +340,12 @@ class ProfilePage extends StatelessWidget {
                     context,
                     LucideIcons.settings,
                     'Account Settings',
-                    () {},
+                    () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const ProfileSettingsPage(),
+                      ),
+                    ),
                   ),
                   settingsButton(
                     context,
@@ -396,21 +401,26 @@ class ProfilePage extends StatelessWidget {
   }
 
   Widget _profileMeta() {
-    return const Column(
+    final user = FirebaseAuth.instance.currentUser;
+    final name = (user?.displayName?.isNotEmpty == true)
+        ? user!.displayName!
+        : 'Traveller';
+    final email = user?.email ?? '';
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Ahmed Khan',
-          style: TextStyle(
+          name,
+          style: const TextStyle(
             color: _titleColor,
             fontSize: 16,
             fontWeight: FontWeight.w700,
           ),
         ),
-        SizedBox(height: 2),
+        const SizedBox(height: 2),
         Text(
-          'ahmedkhan@email.com',
-          style: TextStyle(fontSize: 12, color: _mutedText),
+          email,
+          style: const TextStyle(fontSize: 12, color: _mutedText),
         ),
         SizedBox(height: 4),
         Row(
@@ -474,7 +484,7 @@ class ProfilePage extends StatelessWidget {
         border: Border.all(color: _cardOutline),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.06),
+            color: Colors.black.withValues(alpha: 0.06),
             blurRadius: 14,
             offset: const Offset(0, 6),
           ),

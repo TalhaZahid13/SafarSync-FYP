@@ -13,11 +13,18 @@ import '../components/smart/smart_alerts.dart';
 import '../utils/responsive.dart';
 import '../ui/app_theme.dart';
 
-class HomePage extends StatelessWidget {
-  final VoidCallback onPlanRoute; // 👈 important
-  final Function(String)? onTabChange; // New callback for search navigation
+class HomePage extends StatefulWidget {
+  final VoidCallback onPlanRoute;
+  final Function(String)? onTabChange;
 
   const HomePage({super.key, required this.onPlanRoute, this.onTabChange});
+
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  List<String> _activeFilters = const ['Nature'];
 
   @override
   Widget build(BuildContext context) {
@@ -38,7 +45,7 @@ class HomePage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            SearchBar(onTabChange: onTabChange),
+            SearchBar(onTabChange: widget.onTabChange),
             SizedBox(height: padding),
             const SmartAlerts(),
             const SizedBox(height: 16),
@@ -46,13 +53,17 @@ class HomePage extends StatelessWidget {
             const SizedBox(height: 16),
             const ResponsiveWeatherEmergency(),
             const SizedBox(height: 16),
-            PopularDestinations(),
+            InterestFilters(
+              initialFilters: _activeFilters,
+              onFiltersChanged: (filters) =>
+                  setState(() => _activeFilters = filters),
+            ),
             const SizedBox(height: 16),
-            const InterestFilters(),
+            PopularDestinations(activeFilters: _activeFilters),
             const SizedBox(height: 16),
             const AIRecommendations(),
             const SizedBox(height: 16),
-            SmartRoutePlanner(onPlanRoute: onPlanRoute),
+            SmartRoutePlanner(onPlanRoute: widget.onPlanRoute),
             const SizedBox(height: 16),
             const HotelFoodFinder(),
             const SizedBox(height: 16),

@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -11,8 +12,51 @@ class ProfileSettingsPage extends StatefulWidget {
 }
 
 class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
-  // Blood group state
+  late final TextEditingController _nameCtrl;
+  late final TextEditingController _emailCtrl;
+  late final TextEditingController _phoneCtrl;
+  late final TextEditingController _cityCtrl;
+
   String selectedBloodGroup = 'O+';
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final user = FirebaseAuth.instance.currentUser;
+    _nameCtrl = TextEditingController(text: user?.displayName ?? '');
+    _emailCtrl = TextEditingController(text: user?.email ?? '');
+    _phoneCtrl = TextEditingController(text: user?.phoneNumber ?? '');
+    _cityCtrl = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    _emailCtrl.dispose();
+    _phoneCtrl.dispose();
+    _cityCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _saveProfile() async {
+    setState(() => _saving = true);
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null && _nameCtrl.text.trim().isNotEmpty) {
+        await user.updateDisplayName(_nameCtrl.text.trim());
+      }
+      if (!mounted) return;
+      Navigator.pop(context);
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to save — please try again')),
+      );
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
 
   final List<String> bloodGroups = [
     'A+',
@@ -86,10 +130,11 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
             const SizedBox(height: 24),
 
             // Form Fields
-            _inputField('Full Name', 'Muhammad Talha'),
-            _inputField('Email', 'talhazahid710@email.com'),
-            _inputField('Contact Number', '+92 3XX XXXXXXX'),
-            _inputField('City', 'Islamabad'),
+            _inputField('Full Name', _nameCtrl),
+            _inputField('Email', _emailCtrl, readOnly: true),
+            _inputField('Contact Number', _phoneCtrl,
+                keyboardType: TextInputType.phone),
+            _inputField('City', _cityCtrl),
             _buildBloodGroupDropdown(),
 
             const SizedBox(height: 24),
@@ -98,10 +143,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: () {
-                  // TODO: save profile changes (selectedBloodGroup etc.)
-                  Navigator.pop(context);
-                },
+                onPressed: _saving ? null : _saveProfile,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: colorScheme.secondary,
                   padding: const EdgeInsets.symmetric(vertical: 14),
@@ -109,10 +151,18 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
                     borderRadius: BorderRadius.circular(14),
                   ),
                 ),
-                child: const Text(
-                  'Save Changes',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                ),
+                child: _saving
+                    ? const SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Colors.white),
+                      )
+                    : const Text(
+                        'Save Changes',
+                        style:
+                            TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                      ),
               ),
             ),
           ],
@@ -178,7 +228,12 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
   }
 
   /// Generic text field for most profile inputs
-  Widget _inputField(String label, String initialValue) {
+  Widget _inputField(
+    String label,
+    TextEditingController controller, {
+    bool readOnly = false,
+    TextInputType keyboardType = TextInputType.text,
+  }) {
     final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
@@ -194,11 +249,10 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
           ),
           const SizedBox(height: 6),
           TextFormField(
-            initialValue: initialValue,
+            controller: controller,
+            readOnly: readOnly,
             style: TextStyle(color: theme.textTheme.bodyMedium?.color),
-            keyboardType: label == 'Contact Number'
-                ? TextInputType.phone
-                : TextInputType.text,
+            keyboardType: keyboardType,
             decoration: InputDecoration(
               filled: true,
               fillColor: theme.cardColor,
