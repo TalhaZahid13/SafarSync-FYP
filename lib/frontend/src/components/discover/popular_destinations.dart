@@ -153,6 +153,33 @@ class _PopularDestinationsState extends State<PopularDestinations> {
     return <dynamic>[];
   }
 
+  Widget _buildImage(String src, double height) {
+    final isNetwork = src.startsWith('http://') || src.startsWith('https://');
+    final fallback = Container(
+      height: height,
+      color: const Color(0xFF1B3A4C),
+      child: const Center(
+        child: Icon(Icons.image_not_supported, color: Colors.white54),
+      ),
+    );
+    if (isNetwork) {
+      return Image.network(
+        src,
+        height: height,
+        width: double.infinity,
+        fit: BoxFit.cover,
+        errorBuilder: (_, _, _) => fallback,
+      );
+    }
+    return Image.asset(
+      src,
+      height: height,
+      width: double.infinity,
+      fit: BoxFit.cover,
+      errorBuilder: (_, _, _) => fallback,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -279,29 +306,7 @@ class _PopularDestinationsState extends State<PopularDestinations> {
                   borderRadius: const BorderRadius.vertical(
                     top: Radius.circular(20),
                   ),
-                  child: Image.network(
-                    dest.image,
-                    height: 108,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                    errorBuilder:
-                        (
-                          BuildContext context,
-                          Object error,
-                          StackTrace? stackTrace,
-                        ) {
-                          return Container(
-                            height: 108,
-                            color: const Color(0xFF1B3A4C),
-                            child: const Center(
-                              child: Icon(
-                                Icons.image_not_supported,
-                                color: Colors.white54,
-                              ),
-                            ),
-                          );
-                        },
-                  ),
+                  child: _buildImage(dest.image, 108),
                 ),
 
                 // Gradient overlay on image

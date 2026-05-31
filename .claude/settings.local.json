@@ -11,7 +11,9 @@
       "Bash(Get-ChildItem -Path \"d:\\\\University\\\\8th Semester\\\\Final Year Project - 2\\\\safarsync_mobileapp\\\\lib\" -Recurse -Filter \"*.dart\")",
       "Bash(Select-Object -ExpandProperty Name)",
       "Bash(Sort-Object)",
-      "Bash(python -c ' *)"
+      "Bash(python -c ' *)",
+      "Bash(Get-ChildItem -Path \"d:\\\\University\\\\8th Semester\\\\Final Year Project - 2\\\\safarsync_mobileapp\" -Recurse -Directory)",
+      "Bash(dart run *)"
     ]
   }
 }
