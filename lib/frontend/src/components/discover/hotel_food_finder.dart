@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
 class HotelFoodFinder extends StatelessWidget {
@@ -150,11 +151,23 @@ class HotelFoodFinder extends StatelessWidget {
                     // Image
                     ClipRRect(
                       borderRadius: BorderRadius.circular(12),
-                      child: Image.network(
-                        item['image'],
+                      child: CachedNetworkImage(
+                        imageUrl: item['image'] as String,
                         width: 80,
                         height: 80,
                         fit: BoxFit.cover,
+                        placeholder: (_, _) => Container(
+                          width: 80,
+                          height: 80,
+                          color: Colors.grey.shade200,
+                        ),
+                        errorWidget: (_, _, _) => Container(
+                          width: 80,
+                          height: 80,
+                          color: Colors.grey.shade200,
+                          child: const Icon(Icons.broken_image,
+                              color: Colors.grey),
+                        ),
                       ),
                     ),
                     const SizedBox(width: 8),

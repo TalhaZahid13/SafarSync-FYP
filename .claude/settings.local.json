@@ -13,7 +13,12 @@
       "Bash(Sort-Object)",
       "Bash(python -c ' *)",
       "Bash(Get-ChildItem -Path \"d:\\\\University\\\\8th Semester\\\\Final Year Project - 2\\\\safarsync_mobileapp\" -Recurse -Directory)",
-      "Bash(dart run *)"
+      "Bash(dart run *)",
+      "Bash(dart analyze *)",
+      "Bash(dir \"d:\\\\University\\\\8th Semester\\\\Final Year Project - 2\\\\safarsync_mobileapp\\\\android\\\\app\\\\\" /b 2>&1)",
+      "WebFetch(domain:maps.app.goo.gl)",
+      "Bash(tail -20 lib/frontend/src/pages/live_map_page.dart)",
+      "Bash(powershell -Command \"Get-Content 'lib/frontend/src/pages/live_map_page.dart' | Select-Object -Last 20\")"
     ]
   }
 }

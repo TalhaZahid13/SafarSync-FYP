@@ -9,48 +9,46 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  # Firebase
   firebase_core: ^3.0.0
   firebase_auth: ^5.0.0
+  # UI & Icons
   lucide_icons_flutter: ^1.0.0
-  pdf: ^3.11.3
-  printing: ^5.10.0
-  intl: ^0.20.2
-  flutter_vector_icons: ^2.0.0
+  font_awesome_flutter: ^10.8.0   # Google + Apple sign-in icons
   cupertino_icons: ^1.0.8
-  flutter_native_splash: ^2.4.3
-  flutter_launcher_icons: ^0.13.1
-  provider: ^6.0.5 # MVVM k liye state management
-  google_fonts: ^4.0.4 # Acha font use karne ke liye
-  flutter_svg: ^2.0.7 # SVG images (logo) use karne ke liye
-  animate_do: ^4.2.0
+  # State & Storage
+  provider: ^6.0.5
   shared_preferences: ^2.5.3
-  cached_network_image: ^3.4.1
-  flutter_screenutil: ^5.9.0
-  awesome_dialog: ^3.2.1
-  animated_bottom_navigation_bar: ^1.4.0
-  shimmer: ^3.0.0
-  socket_io_client: ^3.1.2
-  image_picker: ^1.0.4
-  permission_handler: ^11.3.1
-  flutter_image_compress: ^2.1.0
-  http: ^1.5.0
   sqflite: ^2.4.2
   path: ^1.9.1
+  # Network & Caching
+  http: ^1.5.0
+  cached_network_image: ^3.4.1
+  # Auth
   google_sign_in: ^6.2.1
   sign_in_with_apple: ^6.1.0
-  font_awesome_flutter: ^10.8.0
-  url_launcher: ^6.3.1
-  share_plus: ^10.0.0
+  # Location & Maps
   geolocator: ^12.0.0
   geocoding: ^3.0.0
   flutter_map: ^7.0.2
   latlong2: ^0.9.1
+  # Utilities
+  intl: ^0.20.2
+  url_launcher: ^6.3.1
+  share_plus: ^10.0.0
+  socket_io_client: ^3.1.2
   flutter_local_notifications: 21.0.0
+  # PDF export (profile trip report)
+  pdf: ^3.11.3
+  printing: ^5.10.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
+  # Build-time code generators — NOT included in the release APK
+  flutter_native_splash: ^2.4.3
+  flutter_launcher_icons: ^0.13.1
 
 flutter:
   uses-material-design: true

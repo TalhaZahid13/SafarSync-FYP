@@ -5,6 +5,7 @@ import 'package:latlong2/latlong.dart';
 import '../utils/responsive.dart';
 import '../utils/api_service.dart';
 import '../utils/route_session.dart';
+import '../utils/vehicle_type.dart';
 import '../ui/app_theme.dart';
 import 'live_map_page.dart';
 import 'new_route_page.dart';
@@ -76,6 +77,9 @@ class _RoutesPageState extends State<RoutesPage> {
     final endLng = (route['end_lng'] as num?)?.toDouble();
 
     if (endLat != null && endLng != null) {
+      if (!context.mounted) return;
+      final vehicle = await showVehiclePickerSheet(context);
+      if (vehicle == null || !context.mounted) return;
       await RouteSession.activate(
         routeName: routeName,
         fromName: fromName,
@@ -84,6 +88,7 @@ class _RoutesPageState extends State<RoutesPage> {
         startLng: startLng ?? 0,
         endLat: endLat,
         endLng: endLng,
+        vehicleType: vehicle,
       );
       if (!context.mounted) return;
       await Navigator.push(
@@ -92,6 +97,7 @@ class _RoutesPageState extends State<RoutesPage> {
           builder: (_) => LiveMapPage(
             routeDestination: LatLng(endLat, endLng),
             destinationName: toName,
+            vehicleType: vehicle,
           ),
         ),
       );
@@ -99,7 +105,7 @@ class _RoutesPageState extends State<RoutesPage> {
       return;
     }
 
-    // Static routes: geocode first.
+    // Static routes: geocode first, then show vehicle picker.
     final scaffold = ScaffoldMessenger.of(context);
     scaffold.showSnackBar(
       SnackBar(
@@ -116,6 +122,8 @@ class _RoutesPageState extends State<RoutesPage> {
       final toLocs = await locationFromAddress(toQ);
       scaffold.hideCurrentSnackBar();
       if (!context.mounted) return;
+      final vehicle = await showVehiclePickerSheet(context);
+      if (vehicle == null || !context.mounted) return;
       final nav = Navigator.of(context);
       await RouteSession.activate(
         routeName: routeName,
@@ -125,6 +133,7 @@ class _RoutesPageState extends State<RoutesPage> {
         startLng: fromLocs.first.longitude,
         endLat: toLocs.first.latitude,
         endLng: toLocs.first.longitude,
+        vehicleType: vehicle,
       );
       await nav.push(
         MaterialPageRoute(
@@ -134,6 +143,7 @@ class _RoutesPageState extends State<RoutesPage> {
             routeDestination: LatLng(
                 toLocs.first.latitude, toLocs.first.longitude),
             destinationName: toName,
+            vehicleType: vehicle,
           ),
         ),
       );
@@ -157,10 +167,22 @@ class _RoutesPageState extends State<RoutesPage> {
     if (route == null) return;
     final endLat = (route['end_lat'] as num?)?.toDouble();
     final endLng = (route['end_lng'] as num?)?.toDouble();
+    final startLat = (route['start_lat'] as num?)?.toDouble();
+    final startLng = (route['start_lng'] as num?)?.toDouble();
     if (endLat == null || endLng == null) return;
+    final vehicle = VehicleTypeX.fromName(route['vehicle_type'] as String?);
     await Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => const LiveMapPage()),
+      MaterialPageRoute(
+        builder: (_) => LiveMapPage(
+          routeOrigin: startLat != null && startLng != null
+              ? LatLng(startLat, startLng)
+              : null,
+          routeDestination: LatLng(endLat, endLng),
+          destinationName: route['to_name'] as String?,
+          vehicleType: vehicle,
+        ),
+      ),
     );
     if (mounted) _loadData();
   }

@@ -8,20 +8,81 @@ import 'package:geocoding/geocoding.dart';
 import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
 import 'package:socket_io_client/socket_io_client.dart' as io;
+import 'package:url_launcher/url_launcher.dart';
 import '../ui/app_theme.dart';
 import '../utils/api_service.dart';
+import '../utils/app_config.dart';
 import '../utils/route_session.dart';
+import '../utils/vehicle_type.dart';
+
+/// Decodes a Google Maps encoded polyline (precision = 5 decimal places).
+/// Must be top-level so it can be passed to [compute].
+List<LatLng> _decodePolyline5(String encoded) {
+  final points = <LatLng>[];
+  int index = 0, lat = 0, lng = 0;
+  while (index < encoded.length) {
+    int shift = 0, result = 0, byte;
+    do {
+      byte = encoded.codeUnitAt(index++) - 63;
+      result |= (byte & 0x1f) << shift;
+      shift += 5;
+    } while (byte >= 0x20);
+    lat += (result & 1) != 0 ? ~(result >> 1) : (result >> 1);
+    shift = 0; result = 0;
+    do {
+      byte = encoded.codeUnitAt(index++) - 63;
+      result |= (byte & 0x1f) << shift;
+      shift += 5;
+    } while (byte >= 0x20);
+    lng += (result & 1) != 0 ? ~(result >> 1) : (result >> 1);
+    points.add(LatLng(lat / 1e5, lng / 1e5));
+  }
+  return points;
+}
+
+/// Decodes a Valhalla-encoded polyline (precision = 6 decimal places).
+/// Must be top-level so it can be passed to [compute].
+List<LatLng> _decodePolyline6(String encoded) {
+  final points = <LatLng>[];
+  int index = 0;
+  int lat = 0;
+  int lng = 0;
+
+  while (index < encoded.length) {
+    int shift = 0, result = 0, byte;
+    do {
+      byte = encoded.codeUnitAt(index++) - 63;
+      result |= (byte & 0x1f) << shift;
+      shift += 5;
+    } while (byte >= 0x20);
+    lat += (result & 1) != 0 ? ~(result >> 1) : (result >> 1);
+
+    shift = 0;
+    result = 0;
+    do {
+      byte = encoded.codeUnitAt(index++) - 63;
+      result |= (byte & 0x1f) << shift;
+      shift += 5;
+    } while (byte >= 0x20);
+    lng += (result & 1) != 0 ? ~(result >> 1) : (result >> 1);
+
+    points.add(LatLng(lat / 1e6, lng / 1e6));
+  }
+  return points;
+}
 
 class LiveMapPage extends StatefulWidget {
   final LatLng? routeOrigin;
   final LatLng? routeDestination;
   final String? destinationName;
+  final VehicleType vehicleType;
 
   const LiveMapPage({
     super.key,
     this.routeOrigin,
     this.routeDestination,
     this.destinationName,
+    this.vehicleType = VehicleType.car,
   });
 
   @override
@@ -49,10 +110,17 @@ class _LiveMapPageState extends State<LiveMapPage> {
   bool _fetchingRoute = false;
   bool _routeFetched = false;
 
+  // Flight overlay (shown for long-distance routes > 180 km)
+  List<LatLng> _flightPoints = [];
+  double _flightDistM = 0;
+  int _flightMinutes = 0;
+  bool _hasFlightOption = false;
+
   // Session-restored route (when no constructor params given)
   LatLng? _sessionDest;
   LatLng? _sessionOrigin;
   String? _sessionDestName;
+  VehicleType _sessionVehicleType = VehicleType.car;
 
   StreamSubscription<Position>? _posStream;
   Timer? _geocodeDebounce;
@@ -61,6 +129,8 @@ class _LiveMapPageState extends State<LiveMapPage> {
   LatLng? get _effectiveDest => widget.routeDestination ?? _sessionDest;
   LatLng? get _effectiveOrigin => widget.routeOrigin ?? _sessionOrigin;
   String? get _effectiveDestName => widget.destinationName ?? _sessionDestName;
+  VehicleType get _effectiveVehicle =>
+      widget.routeDestination != null ? widget.vehicleType : _sessionVehicleType;
   bool get _hasRoute => _effectiveDest != null;
 
   @override
@@ -90,6 +160,8 @@ class _LiveMapPageState extends State<LiveMapPage> {
             if (startLat != null && startLng != null) {
               _sessionOrigin = LatLng(startLat, startLng);
             }
+            _sessionVehicleType = VehicleTypeX.fromName(
+                session['vehicle_type'] as String?);
           });
         }
       }
@@ -202,54 +274,181 @@ class _LiveMapPageState extends State<LiveMapPage> {
     if (mounted) setState(() => _fetchingRoute = true);
 
     try {
-      final uri = Uri.parse(
-        'https://router.project-osrm.org/route/v1/driving/'
-        '${from.longitude},${from.latitude};'
-        '${to.longitude},${to.latitude}'
-        '?overview=full&geometries=geojson',
-      );
+      final (coords, distM, durS) = _effectiveVehicle == VehicleType.car
+          ? await _fetchValhallaCarRoute(from, to)
+          : await _fetchOsrmCyclingRoute(from, to);
 
-      final response = await http.get(uri).timeout(const Duration(seconds: 20));
       if (!mounted) return;
+      setState(() {
+        _routePoints = coords;
+        _totalDistM = distM;
+        _totalDurS = durS;
+        _remainingDistM = distM;
+        _fetchingRoute = false;
+        _routeFetched = true;
+      });
 
-      if (response.statusCode == 200) {
-        final data = await compute(
-          (String body) => jsonDecode(body) as Map<String, dynamic>,
-          response.body,
-        );
-
-        final routes = data['routes'] as List?;
-        if (routes != null && routes.isNotEmpty) {
-          final route = routes[0] as Map<String, dynamic>;
-          final coords = (route['geometry']['coordinates'] as List)
-              .map((c) => LatLng(
-                    (c[1] as num).toDouble(),
-                    (c[0] as num).toDouble(),
-                  ))
-              .toList();
-
-          final dist = (route['distance'] as num).toDouble();
-          final dur = (route['duration'] as num).toDouble();
-
-          if (!mounted) return;
-          setState(() {
-            _routePoints = coords;
-            _totalDistM = dist;
-            _totalDurS = dur;
-            _remainingDistM = dist;
-            _fetchingRoute = false;
-            _routeFetched = true;
-          });
-
-          // Fit the camera to show the full route after map is ready
-          if (_mapReady && coords.length >= 2) {
-            _fitRoute(coords);
-          }
-        }
-      }
-    } catch (_) {
+      if (_mapReady && coords.length >= 2) _fitRoute(coords);
+      _maybeCalcFlight(from, to);
+    } catch (e) {
+      debugPrint('fetchRoute error: $e');
       if (mounted) setState(() => _fetchingRoute = false);
     }
+  }
+
+  /// Calculates flight straight-line overlay for routes longer than 180 km.
+  void _maybeCalcFlight(LatLng from, LatLng to) {
+    final meters = Geolocator.distanceBetween(
+        from.latitude, from.longitude, to.latitude, to.longitude);
+    if (meters < 180000) return; // no commercial flights below ~180 km
+    final minutes = (meters / 1000 / 800 * 60 + 25).round();
+    if (!mounted) return;
+    setState(() {
+      _flightPoints = [from, to];
+      _flightDistM = meters;
+      _flightMinutes = minutes;
+      _hasFlightOption = true;
+    });
+  }
+
+  /// Car routing — three-tier chain:
+  ///   1. Google Maps Directions API (identical routes to what Maps shows)
+  ///   2. Valhalla with use_highways:1.0  (if no API key or quota exceeded)
+  ///   3. OSRM driving                   (final fallback)
+  Future<(List<LatLng>, double, double)> _fetchValhallaCarRoute(
+      LatLng from, LatLng to) async {
+    // ── Tier 1: Google Maps Directions API ──────────────────────────────────
+    final key = AppConfig.googleMapsApiKey;
+    if (key.isNotEmpty && key != 'YOUR_GOOGLE_MAPS_API_KEY_HERE') {
+      try {
+        final uri = Uri.parse(
+          'https://maps.googleapis.com/maps/api/directions/json'
+          '?origin=${from.latitude},${from.longitude}'
+          '&destination=${to.latitude},${to.longitude}'
+          '&mode=driving'
+          '&key=$key',
+        );
+        final resp = await http.get(uri).timeout(const Duration(seconds: 20));
+        if (resp.statusCode == 200) {
+          final data = await compute(
+            (String b) => jsonDecode(b) as Map<String, dynamic>,
+            resp.body,
+          );
+          if (data['status'] == 'OK') {
+            final routes = data['routes'] as List;
+            final route = routes[0] as Map<String, dynamic>;
+            final leg = (route['legs'] as List)[0] as Map<String, dynamic>;
+            final distM =
+                ((leg['distance'] as Map)['value'] as num).toDouble();
+            final durS =
+                ((leg['duration'] as Map)['value'] as num).toDouble();
+            final encoded =
+                (route['overview_polyline'] as Map)['points'] as String;
+            final coords = await compute(_decodePolyline5, encoded);
+            debugPrint('Car route: Google Maps Directions API ✓');
+            return (coords, distM, durS);
+          }
+          debugPrint(
+              'Google Maps API status: ${data['status']} — trying Valhalla');
+        }
+      } catch (e) {
+        debugPrint('Google Maps Directions failed ($e) — trying Valhalla');
+      }
+    }
+
+    // ── Tier 2: Valhalla (use_highways:1.0 forces motorway preference) ──────
+    try {
+      final body = jsonEncode({
+        'locations': [
+          {'lon': from.longitude, 'lat': from.latitude},
+          {'lon': to.longitude, 'lat': to.latitude},
+        ],
+        'costing': 'auto',
+        'costing_options': {
+          'auto': {
+            'use_highways': 8.0, // >1 encourages motorways; 8 = strong preference
+            'use_tolls': 1.0,    // allow toll motorways (M-1, M-2 are tolled)
+            'top_speed': 130,
+          }
+        },
+        'directions_options': {'units': 'kilometers'},
+      });
+      final resp = await http
+          .post(
+            Uri.parse('https://valhalla.openstreetmap.de/route'),
+            headers: {'Content-Type': 'application/json'},
+            body: body,
+          )
+          .timeout(const Duration(seconds: 25));
+      if (resp.statusCode != 200) throw Exception('Valhalla ${resp.statusCode}');
+      final data = await compute(
+        (String b) => jsonDecode(b) as Map<String, dynamic>,
+        resp.body,
+      );
+      final leg =
+          ((data['trip'] as Map)['legs'] as List)[0] as Map<String, dynamic>;
+      final summary = leg['summary'] as Map<String, dynamic>;
+      final distM = (summary['length'] as num).toDouble() * 1000;
+      final durS = (summary['time'] as num).toDouble();
+      final coords = await compute(_decodePolyline6, leg['shape'] as String);
+      debugPrint('Car route: Valhalla ✓');
+      return (coords, distM, durS);
+    } catch (e) {
+      debugPrint('Valhalla failed ($e) — falling back to OSRM driving');
+    }
+
+    // ── Tier 3: OSRM driving ─────────────────────────────────────────────────
+    return _fetchOsrmDrivingFallback(from, to);
+  }
+
+  /// OSRM cycling profile: naturally avoids motorways restricted to bikes,
+  /// routing through national highways (N-5, N-55…) instead.
+  Future<(List<LatLng>, double, double)> _fetchOsrmCyclingRoute(
+      LatLng from, LatLng to) async {
+    final resp = await http
+        .get(Uri.parse(
+          'https://router.project-osrm.org/route/v1/cycling/'
+          '${from.longitude},${from.latitude};'
+          '${to.longitude},${to.latitude}'
+          '?overview=full&geometries=geojson',
+        ))
+        .timeout(const Duration(seconds: 20));
+
+    if (resp.statusCode != 200) throw Exception('OSRM ${resp.statusCode}');
+    return _parseOsrmResponse(resp.body);
+  }
+
+  /// OSRM driving — used only as Valhalla fallback.
+  Future<(List<LatLng>, double, double)> _fetchOsrmDrivingFallback(
+      LatLng from, LatLng to) async {
+    final resp = await http
+        .get(Uri.parse(
+          'https://router.project-osrm.org/route/v1/driving/'
+          '${from.longitude},${from.latitude};'
+          '${to.longitude},${to.latitude}'
+          '?overview=full&geometries=geojson',
+        ))
+        .timeout(const Duration(seconds: 20));
+
+    if (resp.statusCode != 200) throw Exception('OSRM fallback ${resp.statusCode}');
+    return _parseOsrmResponse(resp.body);
+  }
+
+  Future<(List<LatLng>, double, double)> _parseOsrmResponse(
+      String body) async {
+    final data = await compute(
+      (String b) => jsonDecode(b) as Map<String, dynamic>,
+      body,
+    );
+    final routes = data['routes'] as List?;
+    if (routes == null || routes.isEmpty) throw Exception('No route');
+    final route = routes[0] as Map<String, dynamic>;
+    final coords = (route['geometry']['coordinates'] as List)
+        .map((c) => LatLng((c[1] as num).toDouble(), (c[0] as num).toDouble()))
+        .toList();
+    final distM = (route['distance'] as num).toDouble();
+    final durS = (route['duration'] as num).toDouble();
+    return (coords, distM, durS);
   }
 
   void _fitRoute(List<LatLng> points) {
@@ -337,6 +536,10 @@ class _LiveMapPageState extends State<LiveMapPage> {
                   _routePoints = [];
                   _routeFetched = false;
                   _remainingDistM = 0;
+                  _flightPoints = [];
+                  _flightDistM = 0;
+                  _flightMinutes = 0;
+                  _hasFlightOption = false;
                 });
               },
             ),
@@ -472,13 +675,75 @@ class _LiveMapPageState extends State<LiveMapPage> {
                                         size: 18,
                                       ),
                                     ),
-                                    // Pin stem
                                     Container(
                                       width: 3,
                                       height: 12,
                                       color: const Color(0xFFEF4444),
                                     ),
                                   ],
+                                ),
+                              ),
+                            ],
+                          ),
+
+                        // ── Flight overlay ──────────────────────────────────
+                        // Thin straight line from origin → destination
+                        if (_hasFlightOption && _flightPoints.length == 2)
+                          PolylineLayer(
+                            polylines: [
+                              Polyline(
+                                points: _flightPoints,
+                                strokeWidth: 2,
+                                color: const Color(0xFF3B82F6)
+                                    .withValues(alpha: 0.5),
+                              ),
+                            ],
+                          ),
+
+                        // Airplane label at midpoint of flight line
+                        if (_hasFlightOption && _flightPoints.length == 2)
+                          MarkerLayer(
+                            markers: [
+                              Marker(
+                                point: LatLng(
+                                  (_flightPoints[0].latitude +
+                                          _flightPoints[1].latitude) /
+                                      2,
+                                  (_flightPoints[0].longitude +
+                                          _flightPoints[1].longitude) /
+                                      2,
+                                ),
+                                width: 120,
+                                height: 34,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 10, vertical: 5),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(17),
+                                    boxShadow: const [
+                                      BoxShadow(
+                                          color: Colors.black26,
+                                          blurRadius: 6),
+                                    ],
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(Icons.flight,
+                                          size: 14,
+                                          color: Color(0xFF3B82F6)),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        '~$_flightMinutes min',
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(0xFF1E293B),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
                             ],
@@ -496,6 +761,21 @@ class _LiveMapPageState extends State<LiveMapPage> {
                           destName: _effectiveDestName ?? 'Destination',
                           distanceM: _remainingDistM,
                           durationS: _remainingDurS,
+                        ),
+                      ),
+
+                    // Route alternatives card (car + flight comparison)
+                    if (_hasRoute && _hasFlightOption)
+                      Positioned(
+                        bottom: 148,
+                        left: 16,
+                        right: 16,
+                        child: _RouteAlternativesCard(
+                          carDistM: _totalDistM,
+                          carDurS: _totalDurS,
+                          flightDistM: _flightDistM,
+                          flightMinutes: _flightMinutes,
+                          destName: _effectiveDestName ?? '',
                         ),
                       ),
 
@@ -766,6 +1046,146 @@ class _ErrorView extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+// ─── Route Alternatives Card (car + flight) ───────────────────────────────────
+
+class _RouteAlternativesCard extends StatelessWidget {
+  final double carDistM;
+  final double carDurS;
+  final double flightDistM;
+  final int flightMinutes;
+  final String destName;
+
+  const _RouteAlternativesCard({
+    required this.carDistM,
+    required this.carDurS,
+    required this.flightDistM,
+    required this.flightMinutes,
+    required this.destName,
+  });
+
+  String _dist(double m) =>
+      m >= 1000 ? '${(m / 1000).toStringAsFixed(0)} km' : '${m.toStringAsFixed(0)} m';
+
+  String _dur(double s) {
+    final mins = (s / 60).round();
+    return mins >= 60 ? '${mins ~/ 60} hr ${mins % 60} min' : '$mins min';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1B3A4C),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withValues(alpha: 0.4), blurRadius: 16),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Car row
+          _RouteRow(
+            icon: Icons.directions_car,
+            iconColor: const Color(0xFF3B82F6),
+            label: 'Car  ·  via Motorway',
+            time: _dur(carDurS),
+            dist: _dist(carDistM),
+          ),
+          Divider(
+              color: Colors.white.withValues(alpha: 0.12), height: 14),
+          // Flight row
+          _RouteRow(
+            icon: Icons.flight,
+            iconColor: AppTheme.turquoise,
+            label: 'Flight  ·  approx.',
+            time: '~$flightMinutes min',
+            dist: _dist(flightDistM),
+            trailing: GestureDetector(
+              onTap: () => launchUrl(
+                Uri.parse(
+                  'https://www.google.com/travel/flights?q='
+                  '${Uri.encodeComponent('flights to $destName')}',
+                ),
+                mode: LaunchMode.externalApplication,
+              ),
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: AppTheme.turquoise.withValues(alpha: 0.18),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                      color: AppTheme.turquoise.withValues(alpha: 0.5)),
+                ),
+                child: const Text(
+                  'Book',
+                  style: TextStyle(
+                    color: AppTheme.turquoise,
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RouteRow extends StatelessWidget {
+  final IconData icon;
+  final Color iconColor;
+  final String label;
+  final String time;
+  final String dist;
+  final Widget? trailing;
+
+  const _RouteRow({
+    required this.icon,
+    required this.iconColor,
+    required this.label,
+    required this.time,
+    required this.dist,
+    this.trailing,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon, color: iconColor, size: 20),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(label,
+                  style: const TextStyle(
+                      color: Colors.white54, fontSize: 11)),
+              const SizedBox(height: 1),
+              Text(time,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                  )),
+            ],
+          ),
+        ),
+        Text(dist,
+            style: const TextStyle(color: Colors.white54, fontSize: 12)),
+        if (trailing != null) ...[const SizedBox(width: 10), trailing!],
+      ],
     );
   }
 }

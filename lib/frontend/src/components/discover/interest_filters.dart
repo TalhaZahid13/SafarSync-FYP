@@ -78,25 +78,18 @@ class _InterestFiltersState extends State<InterestFilters> {
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(20),
 
-              // ✅ Active = gradient
               gradient: isActive ? filter['gradient'] : null,
-
-              // ✅ Inactive = glass
-              color: isActive ? null : AppTheme.navyGlass,
-
-              // ✅ Border FIX
+              color: isActive ? null : Colors.white.withValues(alpha: 0.10),
               border: Border.all(
                 color: isActive
-                    ? filter['borderColor'].withValues(alpha:0.6)
-                    : Colors.white,
-                width: 1,
+                    ? (filter['borderColor'] as Color).withValues(alpha: 0.7)
+                    : Colors.white.withValues(alpha: 0.35),
+                width: 1.2,
               ),
-
-              // ✅ Glow FIX
               boxShadow: isActive
                   ? [
                       BoxShadow(
-                        color: filter['borderColor'].withValues(alpha:0.35),
+                        color: (filter['borderColor'] as Color).withValues(alpha: 0.35),
                         blurRadius: 14,
                         offset: const Offset(0, 6),
                       ),

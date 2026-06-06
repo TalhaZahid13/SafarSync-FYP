@@ -16,6 +16,9 @@ class SmartRoutePlanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool hasControllers =
+        fromController != null && toController != null;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
@@ -26,63 +29,49 @@ class SmartRoutePlanner extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header Row
+          // Header
           Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Icon + Title
-              Expanded(
-                child: Row(
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF3B82F6), Color(0xFF06B6D4)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(Icons.navigation,
+                    color: Colors.white, size: 20),
+              ),
+              const SizedBox(width: 8),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF3B82F6), Color(0xFF06B6D4)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Icon(
-                        Icons.navigation,
+                    Text(
+                      'Smart Route Planner',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
                         color: Colors.white,
-                        size: 20,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: const [
-                          Text(
-                            'Smart Route Planner',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          Text(
-                            'Optimized for weather & traffic',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: Colors.white70,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
-                      ),
+                    Text(
+                      'Optimized for weather & traffic',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style:
+                          TextStyle(color: Colors.white70, fontSize: 12),
                     ),
                   ],
                 ),
               ),
               const SizedBox(width: 8),
-              // Plan Route Button
               Flexible(
                 child: FittedBox(
                   fit: BoxFit.scaleDown,
@@ -92,9 +81,7 @@ class SmartRoutePlanner extends StatelessWidget {
                     borderRadius: BorderRadius.circular(16),
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
-                      ),
+                          horizontal: 16, vertical: 8),
                       decoration: BoxDecoration(
                         gradient: const LinearGradient(
                           colors: [Color(0xFFFDB913), Color(0xFF1B5A6E)],
@@ -122,7 +109,7 @@ class SmartRoutePlanner extends StatelessWidget {
           ),
           const SizedBox(height: 16),
 
-          // Route Info Card
+          // From / To card
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
@@ -131,251 +118,122 @@ class SmartRoutePlanner extends StatelessWidget {
               ),
               borderRadius: BorderRadius.circular(16),
             ),
-            child: Stack(
+            child: Column(
               children: [
-                // Weather & Traffic info
-                Positioned(
-                  top: 4,
-                  right: 4,
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(8),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.05),
-                              blurRadius: 4,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: Row(
-                          children: const [
-                            Icon(Icons.wb_sunny, size: 16, color: Colors.blue),
-                            SizedBox(width: 4),
-                            Text(
-                              'Sunny 75°',
-                              style: TextStyle(
-                                fontSize: 10,
-                                color: Colors.black87,
+                // From
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Container(
+                      width: 32,
+                      height: 32,
+                      decoration: const BoxDecoration(
+                          color: Colors.green, shape: BoxShape.circle),
+                      child: const Icon(Icons.location_on,
+                          size: 16, color: Colors.white),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: hasControllers
+                          ? TextField(
+                              controller: fromController,
+                              decoration: const InputDecoration(
+                                hintText: 'From — city or address',
+                                hintStyle: TextStyle(
+                                    fontSize: 13, color: Colors.grey),
+                                isDense: true,
+                                border: InputBorder.none,
+                                contentPadding: EdgeInsets.zero,
                               ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(8),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.05),
-                              blurRadius: 4,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: Row(
-                          children: const [
-                            Icon(Icons.flash_on, size: 16, color: Colors.green),
-                            SizedBox(width: 4),
-                            Text(
-                              'Light Traffic',
+                              style: const TextStyle(
+                                  fontSize: 14, color: Colors.black87),
+                            )
+                          : const Text(
+                              'Starting point',
                               style: TextStyle(
-                                fontSize: 10,
-                                color: Colors.black87,
-                              ),
+                                  fontSize: 13, color: Colors.black54),
                             ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
 
-                // Route Stops
-                Column(
+                // Divider
+                Container(
+                  margin: const EdgeInsets.symmetric(
+                      vertical: 8, horizontal: 16),
+                  height: 1,
+                  color: Colors.grey.shade200,
+                ),
+
+                // To
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    const SizedBox(height: 24),
-                    // Start Point
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Container(
-                          width: 32,
-                          height: 32,
-                          decoration: const BoxDecoration(
-                            color: Colors.green,
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.location_on,
-                            size: 16,
-                            color: Colors.white,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: fromController != null
-                              ? TextField(
-                                  controller: fromController,
-                                  decoration: const InputDecoration(
-                                    hintText: 'From — city or address',
-                                    hintStyle: TextStyle(
-                                        fontSize: 12, color: Colors.grey),
-                                    isDense: true,
-                                    border: InputBorder.none,
-                                    contentPadding: EdgeInsets.zero,
-                                  ),
-                                  style: const TextStyle(
-                                      fontSize: 14, color: Colors.black87),
-                                )
-                              : const Text(
-                                  'Islamabad, Pakistan',
-                                  style: TextStyle(
-                                      fontSize: 14, color: Colors.black87),
-                                ),
-                        ),
-                      ],
-                    ),
-                    // Fuel Icon between stops
                     Container(
-                      margin: const EdgeInsets.only(left: 16),
+                      width: 32,
                       height: 32,
-                      child: Stack(
-                        children: [
-                          Positioned(
-                            left: 0,
-                            top: 8,
-                            bottom: 0,
-                            child: Container(
-                              width: 2,
-                              decoration: BoxDecoration(
-                                border: Border(
-                                  left: BorderSide(
-                                    color: Colors.grey.shade300,
-                                    width: 2,
-                                    style: BorderStyle.solid,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                          Positioned(
-                            left: -8,
-                            top: 0,
-                            child: Container(
-                              padding: const EdgeInsets.all(2),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: const Icon(
-                                Icons.local_gas_station,
-                                size: 16,
-                                color: Colors.orange,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
+                      decoration: const BoxDecoration(
+                          color: Colors.red, shape: BoxShape.circle),
+                      child: const Icon(Icons.location_on,
+                          size: 16, color: Colors.white),
                     ),
-                    // Destination Point
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Container(
-                          width: 32,
-                          height: 32,
-                          decoration: const BoxDecoration(
-                            color: Colors.red,
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.location_on,
-                            size: 16,
-                            color: Colors.white,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: toController != null
-                              ? TextField(
-                                  controller: toController,
-                                  decoration: const InputDecoration(
-                                    hintText: 'To — city or address',
-                                    hintStyle: TextStyle(
-                                        fontSize: 12, color: Colors.grey),
-                                    isDense: true,
-                                    border: InputBorder.none,
-                                    contentPadding: EdgeInsets.zero,
-                                  ),
-                                  style: const TextStyle(
-                                      fontSize: 14, color: Colors.black87),
-                                )
-                              : const Text(
-                                  'Murree, Punjab',
-                                  style: TextStyle(
-                                      fontSize: 14, color: Colors.black87),
-                                ),
-                        ),
-                      ],
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: hasControllers
+                          ? TextField(
+                              controller: toController,
+                              decoration: const InputDecoration(
+                                hintText: 'To — city or address',
+                                hintStyle: TextStyle(
+                                    fontSize: 13, color: Colors.grey),
+                                isDense: true,
+                                border: InputBorder.none,
+                                contentPadding: EdgeInsets.zero,
+                              ),
+                              style: const TextStyle(
+                                  fontSize: 14, color: Colors.black87),
+                            )
+                          : const Text(
+                              'Destination',
+                              style: TextStyle(
+                                  fontSize: 13, color: Colors.black54),
+                            ),
                     ),
                   ],
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 16),
 
-          // Info Grid
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _infoBox('Distance', '60 km', Colors.amber.shade50),
-              const SizedBox(width: 8),
-              _infoBox('Duration', '1h 30m', Colors.blue.shade50),
-              const SizedBox(width: 8),
-              _infoBox('Fuel Cost', 'Rs 800', Colors.green.shade50),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _infoBox(String label, String value, Color bgColor) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: bgColor,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          children: [
-            Text(
-              label,
-              style: const TextStyle(fontSize: 10, color: Colors.grey),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              value,
-              style: const TextStyle(fontSize: 14, color: Colors.black87),
+          // When used as CTA on home screen (no controllers)
+          if (!hasControllers) ...[
+            const SizedBox(height: 12),
+            GestureDetector(
+              onTap: onPlanRoute,
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.15)),
+                ),
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.add_road, color: Colors.white70, size: 16),
+                    SizedBox(width: 8),
+                    Text(
+                      'Tap to plan your route',
+                      style:
+                          TextStyle(color: Colors.white70, fontSize: 13),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ],
-        ),
+        ],
       ),
     );
   }

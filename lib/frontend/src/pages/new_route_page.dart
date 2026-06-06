@@ -5,6 +5,8 @@ import 'package:intl/intl.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../ui/app_theme.dart';
+import '../utils/route_session.dart';
+import '../utils/vehicle_type.dart';
 import 'live_map_page.dart';
 
 class NewRoutePage extends StatefulWidget {
@@ -23,6 +25,27 @@ class _NewRoutePageState extends State<NewRoutePage> {
   DateTime? _travelDate;
   bool _loading = false;
   bool _locatingMe = false;
+
+  // Exact GPS coords stored when using "current location".
+  // Cleared when user manually edits the From field.
+  LatLng? _fromCoords;
+  bool _settingFrom = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _fromCtrl.addListener(() {
+      if (!_settingFrom) _fromCoords = null;
+    });
+  }
+
+  void _setFrom(String label, LatLng coords) {
+    _settingFrom = true;
+    _fromCtrl.text = label;
+    _fromCoords = coords;
+    _settingFrom = false;
+    setState(() {});
+  }
 
   @override
   void dispose() {
@@ -71,6 +94,10 @@ class _NewRoutePageState extends State<NewRoutePage> {
         timeLimit: const Duration(seconds: 15),
       );
 
+      final exactCoords = LatLng(position.latitude, position.longitude);
+      String label =
+          '${position.latitude.toStringAsFixed(5)}, ${position.longitude.toStringAsFixed(5)}';
+
       final placemarks = await placemarkFromCoordinates(
         position.latitude,
         position.longitude,
@@ -83,9 +110,11 @@ class _NewRoutePageState extends State<NewRoutePage> {
             ? p.locality!
             : (p.subAdministrativeArea ?? '');
         final country = p.country ?? '';
-        _fromCtrl.text =
-            [city, country].where((s) => s.isNotEmpty).join(', ');
+        final readable = [city, country].where((s) => s.isNotEmpty).join(', ');
+        if (readable.isNotEmpty) label = readable;
       }
+      // Store exact GPS coords — _activateRoute() will use these directly
+      _setFrom(label, exactCoords);
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -127,22 +156,47 @@ class _NewRoutePageState extends State<NewRoutePage> {
     try {
       final from = _fromCtrl.text.trim();
       final to = _toCtrl.text.trim();
-      final fromQuery = from.contains(',') ? from : '$from, Pakistan';
-      final toQuery = to.contains(',') ? to : '$to, Pakistan';
 
-      final fromLocs = await locationFromAddress(fromQuery);
+      // Use exact stored GPS coords when available; geocode only typed text.
+      LatLng origin;
+      if (_fromCoords != null) {
+        origin = _fromCoords!;
+      } else {
+        final q = from.contains(',') ? from : '$from, Pakistan';
+        final locs = await locationFromAddress(q);
+        origin = LatLng(locs.first.latitude, locs.first.longitude);
+      }
+
+      final toQuery = to.contains(',') ? to : '$to, Pakistan';
       final toLocs = await locationFromAddress(toQuery);
+      final dest = LatLng(toLocs.first.latitude, toLocs.first.longitude);
+
+      if (!mounted) return;
+
+      final vehicle = await showVehiclePickerSheet(context);
+      if (vehicle == null || !mounted) return;
+
+      await RouteSession.activate(
+        routeName: _nameCtrl.text.trim(),
+        fromName: from,
+        toName: to,
+        startLat: origin.latitude,
+        startLng: origin.longitude,
+        endLat: dest.latitude,
+        endLng: dest.longitude,
+        travelDate: _travelDate,
+        vehicleType: vehicle,
+      );
 
       if (!mounted) return;
       await Navigator.pushReplacement(
         context,
         MaterialPageRoute(
           builder: (_) => LiveMapPage(
-            routeOrigin:
-                LatLng(fromLocs.first.latitude, fromLocs.first.longitude),
-            routeDestination:
-                LatLng(toLocs.first.latitude, toLocs.first.longitude),
+            routeOrigin: origin,
+            routeDestination: dest,
             destinationName: to,
+            vehicleType: vehicle,
           ),
         ),
       );

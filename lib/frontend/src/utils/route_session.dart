@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'api_service.dart';
+import 'vehicle_type.dart';
 
 /// Persists one "active route" to SharedPreferences so it survives app restarts.
 /// Also syncs to the backend (fire-and-forget) so the route is stored in the DB.
@@ -16,6 +17,7 @@ class RouteSession {
     required double endLat,
     required double endLng,
     DateTime? travelDate,
+    VehicleType vehicleType = VehicleType.car,
   }) async {
     final data = {
       'route_name': routeName,
@@ -25,6 +27,7 @@ class RouteSession {
       'start_lng': startLng,
       'end_lat': endLat,
       'end_lng': endLng,
+      'vehicle_type': vehicleType.name,
       if (travelDate != null) 'travel_date': travelDate.toIso8601String(),
       'activated_at': DateTime.now().toIso8601String(),
     };
