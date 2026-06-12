@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 /// App-level configuration constants.
 ///
 /// HOW TO GET YOUR GOOGLE MAPS KEY:
@@ -10,4 +12,21 @@
 /// Free monthly quota: $200 credit ≈ 40,000 Directions requests — more than enough.
 class AppConfig {
   static const String googleMapsApiKey = 'YOUR_GOOGLE_MAPS_API_KEY_HERE';
+
+  // Base URL for Socket.io
+  static String get baseUrl {
+    if (kIsWeb) {
+      return 'http://localhost:5000';
+    }
+    switch (defaultTargetPlatform) {
+      case TargetPlatform.android:
+        return 'http://192.168.1.5:5000';
+      case TargetPlatform.iOS:
+      case TargetPlatform.linux:
+      case TargetPlatform.macOS:
+      case TargetPlatform.windows:
+      case TargetPlatform.fuchsia:
+        return 'http://localhost:5000';
+    }
+  }
 }

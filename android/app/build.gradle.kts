@@ -51,16 +51,8 @@ android {
         }
     }
 
-    // ABI splits: builds one small APK per CPU architecture instead of a
-    // single fat APK. arm64-v8a covers ~95% of modern Android phones.
-    splits {
-        abi {
-            isEnable = true
-            reset()
-            include("arm64-v8a", "armeabi-v7a")
-            isUniversalApk = false
-        }
-    }
+    // ABI splits disabled to avoid conflicts with NDK configuration
+    // Flutter will handle architecture selection automatically
 }
 
 flutter {

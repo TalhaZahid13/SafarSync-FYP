@@ -616,4 +616,67 @@ class ApiService {
       return {'success': false, 'message': 'Error: $e'};
     }
   }
+
+  // ============ GENERIC HTTP METHODS ============
+
+  /// Generic GET request
+  static Future<Map<String, dynamic>> getRequest(String endpoint) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl$endpoint'),
+        headers: await getHeaders(needsAuth: true),
+      );
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        return {'success': false, 'message': 'Request failed: ${response.statusCode}'};
+      }
+    } catch (e) {
+      return {'success': false, 'message': 'Error: $e'};
+    }
+  }
+
+  /// Generic POST request
+  static Future<Map<String, dynamic>> postRequest(String endpoint, Map<String, dynamic> body) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl$endpoint'),
+        headers: await getHeaders(needsAuth: true),
+        body: jsonEncode(body),
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return jsonDecode(response.body);
+      } else {
+        return {'success': false, 'message': 'Request failed: ${response.statusCode}'};
+      }
+    } catch (e) {
+      return {'success': false, 'message': 'Error: $e'};
+    }
+  }
+
+  /// Generic PUT request
+  static Future<Map<String, dynamic>> putRequest(String endpoint, Map<String, dynamic> body) async {
+    try {
+      final response = await http.put(
+        Uri.parse('$baseUrl$endpoint'),
+        headers: await getHeaders(needsAuth: true),
+        body: jsonEncode(body),
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return jsonDecode(response.body);
+      } else {
+        return {'success': false, 'message': 'Request failed: ${response.statusCode}'};
+      }
+    } catch (e) {
+      return {'success': false, 'message': 'Error: $e'};
+    }
+  }
+
+  /// Get current user ID (from Firebase)
+  static String? get userId {
+    return _auth.currentUser?.uid;
+  }
 }
