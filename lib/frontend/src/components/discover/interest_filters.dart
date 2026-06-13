@@ -2,14 +2,21 @@ import 'package:flutter/material.dart';
 import '../../ui/app_theme.dart'; // 👈 IMPORTANT
 
 class InterestFilters extends StatefulWidget {
-  const InterestFilters({super.key});
+  final List<String> initialFilters;
+  final ValueChanged<List<String>>? onFiltersChanged;
+
+  const InterestFilters({
+    super.key,
+    this.initialFilters = const ['Nature'],
+    this.onFiltersChanged,
+  });
 
   @override
   State<InterestFilters> createState() => _InterestFiltersState();
 }
 
 class _InterestFiltersState extends State<InterestFilters> {
-  final List<String> activeFilters = ['Nature'];
+  late List<String> activeFilters;
 
   final List<Map<String, dynamic>> filters = [
     {
@@ -38,6 +45,12 @@ class _InterestFiltersState extends State<InterestFilters> {
     },
   ];
 
+  @override
+  void initState() {
+    super.initState();
+    activeFilters = List<String>.from(widget.initialFilters);
+  }
+
   void toggleFilter(String name) {
     setState(() {
       if (activeFilters.contains(name)) {
@@ -46,6 +59,7 @@ class _InterestFiltersState extends State<InterestFilters> {
         activeFilters.add(name);
       }
     });
+    widget.onFiltersChanged?.call(List<String>.from(activeFilters));
   }
 
   @override
@@ -64,25 +78,18 @@ class _InterestFiltersState extends State<InterestFilters> {
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(20),
 
-              // ✅ Active = gradient
               gradient: isActive ? filter['gradient'] : null,
-
-              // ✅ Inactive = glass
-              color: isActive ? null : AppTheme.navyGlass,
-
-              // ✅ Border FIX
+              color: isActive ? null : Colors.white.withValues(alpha: 0.10),
               border: Border.all(
                 color: isActive
-                    ? filter['borderColor'].withOpacity(0.6)
-                    : Colors.white,
-                width: 1,
+                    ? (filter['borderColor'] as Color).withValues(alpha: 0.7)
+                    : Colors.white.withValues(alpha: 0.35),
+                width: 1.2,
               ),
-
-              // ✅ Glow FIX
               boxShadow: isActive
                   ? [
                       BoxShadow(
-                        color: filter['borderColor'].withOpacity(0.35),
+                        color: (filter['borderColor'] as Color).withValues(alpha: 0.35),
                         blurRadius: 14,
                         offset: const Offset(0, 6),
                       ),

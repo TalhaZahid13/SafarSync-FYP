@@ -155,12 +155,12 @@ class WishlistPage extends StatelessWidget {
                     border: Border.all(color: _surfaceOutline),
                     boxShadow: [
                       BoxShadow(
-                        color: accent.withOpacity(0.18),
+                        color: accent.withValues(alpha: 0.18),
                         blurRadius: 18,
                         offset: const Offset(0, 8),
                       ),
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.16),
+                        color: Colors.black.withValues(alpha: 0.16),
                         blurRadius: 10,
                         offset: const Offset(0, 4),
                       ),

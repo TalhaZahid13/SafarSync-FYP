@@ -68,7 +68,9 @@ class Destination {
 }
 
 class PopularDestinations extends StatefulWidget {
-  const PopularDestinations({Key? key}) : super(key: key);
+  final List<String> activeFilters;
+
+  const PopularDestinations({Key? key, this.activeFilters = const []}) : super(key: key);
 
   @override
   State<PopularDestinations> createState() => _PopularDestinationsState();
@@ -153,45 +155,75 @@ class _PopularDestinationsState extends State<PopularDestinations> {
     return <dynamic>[];
   }
 
+  Widget _buildImage(String src, double height) {
+    final isNetwork = src.startsWith('http://') || src.startsWith('https://');
+    final fallback = Container(
+      height: height,
+      color: const Color(0xFF1B3A4C),
+      child: const Center(
+        child: Icon(Icons.image_not_supported, color: Colors.white54),
+      ),
+    );
+    if (isNetwork) {
+      return Image.network(
+        src,
+        height: height,
+        width: double.infinity,
+        fit: BoxFit.cover,
+        errorBuilder: (_, _, _) => fallback,
+      );
+    }
+    return Image.asset(
+      src,
+      height: height,
+      width: double.infinity,
+      fit: BoxFit.cover,
+      errorBuilder: (_, _, _) => fallback,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: <Widget>[
-              const Text(
-                'Popular Destinations',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFF1B3A4C),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: <Widget>[
+                const Text(
+                  'Popular Destinations',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
                 ),
-              ),
-              TextButton(
-                onPressed: () {
-                  // Navigate to the Explore Page when button is pressed
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) =>
-                          const ExplorePage(), // Navigate to ExplorePage
-                    ),
-                  );
-                },
-                child: const Text(
-                  'View All →',
-                  style: TextStyle(color: Colors.white70),
+                TextButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const ExplorePage()),
+                    );
+                  },
+                  child: const Text(
+                    'View All →',
+                    style: TextStyle(color: Colors.white70),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
-        _buildContent(),
-      ],
+          _buildContent(),
+        ],
+      ),
     );
   }
 
@@ -237,6 +269,26 @@ class _PopularDestinationsState extends State<PopularDestinations> {
       );
     }
 
+    final List<Destination> filtered = widget.activeFilters.isEmpty
+        ? destinations
+        : destinations.where((d) {
+            final cat = (d.category ?? '').toLowerCase();
+            return widget.activeFilters.any((f) => f.toLowerCase() == cat);
+          }).toList();
+
+    if (filtered.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.all(32.0),
+        child: Center(
+          child: Text(
+            'No destinations match the selected filters',
+            style: TextStyle(color: Colors.white70),
+            textAlign: TextAlign.center,
+          ),
+        ),
+      );
+    }
+
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -247,9 +299,9 @@ class _PopularDestinationsState extends State<PopularDestinations> {
         crossAxisSpacing: 12,
         mainAxisSpacing: 12,
       ),
-      itemCount: destinations.length,
+      itemCount: filtered.length,
       itemBuilder: (BuildContext context, int index) {
-        final Destination dest = destinations[index];
+        final Destination dest = filtered[index];
         return _buildDestinationCard(dest);
       },
     );
@@ -260,19 +312,12 @@ class _PopularDestinationsState extends State<PopularDestinations> {
       onTap: () {},
       child: Container(
         decoration: BoxDecoration(
-          color: AppTheme.navyGlass,
+          color: Colors.white.withValues(alpha: 0.07),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: AppTheme.violet.withOpacity(0.35),
+            color: Colors.white.withValues(alpha: 0.15),
             width: 1,
           ),
-          boxShadow: [
-            BoxShadow(
-              color: AppTheme.violet.withOpacity(0.18),
-              blurRadius: 18,
-              offset: const Offset(0, 8),
-            ),
-          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -283,29 +328,7 @@ class _PopularDestinationsState extends State<PopularDestinations> {
                   borderRadius: const BorderRadius.vertical(
                     top: Radius.circular(20),
                   ),
-                  child: Image.network(
-                    dest.image,
-                    height: 108,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                    errorBuilder:
-                        (
-                          BuildContext context,
-                          Object error,
-                          StackTrace? stackTrace,
-                        ) {
-                          return Container(
-                            height: 108,
-                            color: AppTheme.navy,
-                            child: const Center(
-                              child: Icon(
-                                Icons.image_not_supported,
-                                color: Colors.white54,
-                              ),
-                            ),
-                          );
-                        },
-                  ),
+                  child: _buildImage(dest.image, 108),
                 ),
 
                 // Gradient overlay on image
@@ -318,7 +341,7 @@ class _PopularDestinationsState extends State<PopularDestinations> {
                       gradient: LinearGradient(
                         colors: [
                           Colors.transparent,
-                          AppTheme.navy.withOpacity(0.75),
+                          Colors.black.withValues(alpha: 0.70),
                         ],
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
@@ -334,17 +357,17 @@ class _PopularDestinationsState extends State<PopularDestinations> {
                     width: 32,
                     height: 32,
                     decoration: BoxDecoration(
-                      color: AppTheme.glassStrong,
+                      color: Colors.black.withValues(alpha: 0.45),
                       shape: BoxShape.circle,
                       border: Border.all(
-                        color: AppTheme.rose.withOpacity(0.45),
+                        color: Colors.white.withValues(alpha: 0.3),
                         width: 1,
                       ),
                     ),
                     child: const Icon(
                       Icons.favorite_border,
                       size: 18,
-                      color: AppTheme.rose,
+                      color: Colors.white,
                     ),
                   ),
                 ),
@@ -386,7 +409,7 @@ class _PopularDestinationsState extends State<PopularDestinations> {
                               const Icon(
                                 Icons.star,
                                 size: 16,
-                                color: AppTheme.gold,
+                                color: AppTheme.turquoise,
                               ),
                               const SizedBox(width: 4),
                               Text(
@@ -420,10 +443,10 @@ class _PopularDestinationsState extends State<PopularDestinations> {
                                     vertical: 4,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: AppTheme.gold.withOpacity(0.16),
+                                    color: AppTheme.turquoise.withValues(alpha: 0.20),
                                     borderRadius: BorderRadius.circular(10),
                                     border: Border.all(
-                                      color: AppTheme.gold.withOpacity(0.45),
+                                      color: AppTheme.turquoise.withValues(alpha: 0.45),
                                     ),
                                   ),
                                   child: FittedBox(
@@ -432,7 +455,7 @@ class _PopularDestinationsState extends State<PopularDestinations> {
                                     child: Text(
                                       dest.price!,
                                       style: const TextStyle(
-                                        color: AppTheme.gold,
+                                        color: AppTheme.turquoise,
                                         fontWeight: FontWeight.bold,
                                       ),
                                     ),

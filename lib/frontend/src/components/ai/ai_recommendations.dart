@@ -49,12 +49,12 @@ class AIRecommendations extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 24),
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: AppTheme.navyGlass,
+        color: const Color(0xFF1B3A4C),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppTheme.cyan.withOpacity(0.25), width: 1),
+        border: Border.all(color: AppTheme.turquoise.withValues(alpha: 0.3), width: 1),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.cyan.withOpacity(0.12),
+            color: AppTheme.turquoise.withValues(alpha: 0.12),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -91,7 +91,7 @@ class AIRecommendations extends StatelessWidget {
               crossAxisCount: 2,
               mainAxisSpacing: 12,
               crossAxisSpacing: 12,
-              childAspectRatio: 0.9,
+              childAspectRatio: 0.78,
             ),
             itemCount: recommendations.length,
             itemBuilder: (context, index) {
@@ -103,17 +103,17 @@ class AIRecommendations extends StatelessWidget {
               return GestureDetector(
                 onTap: () {},
                 child: Container(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: AppTheme.glassStrong,
+                    color: Colors.white.withValues(alpha: 0.07),
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
-                      color: accent.withOpacity(0.35),
+                      color: accent.withValues(alpha: 0.35),
                       width: 1,
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: accent.withOpacity(0.16),
+                        color: accent.withValues(alpha: 0.16),
                         blurRadius: 16,
                         offset: const Offset(0, 8),
                       ),
@@ -123,8 +123,8 @@ class AIRecommendations extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Container(
-                        width: 48,
-                        height: 48,
+                        width: 44,
+                        height: 44,
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(12),
                           gradient: gradient,
@@ -132,27 +132,30 @@ class AIRecommendations extends StatelessWidget {
                         child: Icon(
                           rec['icon'] as IconData,
                           color: Colors.white,
+                          size: 22,
                         ),
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 6),
                       Text(
                         rec['title'] as String,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
-                          fontSize: 14,
+                          fontSize: 13,
                           fontWeight: FontWeight.bold,
                           color: Colors.white,
                         ),
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        rec['subtitle'] as String,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: Colors.white70,
+                      const SizedBox(height: 2),
+                      Flexible(
+                        child: Text(
+                          rec['subtitle'] as String,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: Colors.white70,
+                          ),
                         ),
                       ),
                       const SizedBox(height: 6),
@@ -164,14 +167,14 @@ class AIRecommendations extends StatelessWidget {
                               padding: const EdgeInsets.only(right: 6),
                               child: Container(
                                 padding: const EdgeInsets.symmetric(
-                                  vertical: 4,
-                                  horizontal: 8,
+                                  vertical: 3,
+                                  horizontal: 7,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: accent.withOpacity(0.16),
+                                  color: accent.withValues(alpha: 0.16),
                                   borderRadius: BorderRadius.circular(12),
                                   border: Border.all(
-                                    color: accent.withOpacity(0.35),
+                                    color: accent.withValues(alpha: 0.35),
                                   ),
                                 ),
                                 child: Text(

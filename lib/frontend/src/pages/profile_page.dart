@@ -4,9 +4,15 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../utils/pdf_export.dart'; // TripData, Destination, RouteData, Hotel, Restaurant, TripStats
 import '../ui/app_theme.dart';
 import 'profile_settings.dart';
+import 'admin_dashboard_page.dart';
+import 'emergency_sos_screen.dart';
+import 'emergency_contacts_page.dart';
+import 'notifications_page.dart';
+import '../utils/notification_service.dart';
 import '../auth/login.dart';
 import '../utils/responsive.dart';
 import '../utils/theme_controller.dart';
+import '../utils/api_service.dart';
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
@@ -174,7 +180,7 @@ class ProfilePage extends StatelessWidget {
                       children: [
                         Container(
                           height: 8,
-                          color: Colors.white.withOpacity(0.12),
+                          color: Colors.white.withValues(alpha: 0.12),
                         ),
                         FractionallySizedBox(
                           widthFactor: 0.68,
@@ -340,14 +346,14 @@ class ProfilePage extends StatelessWidget {
                     context,
                     LucideIcons.settings,
                     'Account Settings',
-                    () {},
+                    () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const ProfileSettingsPage(),
+                      ),
+                    ),
                   ),
-                  settingsButton(
-                    context,
-                    LucideIcons.bell,
-                    'Notifications',
-                    () {},
-                  ),
+                  _NotificationsBadgeButton(context: context),
                   settingsButton(
                     context,
                     LucideIcons.shield,
@@ -359,6 +365,39 @@ class ProfilePage extends StatelessWidget {
                     LucideIcons.handHelping,
                     'Help & Support',
                     () {},
+                  ),
+                  settingsButton(
+                    context,
+                    Icons.sos,
+                    'Emergency SOS',
+                    () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const EmergencySOSScreen(),
+                      ),
+                    ),
+                  ),
+                  settingsButton(
+                    context,
+                    Icons.contact_emergency_outlined,
+                    'Emergency Contacts',
+                    () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const EmergencyContactsPage(),
+                      ),
+                    ),
+                  ),
+                  settingsButton(
+                    context,
+                    LucideIcons.layoutDashboard,
+                    'Admin Dashboard',
+                    () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const AdminDashboardPage(),
+                      ),
+                    ),
                   ),
                   settingsButton(
                     context,
@@ -396,21 +435,26 @@ class ProfilePage extends StatelessWidget {
   }
 
   Widget _profileMeta() {
-    return const Column(
+    final user = FirebaseAuth.instance.currentUser;
+    final name = (user?.displayName?.isNotEmpty == true)
+        ? user!.displayName!
+        : 'Traveller';
+    final email = user?.email ?? '';
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Ahmed Khan',
-          style: TextStyle(
+          name,
+          style: const TextStyle(
             color: _titleColor,
             fontSize: 16,
             fontWeight: FontWeight.w700,
           ),
         ),
-        SizedBox(height: 2),
+        const SizedBox(height: 2),
         Text(
-          'ahmedkhan@email.com',
-          style: TextStyle(fontSize: 12, color: _mutedText),
+          email,
+          style: const TextStyle(fontSize: 12, color: _mutedText),
         ),
         SizedBox(height: 4),
         Row(
@@ -474,7 +518,7 @@ class ProfilePage extends StatelessWidget {
         border: Border.all(color: _cardOutline),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.06),
+            color: Colors.black.withValues(alpha: 0.06),
             blurRadius: 14,
             offset: const Offset(0, 6),
           ),
@@ -521,6 +565,15 @@ class ProfilePage extends StatelessWidget {
   ) {
     final isLogout = label.contains('Log Out');
     final isPdf = label.contains('PDF');
+    final isSOS = label == 'Emergency SOS';
+    final isContacts = label.contains('Emergency Contacts');
+    final activeColor = isSOS
+        ? const Color(0xFFB71C1C)
+        : isContacts
+            ? const Color(0xFFB71C1C)
+            : isLogout
+                ? const Color(0xFFFF4D6D)
+                : null;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(10),
@@ -531,21 +584,86 @@ class ProfilePage extends StatelessWidget {
             Icon(
               icon,
               size: 16,
-              color: isLogout
-                  ? const Color(0xFFFF4D6D)
-                  : (isPdf ? _gold : _mutedText),
+              color: activeColor ?? (isPdf ? _gold : _mutedText),
             ),
             const SizedBox(width: 10),
             Text(
               label,
               style: TextStyle(
                 fontSize: 14,
-                color: isLogout
-                    ? const Color(0xFFFF4D6D)
-                    : (isPdf ? _gold : _titleColor),
-                fontWeight: isPdf ? FontWeight.w600 : FontWeight.w400,
+                color: activeColor ?? (isPdf ? _gold : _titleColor),
+                fontWeight: (isPdf || isSOS || isContacts) ? FontWeight.w600 : FontWeight.w400,
               ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Notifications button with live unread badge ──────────────────────────────
+class _NotificationsBadgeButton extends StatefulWidget {
+  final BuildContext context;
+  const _NotificationsBadgeButton({required this.context});
+
+  @override
+  State<_NotificationsBadgeButton> createState() =>
+      _NotificationsBadgeButtonState();
+}
+
+class _NotificationsBadgeButtonState
+    extends State<_NotificationsBadgeButton> {
+  int _unread = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _unread = NotificationService.instance.unreadCount;
+    NotificationService.instance.addUnreadListener(_onUnreadChanged);
+    _fetchCount();
+  }
+
+  void _onUnreadChanged() {
+    if (mounted) setState(() => _unread = NotificationService.instance.unreadCount);
+  }
+
+  Future<void> _fetchCount() async {
+    try {
+      final resp = await ApiService.getRequest('/notifications/unread-count');
+      if (!mounted) return;
+      final count = resp['count'] as int? ?? 0;
+      NotificationService.instance.setUnreadCount(count);
+      setState(() => _unread = count);
+    } catch (_) {}
+  }
+
+  @override
+  void dispose() {
+    NotificationService.instance.removeUnreadListener(_onUnreadChanged);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const NotificationsPage()),
+      ).then((_) => _fetchCount()),
+      borderRadius: BorderRadius.circular(10),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 11, horizontal: 8),
+        child: Row(
+          children: [
+            Badge(
+              isLabelVisible: _unread > 0,
+              label: Text(_unread > 99 ? '99+' : '$_unread'),
+              child: const Icon(LucideIcons.bell, size: 16, color: Color(0xFF6B7280)),
+            ),
+            const SizedBox(width: 10),
+            const Text('Notifications',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w400)),
           ],
         ),
       ),

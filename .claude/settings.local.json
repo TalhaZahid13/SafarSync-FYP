@@ -1,0 +1,37 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(flutter analyze *)",
+      "Bash(Get-ChildItem -Recurse -Directory -Path \"d:\\\\University\\\\8th Semester\\\\Final Year Project - 2\\\\safarsync_mobileapp\" -Filter \"*routes*\")",
+      "Bash(Select-Object -ExpandProperty FullName)",
+      "Bash(flutter pub *)",
+      "Bash(npm install *)",
+      "Bash(Test-Path \"d:\\\\University\\\\8th Semester\\\\Final Year Project - 2\\\\safarsync_mobileapp\\\\android\\\\app\\\\google-services.json\" -PathType Leaf)",
+      "Bash(xargs grep -l \"Geolocator\\\\|geolocator\\\\|getCurrentPosition\\\\|getPositionStream\")",
+      "Bash(Get-ChildItem -Path \"d:\\\\University\\\\8th Semester\\\\Final Year Project - 2\\\\safarsync_mobileapp\\\\lib\" -Recurse -Filter \"*.dart\")",
+      "Bash(Select-Object -ExpandProperty Name)",
+      "Bash(Sort-Object)",
+      "Bash(python -c ' *)",
+      "Bash(Get-ChildItem -Path \"d:\\\\University\\\\8th Semester\\\\Final Year Project - 2\\\\safarsync_mobileapp\" -Recurse -Directory)",
+      "Bash(dart run *)",
+      "Bash(dart analyze *)",
+      "Bash(dir \"d:\\\\University\\\\8th Semester\\\\Final Year Project - 2\\\\safarsync_mobileapp\\\\android\\\\app\\\\\" /b 2>&1)",
+      "WebFetch(domain:maps.app.goo.gl)",
+      "Bash(tail -20 lib/frontend/src/pages/live_map_page.dart)",
+      "Bash(powershell -Command \"Get-Content 'lib/frontend/src/pages/live_map_page.dart' | Select-Object -Last 20\")",
+      "Bash(cat)",
+      "Bash(mysql -u root safarsync)",
+      "Read(//mnt/c/Users/user/Desktop/**)",
+      "Bash(flutter run *)",
+      "Bash(keytool -list -v -keystore android/app/debug.keystore -alias androiddebugkey -storepass android -keypass android)",
+      "Bash(keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android -keypass android)",
+      "Bash(npm start *)",
+      "PowerShell(wc *)",
+      "Bash(New-Item -ItemType File -Path \"D:\\\\University\\\\8th Semester\\\\Final Year Project - 2\\\\safarsync_mobileapp\\\\lib\\\\backend\\\\controllers\\\\emergencyController.js\" -Force)",
+      "Bash(Out-Null)",
+      "Bash(Write-Output \"created\")",
+      "PowerShell(New-Item *)",
+      "Bash(New-Item -ItemType File -Path \"D:\\\\University\\\\8th Semester\\\\Final Year Project - 2\\\\safarsync_mobileapp\\\\lib\\\\backend\\\\routes\\\\emergencyContactRoutes.js\" -Force)"
+    ]
+  }
+}

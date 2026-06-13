@@ -1,10 +1,23 @@
 import 'package:flutter/material.dart';
+import 'package:geocoding/geocoding.dart';
+import 'package:intl/intl.dart';
+import 'package:latlong2/latlong.dart';
 import '../utils/responsive.dart';
+import '../utils/api_service.dart';
+import '../utils/route_session.dart';
+import '../utils/vehicle_type.dart';
 import '../ui/app_theme.dart';
+import 'live_map_page.dart';
+import 'new_route_page.dart';
 
-class RoutesPage extends StatelessWidget {
-  RoutesPage({super.key});
+class RoutesPage extends StatefulWidget {
+  const RoutesPage({super.key});
 
+  @override
+  State<RoutesPage> createState() => _RoutesPageState();
+}
+
+class _RoutesPageState extends State<RoutesPage> {
   static const Color _pageBgTop = AppTheme.pureWhite;
   static const Color _pageBgMid = AppTheme.offWhite;
   static const Color _pageBgBottom = AppTheme.pureWhite;
@@ -18,7 +31,161 @@ class RoutesPage extends StatelessWidget {
   static const Color _amber = AppTheme.turquoise;
   static const Color _orange = AppTheme.turquoise;
 
-  final double activeRouteProgress = 0.35;
+  Map<String, dynamic>? _activeRoute;
+  List<Map<String, dynamic>> _backendRoutes = [];
+  bool _loadingRoutes = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _loadData();
+    });
+  }
+
+  Future<void> _loadData() async {
+    if (!mounted) return;
+    setState(() => _loadingRoutes = true);
+    final session = await RouteSession.getActive();
+    final routesResult = await ApiService.getUserRoutes();
+    if (!mounted) return;
+    setState(() {
+      _activeRoute = session;
+      if (routesResult['success'] == true) {
+        final raw = routesResult['routes'];
+        if (raw is List) {
+          _backendRoutes = raw.cast<Map<String, dynamic>>();
+        }
+      }
+      _loadingRoutes = false;
+    });
+  }
+
+  Future<void> _startRoute(
+    BuildContext context,
+    Map<String, dynamic> route,
+  ) async {
+    final fromName =
+        (route['from'] ?? route['start_location'] ?? '') as String;
+    final toName = (route['to'] ?? route['end_location'] ?? '') as String;
+    final routeName = (route['name'] ?? route['route_name'] ?? 'Route') as String;
+
+    // Use stored coordinates if available (backend routes have them).
+    final startLat = (route['start_lat'] as num?)?.toDouble();
+    final startLng = (route['start_lng'] as num?)?.toDouble();
+    final endLat = (route['end_lat'] as num?)?.toDouble();
+    final endLng = (route['end_lng'] as num?)?.toDouble();
+
+    if (endLat != null && endLng != null) {
+      if (!context.mounted) return;
+      final vehicle = await showVehiclePickerSheet(context);
+      if (vehicle == null || !context.mounted) return;
+      await RouteSession.activate(
+        routeName: routeName,
+        fromName: fromName,
+        toName: toName,
+        startLat: startLat ?? 0,
+        startLng: startLng ?? 0,
+        endLat: endLat,
+        endLng: endLng,
+        vehicleType: vehicle,
+      );
+      if (!context.mounted) return;
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => LiveMapPage(
+            routeDestination: LatLng(endLat, endLng),
+            destinationName: toName,
+            vehicleType: vehicle,
+          ),
+        ),
+      );
+      if (mounted) _loadData();
+      return;
+    }
+
+    // Static routes: geocode first, then show vehicle picker.
+    final scaffold = ScaffoldMessenger.of(context);
+    scaffold.showSnackBar(
+      SnackBar(
+        content: Text('Loading $fromName → $toName…'),
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 10),
+      ),
+    );
+    try {
+      final fromQ =
+          fromName.contains(',') ? fromName : '$fromName, Pakistan';
+      final toQ = toName.contains(',') ? toName : '$toName, Pakistan';
+      final fromLocs = await locationFromAddress(fromQ);
+      final toLocs = await locationFromAddress(toQ);
+      scaffold.hideCurrentSnackBar();
+      if (!context.mounted) return;
+      final vehicle = await showVehiclePickerSheet(context);
+      if (vehicle == null || !context.mounted) return;
+      final nav = Navigator.of(context);
+      await RouteSession.activate(
+        routeName: routeName,
+        fromName: fromName,
+        toName: toName,
+        startLat: fromLocs.first.latitude,
+        startLng: fromLocs.first.longitude,
+        endLat: toLocs.first.latitude,
+        endLng: toLocs.first.longitude,
+        vehicleType: vehicle,
+      );
+      await nav.push(
+        MaterialPageRoute(
+          builder: (_) => LiveMapPage(
+            routeOrigin: LatLng(
+                fromLocs.first.latitude, fromLocs.first.longitude),
+            routeDestination: LatLng(
+                toLocs.first.latitude, toLocs.first.longitude),
+            destinationName: toName,
+            vehicleType: vehicle,
+          ),
+        ),
+      );
+      if (mounted) _loadData();
+    } catch (_) {
+      scaffold.hideCurrentSnackBar();
+      if (!context.mounted) return;
+      scaffold.showSnackBar(
+        SnackBar(
+          content: const Text(
+              'Could not resolve locations — check spelling'),
+          backgroundColor: Colors.red.shade600,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  Future<void> _resumeActiveRoute(BuildContext context) async {
+    final route = _activeRoute;
+    if (route == null) return;
+    final endLat = (route['end_lat'] as num?)?.toDouble();
+    final endLng = (route['end_lng'] as num?)?.toDouble();
+    final startLat = (route['start_lat'] as num?)?.toDouble();
+    final startLng = (route['start_lng'] as num?)?.toDouble();
+    if (endLat == null || endLng == null) return;
+    final vehicle = VehicleTypeX.fromName(route['vehicle_type'] as String?);
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => LiveMapPage(
+          routeOrigin: startLat != null && startLng != null
+              ? LatLng(startLat, startLng)
+              : null,
+          routeDestination: LatLng(endLat, endLng),
+          destinationName: route['to_name'] as String?,
+          vehicleType: vehicle,
+        ),
+      ),
+    );
+    if (mounted) _loadData();
+  }
 
   final List<Map<String, dynamic>> savedRoutes = [
     {
@@ -67,7 +234,7 @@ class RoutesPage extends StatelessWidget {
       decoration: BoxDecoration(
         color: bgColor,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: borderColor.withOpacity(0.5)),
+        border: Border.all(color: borderColor.withValues(alpha: 0.5)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -104,7 +271,7 @@ class RoutesPage extends StatelessWidget {
         border: Border.all(color: AppTheme.veryLightGray),
         boxShadow: [
           BoxShadow(
-            color: accent.withOpacity(0.1),
+            color: accent.withValues(alpha: 0.1),
             blurRadius: 14,
             offset: const Offset(0, 6),
           ),
@@ -181,7 +348,7 @@ class RoutesPage extends StatelessWidget {
               ),
               const SizedBox(width: 10),
               ElevatedButton(
-                onPressed: () {},
+                onPressed: () => _startRoute(context, route),
                 style: ElevatedButton.styleFrom(
                   minimumSize: const Size(64, 32),
                   padding: const EdgeInsets.symmetric(horizontal: 14),
@@ -210,7 +377,7 @@ class RoutesPage extends StatelessWidget {
                   context,
                   'Distance',
                   route['distance'],
-                  AppTheme.turquoise.withOpacity(0.15),
+                  AppTheme.turquoise.withValues(alpha: 0.15),
                   _amber,
                   Icons.near_me,
                   _amber,
@@ -222,7 +389,7 @@ class RoutesPage extends StatelessWidget {
                   context,
                   'Duration',
                   route['duration'],
-                  AppTheme.turquoise.withOpacity(0.15),
+                  AppTheme.turquoise.withValues(alpha: 0.15),
                   _cyan,
                   Icons.access_time,
                   _cyan,
@@ -234,7 +401,7 @@ class RoutesPage extends StatelessWidget {
                   context,
                   'Fuel',
                   route['fuelCost'],
-                  AppTheme.turquoise.withOpacity(0.15),
+                  AppTheme.turquoise.withValues(alpha: 0.15),
                   _teal,
                   Icons.local_gas_station_outlined,
                   _teal,
@@ -246,13 +413,266 @@ class RoutesPage extends StatelessWidget {
                   context,
                   'Stops',
                   route['stops'].toString(),
-                  AppTheme.lightGray.withOpacity(0.5),
+                  AppTheme.lightGray.withValues(alpha: 0.5),
                   _violet,
                   Icons.room_preferences_outlined,
                   _violet,
                 ),
               ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActiveRouteCard(BuildContext context, double padding) {
+    if (_loadingRoutes) {
+      return Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: _glassCard,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: _cyan.withValues(alpha: 0.3), width: 1.2),
+        ),
+        child: const Center(
+          child: CircularProgressIndicator(color: _teal),
+        ),
+      );
+    }
+
+    if (_activeRoute == null) {
+      return Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: _glassCard,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: AppTheme.veryLightGray, width: 1.2),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: AppTheme.offWhite,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(Icons.navigation_outlined,
+                  color: _secondaryText, size: 22),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: const [
+                  Text(
+                    'No active route',
+                    style: TextStyle(
+                        fontWeight: FontWeight.w600, color: _primaryText),
+                  ),
+                  SizedBox(height: 2),
+                  Text(
+                    'Tap "New Route" or Start a route below',
+                    style: TextStyle(fontSize: 12, color: _secondaryText),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final r = _activeRoute!;
+    final fromName = r['from_name'] as String? ?? '';
+    final toName = r['to_name'] as String? ?? '';
+    final routeName = r['route_name'] as String? ?? 'Active Route';
+    final activatedAt = r['activated_at'] as String?;
+    final travelDate = r['travel_date'] as String?;
+
+    String activatedLabel = 'In Progress';
+    if (activatedAt != null) {
+      try {
+        final dt = DateTime.parse(activatedAt).toLocal();
+        activatedLabel =
+            'Started ${DateFormat('d MMM, h:mm a').format(dt)}';
+      } catch (_) {}
+    }
+
+    String travelLabel = '';
+    if (travelDate != null) {
+      try {
+        final dt = DateTime.parse(travelDate);
+        travelLabel = 'Travel date: ${DateFormat('d MMM yyyy').format(dt)}';
+      } catch (_) {}
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: _glassCard,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: _cyan.withValues(alpha: 0.3), width: 1.2),
+        boxShadow: [
+          BoxShadow(
+            color: _cyan.withValues(alpha: 0.1),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(colors: [_amber, _orange]),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(Icons.navigation, color: Colors.white),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      routeName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w600, color: _primaryText),
+                    ),
+                    Text(
+                      activatedLabel,
+                      style:
+                          const TextStyle(color: _teal, fontSize: 11),
+                    ),
+                  ],
+                ),
+              ),
+              // Stop button
+              IconButton(
+                icon: const Icon(Icons.stop_circle_outlined,
+                    color: Colors.redAccent, size: 22),
+                tooltip: 'Stop route',
+                onPressed: () async {
+                  await RouteSession.clear();
+                  if (mounted) setState(() => _activeRoute = null);
+                },
+              ),
+            ],
+          ),
+          SizedBox(height: padding * 0.75),
+
+          // From → To visual
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  AppTheme.offWhite,
+                  AppTheme.lightGray.withValues(alpha: 0.5),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppTheme.veryLightGray),
+            ),
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 28,
+                      height: 28,
+                      decoration: const BoxDecoration(
+                          color: Color(0xFF22C55E),
+                          shape: BoxShape.circle),
+                      child: const Icon(Icons.location_on,
+                          color: Colors.white, size: 14),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        fromName.isNotEmpty ? fromName : 'Starting point',
+                        style: const TextStyle(
+                            color: _primaryText,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13),
+                      ),
+                    ),
+                  ],
+                ),
+                Container(
+                  margin: const EdgeInsets.symmetric(vertical: 6),
+                  height: 1,
+                  color: AppTheme.veryLightGray,
+                ),
+                Row(
+                  children: [
+                    Container(
+                      width: 28,
+                      height: 28,
+                      decoration: const BoxDecoration(
+                          color: Color(0xFFF43F5E),
+                          shape: BoxShape.circle),
+                      child: const Icon(Icons.location_on,
+                          color: Colors.white, size: 14),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        toName.isNotEmpty ? toName : 'Destination',
+                        style: const TextStyle(
+                            color: _primaryText,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+
+          if (travelLabel.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                const Icon(Icons.calendar_today_outlined,
+                    size: 13, color: _secondaryText),
+                const SizedBox(width: 6),
+                Text(travelLabel,
+                    style: const TextStyle(
+                        fontSize: 11, color: _secondaryText)),
+              ],
+            ),
+          ],
+
+          SizedBox(height: padding * 0.75),
+
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () => _resumeActiveRoute(context),
+              icon: const Icon(Icons.navigation, size: 18),
+              label: const Text('Resume Navigation',
+                  style: TextStyle(fontWeight: FontWeight.bold)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _teal,
+                foregroundColor: Colors.white,
+                padding:
+                    const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+                elevation: 0,
+              ),
+            ),
           ),
         ],
       ),
@@ -307,7 +727,12 @@ class RoutesPage extends StatelessWidget {
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton.icon(
-                            onPressed: () {},
+                            onPressed: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const NewRoutePage(),
+                              ),
+                            ),
                             icon: Icon(
                               Icons.add,
                               size: 16,
@@ -360,8 +785,14 @@ class RoutesPage extends StatelessWidget {
                           ],
                         ),
                         ElevatedButton.icon(
-                          onPressed: () {},
-                          icon: Icon(Icons.add, size: 16, color: Colors.white),
+                          onPressed: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const NewRoutePage(),
+                            ),
+                          ),
+                          icon: const Icon(Icons.add,
+                              size: 16, color: Colors.white),
                           label: const Text(
                             'New Route',
                             style: TextStyle(
@@ -385,243 +816,58 @@ class RoutesPage extends StatelessWidget {
                     ),
               SizedBox(height: padding),
 
-              // Active Route
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: _glassCard,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: _cyan.withOpacity(0.3),
-                    width: 1.2,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: _cyan.withOpacity(0.1),
-                      blurRadius: 20,
-                      offset: const Offset(0, 8),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Header
-                    Row(
-                      children: [
-                        Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [_amber, _orange],
-                            ),
-                            borderRadius: const BorderRadius.all(
-                              Radius.circular(12),
-                            ),
-                          ),
-                          child: const Icon(
-                            Icons.navigation,
-                            color: Colors.white,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Active Route',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w600,
-                                color: _primaryText,
-                              ),
-                            ),
-                            const Text(
-                              'In Progress',
-                              style: TextStyle(color: _teal, fontSize: 12),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: padding * 0.75),
-
-                    // Route Stops
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            AppTheme.offWhite,
-                            AppTheme.lightGray.withOpacity(0.5),
-                          ],
-                        ),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AppTheme.veryLightGray),
-                      ),
-                      child: Column(
-                        children: [
-                          Row(
-                            children: [
-                              Container(
-                                width: 32,
-                                height: 32,
-                                decoration: const BoxDecoration(
-                                  color: Color(0xFF22C55E),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: const Icon(
-                                  Icons.location_on,
-                                  color: Colors.white,
-                                  size: 16,
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: const [
-                                  Text(
-                                    'Islamabad',
-                                    style: TextStyle(
-                                      color: _primaryText,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                  Text(
-                                    'Starting Point',
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      color: _secondaryText,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                          Container(
-                            margin: const EdgeInsets.symmetric(vertical: 6),
-                            height: 1,
-                            color: AppTheme.veryLightGray,
-                          ),
-                          Row(
-                            children: [
-                              Container(
-                                width: 32,
-                                height: 32,
-                                decoration: const BoxDecoration(
-                                  color: Color(0xFFF43F5E),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: const Icon(
-                                  Icons.location_on,
-                                  color: Colors.white,
-                                  size: 16,
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: const [
-                                  Text(
-                                    'Murree',
-                                    style: TextStyle(
-                                      color: _primaryText,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                  Text(
-                                    'Destination • 45 min away',
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      color: _secondaryText,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                    SizedBox(height: padding * 0.75),
-
-                    // 🔥 NEW: Route progress bar
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Route progress',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: _secondaryText,
-                          ),
-                        ),
-                        SizedBox(height: padding * 0.375),
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: LinearProgressIndicator(
-                            value: activeRouteProgress,
-                            minHeight: 8,
-                            backgroundColor: AppTheme.veryLightGray,
-                            valueColor: const AlwaysStoppedAnimation(_cyan),
-                          ),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: padding * 0.75),
-
-                    // Info cards
-                    Wrap(
-                      spacing: 10,
-                      runSpacing: 10,
-                      children: [
-                        SizedBox(
-                          width: 110,
-                          child: _buildInfoCard(
-                            context,
-                            'Distance',
-                            '60 km',
-                            AppTheme.turquoise.withOpacity(0.15),
-                            _amber,
-                            Icons.near_me,
-                            _amber,
-                          ),
-                        ),
-                        SizedBox(
-                          width: 110,
-                          child: _buildInfoCard(
-                            context,
-                            'ETA',
-                            '45 min',
-                            AppTheme.turquoise.withOpacity(0.15),
-                            _cyan,
-                            Icons.access_time,
-                            _cyan,
-                          ),
-                        ),
-                        SizedBox(
-                          width: 110,
-                          child: _buildInfoCard(
-                            context,
-                            'Fuel',
-                            'Rs 800',
-                            AppTheme.turquoise.withOpacity(0.15),
-                            _teal,
-                            Icons.local_gas_station_outlined,
-                            _teal,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
+              // Active Route card
+              _buildActiveRouteCard(context, padding),
               SizedBox(height: padding),
 
-              // Saved Routes
+              // User-created routes from backend
+              if (_loadingRoutes)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 12),
+                  child: Center(
+                    child: CircularProgressIndicator(color: _teal),
+                  ),
+                )
+              else if (_backendRoutes.isNotEmpty) ...[
+                const Text(
+                  '↗ My Routes',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: _primaryText,
+                  ),
+                ),
+                SizedBox(height: padding * 0.75),
+                Column(
+                  children: _backendRoutes.asMap().entries.map((entry) {
+                    final index = entry.key;
+                    final r = entry.value;
+                    final unified = {
+                      'name': r['route_name'] ?? 'Unnamed Route',
+                      'tag': 'Saved',
+                      'from': r['start_location'] ?? '',
+                      'to': r['end_location'] ?? '',
+                      'distance': '—',
+                      'duration': '—',
+                      'fuelCost': '—',
+                      'stops': 0,
+                      'start_lat': r['start_lat'],
+                      'start_lng': r['start_lng'],
+                      'end_lat': r['end_lat'],
+                      'end_lng': r['end_lng'],
+                    };
+                    return Padding(
+                      padding: EdgeInsets.only(bottom: padding * 0.75),
+                      child: _buildSavedRouteCard(context, unified, index),
+                    );
+                  }).toList(),
+                ),
+                SizedBox(height: padding * 0.5),
+              ],
+
+              // Suggested routes
               const Text(
-                '↗ Saved Routes',
+                '↗ Suggested Routes',
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,

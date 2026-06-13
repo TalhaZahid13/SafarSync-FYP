@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
 class HotelFoodFinder extends StatelessWidget {
@@ -112,7 +113,7 @@ class HotelFoodFinder extends StatelessWidget {
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.12),
+            color: Colors.black.withValues(alpha:0.12),
             blurRadius: 12,
             offset: const Offset(0, 6),
           ),
@@ -139,7 +140,7 @@ class HotelFoodFinder extends StatelessWidget {
                 margin: const EdgeInsets.only(bottom: 12),
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.surfaceContainerHighest.withOpacity(
+                  color: theme.colorScheme.surfaceContainerHighest.withValues(alpha:
                     0.45,
                   ),
                   borderRadius: BorderRadius.circular(16),
@@ -150,11 +151,23 @@ class HotelFoodFinder extends StatelessWidget {
                     // Image
                     ClipRRect(
                       borderRadius: BorderRadius.circular(12),
-                      child: Image.network(
-                        item['image'],
+                      child: CachedNetworkImage(
+                        imageUrl: item['image'] as String,
                         width: 80,
                         height: 80,
                         fit: BoxFit.cover,
+                        placeholder: (_, _) => Container(
+                          width: 80,
+                          height: 80,
+                          color: Colors.grey.shade200,
+                        ),
+                        errorWidget: (_, _, _) => Container(
+                          width: 80,
+                          height: 80,
+                          color: Colors.grey.shade200,
+                          child: const Icon(Icons.broken_image,
+                              color: Colors.grey),
+                        ),
                       ),
                     ),
                     const SizedBox(width: 8),

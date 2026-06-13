@@ -96,10 +96,10 @@ class AppTheme {
   static BoxDecoration weatherCardDecoration = BoxDecoration(
     gradient: weatherCardGradient,
     borderRadius: BorderRadius.circular(20),
-    border: Border.all(color: weatherBorder.withOpacity(0.35), width: 1),
+    border: Border.all(color: weatherBorder.withValues(alpha:0.35), width: 1),
     boxShadow: [
       BoxShadow(
-        color: weatherBorder.withOpacity(0.15),
+        color: weatherBorder.withValues(alpha:0.15),
         blurRadius: 20,
         offset: const Offset(0, 10),
       ),
@@ -184,7 +184,7 @@ class AppTheme {
         surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
-          side: BorderSide(color: veryLightGray.withOpacity(0.5), width: 1),
+          side: BorderSide(color: veryLightGray.withValues(alpha:0.5), width: 1),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(

@@ -67,7 +67,7 @@ class RoutesPage extends StatelessWidget {
       decoration: BoxDecoration(
         color: bgColor,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: borderColor.withOpacity(0.5)),
+        border: Border.all(color: borderColor.withValues(alpha:0.5)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -104,7 +104,7 @@ class RoutesPage extends StatelessWidget {
         border: Border.all(color: AppTheme.veryLightGray),
         boxShadow: [
           BoxShadow(
-            color: accent.withOpacity(0.1),
+            color: accent.withValues(alpha:0.1),
             blurRadius: 14,
             offset: const Offset(0, 6),
           ),
@@ -210,7 +210,7 @@ class RoutesPage extends StatelessWidget {
                   context,
                   'Distance',
                   route['distance'],
-                  AppTheme.turquoise.withOpacity(0.15),
+                  AppTheme.turquoise.withValues(alpha:0.15),
                   _amber,
                   Icons.near_me,
                   _amber,
@@ -222,7 +222,7 @@ class RoutesPage extends StatelessWidget {
                   context,
                   'Duration',
                   route['duration'],
-                  AppTheme.turquoise.withOpacity(0.15),
+                  AppTheme.turquoise.withValues(alpha:0.15),
                   _cyan,
                   Icons.access_time,
                   _cyan,
@@ -234,7 +234,7 @@ class RoutesPage extends StatelessWidget {
                   context,
                   'Fuel',
                   route['fuelCost'],
-                  AppTheme.turquoise.withOpacity(0.15),
+                  AppTheme.turquoise.withValues(alpha:0.15),
                   _teal,
                   Icons.local_gas_station_outlined,
                   _teal,
@@ -246,7 +246,7 @@ class RoutesPage extends StatelessWidget {
                   context,
                   'Stops',
                   route['stops'].toString(),
-                  AppTheme.lightGray.withOpacity(0.5),
+                  AppTheme.lightGray.withValues(alpha:0.5),
                   _violet,
                   Icons.room_preferences_outlined,
                   _violet,
@@ -395,10 +395,10 @@ class RoutesPage extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: _glassCard,
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: _cyan.withOpacity(0.3), width: 1.2),
+                  border: Border.all(color: _cyan.withValues(alpha:0.3), width: 1.2),
                   boxShadow: [
                     BoxShadow(
-                      color: _cyan.withOpacity(0.1),
+                      color: _cyan.withValues(alpha:0.1),
                       blurRadius: 20,
                       offset: const Offset(0, 8),
                     ),
@@ -454,7 +454,7 @@ class RoutesPage extends StatelessWidget {
                         gradient: LinearGradient(
                           colors: [
                             AppTheme.offWhite,
-                            AppTheme.lightGray.withOpacity(0.5),
+                            AppTheme.lightGray.withValues(alpha:0.5),
                           ],
                         ),
                         borderRadius: BorderRadius.circular(12),
@@ -583,7 +583,7 @@ class RoutesPage extends StatelessWidget {
                             context,
                             'Distance',
                             '60 km',
-                            AppTheme.turquoise.withOpacity(0.15),
+                            AppTheme.turquoise.withValues(alpha:0.15),
                             _amber,
                             Icons.near_me,
                             _amber,
@@ -595,7 +595,7 @@ class RoutesPage extends StatelessWidget {
                             context,
                             'ETA',
                             '45 min',
-                            AppTheme.turquoise.withOpacity(0.15),
+                            AppTheme.turquoise.withValues(alpha:0.15),
                             _cyan,
                             Icons.access_time,
                             _cyan,
@@ -607,7 +607,7 @@ class RoutesPage extends StatelessWidget {
                             context,
                             'Fuel',
                             'Rs 800',
-                            AppTheme.turquoise.withOpacity(0.15),
+                            AppTheme.turquoise.withValues(alpha:0.15),
                             _teal,
                             Icons.local_gas_station_outlined,
                             _teal,

@@ -199,7 +199,7 @@ class _AIAssistantState extends State<AIAssistant> {
                         width: 40,
                         height: 40,
                         decoration: BoxDecoration(
-                          color: colorScheme.onPrimary.withOpacity(0.18),
+                          color: colorScheme.onPrimary.withValues(alpha:0.18),
                           shape: BoxShape.circle,
                         ),
                         child: Center(
@@ -223,7 +223,7 @@ class _AIAssistantState extends State<AIAssistant> {
                           Text(
                             'Online • Ready to help',
                             style: TextStyle(
-                              color: colorScheme.onPrimary.withOpacity(0.85),
+                              color: colorScheme.onPrimary.withValues(alpha:0.85),
                               fontSize: 12,
                             ),
                           ),
@@ -305,7 +305,7 @@ class _AIAssistantState extends State<AIAssistant> {
                                 style: TextStyle(
                                   fontSize: 10,
                                   color: msg.isUser
-                                      ? colorScheme.onPrimary.withOpacity(0.85)
+                                      ? colorScheme.onPrimary.withValues(alpha:0.85)
                                       : theme.textTheme.bodySmall?.color,
                                 ),
                               ),

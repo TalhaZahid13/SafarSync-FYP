@@ -19,6 +19,14 @@ class ApiService {
   );
 
   static final String baseUrl = _resolveBaseUrl();
+
+  /// Socket.io server URL (same host, no /api path)
+  static String get socketUrl {
+    if (baseUrl.endsWith('/api')) {
+      return baseUrl.substring(0, baseUrl.length - 4);
+    }
+    return baseUrl;
+  }
   static final FirebaseAuth _auth = FirebaseAuth.instance;
 
   static String _resolveBaseUrl() {
@@ -511,6 +519,30 @@ class ApiService {
     }
   }
 
+  /// Push live GPS position to backend (fire-and-forget)
+  static Future<void> updateLocation({
+    required double latitude,
+    required double longitude,
+    double? accuracy,
+    String? city,
+    String? country,
+  }) async {
+    try {
+      await http.post(
+        Uri.parse('$baseUrl/location/update'),
+        headers: await getHeaders(needsAuth: true),
+        body: jsonEncode({
+          'latitude': latitude,
+          'longitude': longitude,
+          if (accuracy != null) 'accuracy': accuracy,
+          if (city != null) 'city': city,
+          if (country != null) 'country': country,
+          'captured_at': DateTime.now().toIso8601String(),
+        }),
+      );
+    } catch (_) {}
+  }
+
   // ============ AI ENDPOINTS ============
 
   /// Send message to AI
@@ -583,5 +615,86 @@ class ApiService {
     } catch (e) {
       return {'success': false, 'message': 'Error: $e'};
     }
+  }
+
+  // ============ GENERIC HTTP METHODS ============
+
+  /// Generic GET request
+  static Future<Map<String, dynamic>> getRequest(String endpoint) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl$endpoint'),
+        headers: await getHeaders(needsAuth: true),
+      );
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        return {'success': false, 'message': 'Request failed: ${response.statusCode}'};
+      }
+    } catch (e) {
+      return {'success': false, 'message': 'Error: $e'};
+    }
+  }
+
+  /// Generic POST request
+  static Future<Map<String, dynamic>> postRequest(String endpoint, Map<String, dynamic> body) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl$endpoint'),
+        headers: await getHeaders(needsAuth: true),
+        body: jsonEncode(body),
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return jsonDecode(response.body);
+      } else {
+        return {'success': false, 'message': 'Request failed: ${response.statusCode}'};
+      }
+    } catch (e) {
+      return {'success': false, 'message': 'Error: $e'};
+    }
+  }
+
+  /// Generic PUT request
+  static Future<Map<String, dynamic>> putRequest(String endpoint, Map<String, dynamic> body) async {
+    try {
+      final response = await http.put(
+        Uri.parse('$baseUrl$endpoint'),
+        headers: await getHeaders(needsAuth: true),
+        body: jsonEncode(body),
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return jsonDecode(response.body);
+      } else {
+        return {'success': false, 'message': 'Request failed: ${response.statusCode}'};
+      }
+    } catch (e) {
+      return {'success': false, 'message': 'Error: $e'};
+    }
+  }
+
+  /// Generic DELETE request
+  static Future<Map<String, dynamic>> deleteRequest(String endpoint) async {
+    try {
+      final response = await http.delete(
+        Uri.parse('$baseUrl$endpoint'),
+        headers: await getHeaders(needsAuth: true),
+      );
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        if (response.body.isEmpty) return {'success': true};
+        return jsonDecode(response.body);
+      } else {
+        return {'success': false, 'message': 'Request failed: ${response.statusCode}'};
+      }
+    } catch (e) {
+      return {'success': false, 'message': 'Error: $e'};
+    }
+  }
+
+  /// Get current user ID (from Firebase)
+  static String? get userId {
+    return _auth.currentUser?.uid;
   }
 }

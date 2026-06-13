@@ -13,11 +13,18 @@ import '../components/smart/smart_alerts.dart';
 import '../utils/responsive.dart';
 import '../ui/app_theme.dart';
 
-class HomePage extends StatelessWidget {
-  final VoidCallback onPlanRoute; // 👈 important
-  final Function(String)? onTabChange; // New callback for search navigation
+class HomePage extends StatefulWidget {
+  final VoidCallback onPlanRoute;
+  final Function(String)? onTabChange;
 
   const HomePage({super.key, required this.onPlanRoute, this.onTabChange});
+
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  List<String> _activeFilters = const ['Nature'];
 
   @override
   Widget build(BuildContext context) {
@@ -27,7 +34,7 @@ class HomePage extends StatelessWidget {
         gradient: LinearGradient(
           colors: [
             Theme.of(context).scaffoldBackgroundColor,
-            Theme.of(context).cardColor.withOpacity(0.65),
+            Theme.of(context).cardColor.withValues(alpha: 0.65),
           ],
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
@@ -38,25 +45,34 @@ class HomePage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            SearchBar(onTabChange: onTabChange),
+            SearchBar(onTabChange: widget.onTabChange),
             SizedBox(height: padding),
-            const SmartAlerts(),
+            // RepaintBoundary isolates each section so rebuilds don't cascade
+            const RepaintBoundary(child: SmartAlerts()),
             const SizedBox(height: 16),
-            const QuickAccessCards(),
+            const RepaintBoundary(child: QuickAccessCards()),
             const SizedBox(height: 16),
-            const ResponsiveWeatherEmergency(),
+            const RepaintBoundary(child: ResponsiveWeatherEmergency()),
             const SizedBox(height: 16),
-            PopularDestinations(),
+            InterestFilters(
+              initialFilters: _activeFilters,
+              onFiltersChanged: (filters) =>
+                  setState(() => _activeFilters = filters),
+            ),
             const SizedBox(height: 16),
-            const InterestFilters(),
+            RepaintBoundary(
+              child: PopularDestinations(activeFilters: _activeFilters),
+            ),
             const SizedBox(height: 16),
-            const AIRecommendations(),
+            const RepaintBoundary(child: AIRecommendations()),
             const SizedBox(height: 16),
-            SmartRoutePlanner(onPlanRoute: onPlanRoute),
+            RepaintBoundary(
+              child: SmartRoutePlanner(onPlanRoute: widget.onPlanRoute),
+            ),
             const SizedBox(height: 16),
-            const HotelFoodFinder(),
+            const RepaintBoundary(child: HotelFoodFinder()),
             const SizedBox(height: 16),
-            const FeatureSections(),
+            const RepaintBoundary(child: FeatureSections()),
             const SizedBox(height: 24),
           ],
         ),
@@ -80,10 +96,10 @@ class ResponsiveWeatherEmergency extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: AppTheme.homeGradient,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppTheme.gold.withOpacity(0.45), width: 1),
+        border: Border.all(color: AppTheme.turquoise.withValues(alpha: 0.45), width: 1),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.coral.withOpacity(0.20),
+            color: AppTheme.turquoise.withValues(alpha: 0.20),
             blurRadius: 18,
             offset: const Offset(0, 8),
           ),

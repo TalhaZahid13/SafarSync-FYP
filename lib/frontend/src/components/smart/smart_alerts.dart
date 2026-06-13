@@ -30,14 +30,14 @@ class _SmartAlertsState extends State<SmartAlerts> {
     AlertItem(
       id: 1,
       icon: LucideIcons.cloud,
-      color: AppTheme.turquoise,
+      color: const Color(0xFF4A90E2), // weather blue
       title: 'Weather Update',
       message: 'Rain expected in 2 hours near Murree - pack your rain gear!',
     ),
     AlertItem(
       id: 2,
       icon: LucideIcons.tag,
-      color: AppTheme.turquoise,
+      color: const Color(0xFFFF8F00), // deal amber
       title: 'Nearby Deal',
       message:
           '30% off at The Golden Fork Restaurant, Islamabad - limited time!',
@@ -45,7 +45,7 @@ class _SmartAlertsState extends State<SmartAlerts> {
     AlertItem(
       id: 3,
       icon: LucideIcons.sparkles,
-      color: AppTheme.turquoise,
+      color: const Color(0xFF7B61FF), // AI purple
       title: 'AI Travel Tip',
       message:
           'Best time to visit Hunza Valley: May-October. Book now for the season!',
@@ -67,12 +67,12 @@ class _SmartAlertsState extends State<SmartAlerts> {
         return Container(
           margin: const EdgeInsets.symmetric(vertical: 6),
           decoration: BoxDecoration(
-            color: alert.color.withOpacity(0.15),
+            color: alert.color.withValues(alpha:0.15),
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: alert.color.withOpacity(0.3), width: 1),
+            border: Border.all(color: alert.color.withValues(alpha:0.3), width: 1),
             boxShadow: [
               BoxShadow(
-                color: alert.color.withOpacity(0.08),
+                color: alert.color.withValues(alpha:0.08),
                 blurRadius: 14,
                 offset: const Offset(0, 8),
               ),
@@ -88,7 +88,7 @@ class _SmartAlertsState extends State<SmartAlerts> {
                   width: 40,
                   height: 40,
                   decoration: BoxDecoration(
-                    color: alert.color.withOpacity(0.3),
+                    color: alert.color.withValues(alpha:0.3),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Center(

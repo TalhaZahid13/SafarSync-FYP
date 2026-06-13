@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../pages/safar_ai_chat_page.dart';
+import '../../pages/hotel_finder_page.dart';
+import '../../pages/food_spots_page.dart';
+import '../../pages/smart_route_page.dart';
 
 class QuickAccessCards extends StatelessWidget {
   const QuickAccessCards({super.key});
@@ -7,32 +10,35 @@ class QuickAccessCards extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cards = [
-      {
-        'icon': Icons.map,
-        'title': 'Smart Route',
-        'subtitle': 'Planning',
-        'gradient': [Colors.blue.shade400, Colors.cyan.shade400],
-      },
-      {
-        'icon': Icons.hotel,
-        'title': 'Hotel',
-        'subtitle': 'Finder',
-        'gradient': [Color(0xFFFDB913), Color(0xFF1B5A6E)],
-      },
-      {
-        'icon': Icons.restaurant,
-        'title': 'Food',
-        'subtitle': 'Spots',
-        'gradient': [Colors.orange.shade400, Colors.yellow.shade400],
-      },
-      {
-        'icon': Icons.computer,
-        'title': 'Safar AI',
-        'subtitle': 'Digital Assistant',
-        'gradient': [const Color(0xFF13E8D0), const Color(0xFF72AEBC)],
-        'isSafarAi': false,
-        'page': const SafarAiChatPage(), // Add route screen here
-      },
+      _CardData(
+        icon: Icons.map,
+        title: 'Smart Route',
+        subtitle: 'Planning',
+        gradient: [Colors.blue.shade400, Colors.cyan.shade400],
+        destination: const SmartRoutePage(),
+      ),
+      _CardData(
+        icon: Icons.hotel,
+        title: 'Hotel',
+        subtitle: 'Finder',
+        gradient: [const Color(0xFFFDB913), const Color(0xFF1B5A6E)],
+        destination: const HotelFinderPage(),
+      ),
+      _CardData(
+        icon: Icons.restaurant,
+        title: 'Food',
+        subtitle: 'Spots',
+        gradient: [Colors.orange.shade400, Colors.yellow.shade400],
+        destination: const FoodSpotsPage(),
+      ),
+      _CardData(
+        icon: Icons.computer,
+        title: 'Safar AI',
+        subtitle: 'Digital Assistant',
+        gradient: [const Color(0xFF13E8D0), const Color(0xFF72AEBC)],
+        destination: const SafarAiChatPage(),
+        isPulse: false,
+      ),
     ];
 
     return GridView.builder(
@@ -48,34 +54,27 @@ class QuickAccessCards extends StatelessWidget {
       itemCount: cards.length,
       itemBuilder: (context, index) {
         final card = cards[index];
-        final bool isSafarAi = (card['isSafarAi'] as bool?) ?? false;
         return AnimatedPulseCard(
-          isPulse: isSafarAi,
+          isPulse: card.isPulse,
           child: InkWell(
             borderRadius: BorderRadius.circular(20),
-            onTap: isSafarAi
-                ? () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const SafarAiChatPage(),
-                      ),
-                    );
-                  }
-                : null,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => card.destination),
+              );
+            },
             child: Container(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: card['gradient'] as List<Color>,
+                  colors: card.gradient,
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
-                    color: (card['gradient'] as List<Color>).first.withOpacity(
-                      0.3,
-                    ),
+                    color: card.gradient.first.withValues(alpha: 0.3),
                     blurRadius: 14,
                     offset: const Offset(0, 8),
                   ),
@@ -85,10 +84,10 @@ class QuickAccessCards extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(card['icon'] as IconData, size: 32, color: Colors.white),
+                  Icon(card.icon, size: 32, color: Colors.white),
                   const SizedBox(height: 12),
                   Text(
-                    card['title'] as String,
+                    card.title,
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 16,
@@ -96,7 +95,7 @@ class QuickAccessCards extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    card['subtitle'] as String,
+                    card.subtitle,
                     style: const TextStyle(color: Colors.white70, fontSize: 12),
                   ),
                 ],
@@ -109,7 +108,24 @@ class QuickAccessCards extends StatelessWidget {
   }
 }
 
-/// Widget to animate pulse glow for highlighted cards (e.g. Safar AI)
+class _CardData {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final List<Color> gradient;
+  final Widget destination;
+  final bool isPulse;
+
+  const _CardData({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.gradient,
+    required this.destination,
+    this.isPulse = false,
+  });
+}
+
 class AnimatedPulseCard extends StatefulWidget {
   final Widget child;
   final bool isPulse;
@@ -157,7 +173,6 @@ class _AnimatedPulseCardState extends State<AnimatedPulseCard>
   @override
   Widget build(BuildContext context) {
     if (!widget.isPulse) return widget.child;
-
     return ScaleTransition(scale: _animation, child: widget.child);
   }
 }
