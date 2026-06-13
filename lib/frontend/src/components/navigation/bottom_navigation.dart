@@ -18,8 +18,8 @@ class BottomNavigation extends StatelessWidget {
     final navItems = [
       {'id': 'home', 'icon': Icons.home, 'label': 'Home'},
       {'id': 'explore', 'icon': Icons.explore, 'label': 'Explore'},
+      {'id': 'trips', 'icon': Icons.bookmark, 'label': 'Trips'},
       {'id': 'routes', 'icon': Icons.alt_route, 'label': 'Routes'},
-      {'id': 'wishlist', 'icon': Icons.favorite, 'label': 'Wishlist'},
       {'id': 'profile', 'icon': Icons.person, 'label': 'Profile'},
     ];
     final isMobile = ResponsiveUtil.isMobile(context);

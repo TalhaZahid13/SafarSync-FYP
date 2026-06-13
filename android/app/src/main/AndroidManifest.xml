@@ -30,6 +30,27 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+        <!--
+          Quick Settings SOS tile.
+          - android:permission restricts binding to the system only.
+          - android:exported="true" is required on API 31+ for services with intent-filters.
+          - The ACTIVE_TILE meta-data tells Android this is a one-shot action (not a toggle).
+          - Requires API 24 (Android 7.0); silently ignored on older devices.
+        -->
+        <service
+            android:name=".SosTileService"
+            android:label="SafarSync SOS"
+            android:icon="@drawable/ic_sos_tile"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.service.quicksettings.ACTIVE_TILE"
+                android:value="false" />
+        </service>
+
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data

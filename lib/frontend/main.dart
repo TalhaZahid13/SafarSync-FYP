@@ -14,11 +14,14 @@ import 'src/pages/explore_page.dart';
 import 'src/pages/routes_page.dart';
 import 'src/pages/wishlist_page.dart';
 import 'src/pages/profile_page.dart';
+import 'src/pages/smart_dashboard_page.dart';
 import 'src/utils/local_database_service.dart';
 import 'src/utils/theme_controller.dart';
 import 'src/ui/app_theme.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter/foundation.dart'; // For checking if it's running on web
+import 'src/utils/notification_service.dart';
+import 'src/pages/emergency_sos_screen.dart';
 // DevicePreview removed
 
 FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
@@ -47,6 +50,8 @@ void main() async {
     await LocalDatabaseService.ensureInitialized();
     // Initialize local notifications after necessary services are ready
     await _initializeNotifications();
+    // Initialize SafarSync notification service (channels + emergency push)
+    await NotificationService.instance.initialize();
   } catch (e) {
     debugPrint('Firebase initialization error: $e');
   }
@@ -135,6 +140,56 @@ class _AppState extends State<App> {
   String activeTab = 'home';
   bool isAIOpen = false;
 
+  // Channel matches the one declared in MainActivity.kt
+  static const _sosTileChannel =
+      MethodChannel('com.example.safarsync_mobileapp/sos_tile');
+
+  @override
+  void initState() {
+    super.initState();
+    // Start socket listener for real-time emergency + general notifications
+    NotificationService.instance.startListening();
+    // Handle SOS tile intent (warm-start: app already running)
+    _sosTileChannel.setMethodCallHandler(_onSosTileMethod);
+    // Handle SOS tile intent (cold-start: check after first frame)
+    WidgetsBinding.instance.addPostFrameCallback((_) => _checkPendingSos());
+  }
+
+  /// Called by native when onNewIntent fires with the SOS tile action
+  /// (app was already running in the background).
+  Future<dynamic> _onSosTileMethod(MethodCall call) async {
+    if (call.method == 'triggerSOS' && mounted) {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => const EmergencySOSScreen(autoStart: true),
+        ),
+      );
+    }
+  }
+
+  /// Checks whether the app was cold-started by the SOS tile.
+  Future<void> _checkPendingSos() async {
+    try {
+      final pending =
+          await _sosTileChannel.invokeMethod<bool>('hasPendingSOS') ?? false;
+      if (pending && mounted) {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => const EmergencySOSScreen(autoStart: true),
+          ),
+        );
+      }
+    } catch (_) {
+      // Platform channel not available (e.g., running on iOS or in tests)
+    }
+  }
+
+  @override
+  void dispose() {
+    NotificationService.instance.stopListening();
+    super.dispose();
+  }
+
   void _goToRoutes() {
     setState(() {
       activeTab = 'routes';
@@ -154,6 +209,8 @@ class _AppState extends State<App> {
         );
       case 'explore':
         return const ExplorePage();
+      case 'trips':
+        return const SmartDashboardPage();
       case 'routes':
         return RoutesPage();
       case 'wishlist':

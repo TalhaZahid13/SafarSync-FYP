@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Warning triangle with exclamation mark — used as Quick Settings SOS tile icon.
+     Must be a single-color white icon so the system can tint it correctly. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+
+    <!-- Outer warning triangle -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M1,21h22L12,2 1,21z" />
+
+    <!-- Exclamation mark — body -->
+    <path
+        android:fillColor="#000000"
+        android:pathData="M13,14h-2v-4h2v4z" />
+
+    <!-- Exclamation mark — dot -->
+    <path
+        android:fillColor="#000000"
+        android:pathData="M13,18h-2v-2h2v2z" />
+
+</vector>

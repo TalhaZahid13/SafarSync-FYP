@@ -675,6 +675,24 @@ class ApiService {
     }
   }
 
+  /// Generic DELETE request
+  static Future<Map<String, dynamic>> deleteRequest(String endpoint) async {
+    try {
+      final response = await http.delete(
+        Uri.parse('$baseUrl$endpoint'),
+        headers: await getHeaders(needsAuth: true),
+      );
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        if (response.body.isEmpty) return {'success': true};
+        return jsonDecode(response.body);
+      } else {
+        return {'success': false, 'message': 'Request failed: ${response.statusCode}'};
+      }
+    } catch (e) {
+      return {'success': false, 'message': 'Error: $e'};
+    }
+  }
+
   /// Get current user ID (from Firebase)
   static String? get userId {
     return _auth.currentUser?.uid;

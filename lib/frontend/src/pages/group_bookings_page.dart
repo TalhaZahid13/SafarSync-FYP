@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../utils/api_service.dart';
+import 'group_live_tracking_page.dart';
+import 'group_invitations_page.dart';
 
 class GroupBookingsPage extends StatefulWidget {
   const GroupBookingsPage({super.key});
@@ -37,6 +39,61 @@ class _GroupBookingsPageState extends State<GroupBookingsPage> {
     }
   }
 
+  Future<void> _showJoinGroupDialog() async {
+    final controller = TextEditingController();
+    final groupId = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Join Group Trip'),
+        content: TextField(
+          controller: controller,
+          keyboardType: TextInputType.number,
+          decoration: const InputDecoration(
+            labelText: 'Group ID',
+            hintText: 'Enter the group booking ID',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, controller.text.trim()),
+            child: const Text('Join'),
+          ),
+        ],
+      ),
+    );
+
+    if (groupId == null || groupId.isEmpty) return;
+
+    try {
+      final response = await ApiService.postRequest(
+        '/group-bookings/$groupId/join',
+        {},
+      );
+      if (!mounted) return;
+      if (response['success'] == true) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Joined group successfully')),
+        );
+        _loadGroupBookings();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(response['error'] ?? 'Failed to join group')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -44,7 +101,13 @@ class _GroupBookingsPageState extends State<GroupBookingsPage> {
         title: const Text('Group Trips'),
         actions: [
           IconButton(
+            icon: const Icon(Icons.group_add),
+            tooltip: 'Join Group',
+            onPressed: _showJoinGroupDialog,
+          ),
+          IconButton(
             icon: const Icon(Icons.add),
+            tooltip: 'Create Group',
             onPressed: () {
               Navigator.push(
                 context,
@@ -325,27 +388,21 @@ class _GroupBookingDetailsScreenState extends State<GroupBookingDetailsScreen> {
 
   Future<void> _startTracking() async {
     try {
-      final response = await ApiService.postRequest(
+      await ApiService.postRequest(
         '/group-bookings/tracking/start',
         {'group_booking_id': widget.groupBookingId},
       );
-
-      if (response['success'] == true && mounted) {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) =>
-                GroupLiveTrackingScreen(groupBookingId: widget.groupBookingId),
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
-      }
+    } catch (_) {
+      // Ignore — session may already exist; proceed to tracking screen
     }
+
+    if (!mounted) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => GroupLiveTrackingPage(groupBookingId: widget.groupBookingId),
+      ),
+    );
   }
 
   @override
@@ -368,7 +425,16 @@ class _GroupBookingDetailsScreenState extends State<GroupBookingDetailsScreen> {
     final members = gb['members'] as List<dynamic>? ?? [];
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Trip Details')),
+      appBar: AppBar(
+        title: const Text('Trip Details'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.person_add_alt_1),
+            tooltip: 'Invite Member',
+            onPressed: _showInviteDialog,
+          ),
+        ],
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -379,9 +445,18 @@ class _GroupBookingDetailsScreenState extends State<GroupBookingDetailsScreen> {
               style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
-            Chip(
-              label: Text(gb['status'] as String? ?? 'Planning'),
-              backgroundColor: _getStatusColor(gb['status'] as String?),
+            Row(
+              children: [
+                Chip(
+                  label: Text(gb['status'] as String? ?? 'Planning'),
+                  backgroundColor: _getStatusColor(gb['status'] as String?),
+                ),
+                const SizedBox(width: 8),
+                Chip(
+                  avatar: const Icon(Icons.group, size: 16),
+                  label: Text('${members.length} members'),
+                ),
+              ],
             ),
             const SizedBox(height: 16),
             if (gb['description'] != null &&
@@ -397,8 +472,19 @@ class _GroupBookingDetailsScreenState extends State<GroupBookingDetailsScreen> {
                   const SizedBox(height: 16),
                 ],
               ),
-            const Text('Members',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Members',
+                    style:
+                        TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                TextButton.icon(
+                  icon: const Icon(Icons.person_add_alt_1, size: 16),
+                  label: const Text('Invite'),
+                  onPressed: _showInviteDialog,
+                ),
+              ],
+            ),
             const SizedBox(height: 8),
             ListView.builder(
               shrinkWrap: true,
@@ -417,19 +503,109 @@ class _GroupBookingDetailsScreenState extends State<GroupBookingDetailsScreen> {
                   ),
                   title: Text(member['full_name'] ?? 'Unknown'),
                   subtitle: Text(member['email'] ?? ''),
+                  trailing: const Icon(Icons.check_circle,
+                      color: Colors.green, size: 18),
                 );
               },
             ),
             const SizedBox(height: 24),
-            ElevatedButton.icon(
-              onPressed: _startTracking,
-              icon: const Icon(Icons.location_on),
-              label: const Text('Start Live Tracking'),
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: _startTracking,
+                    icon: const Icon(Icons.location_on),
+                    label: const Text('Live Tracking'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                OutlinedButton.icon(
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const GroupInvitationsPage()),
+                  ),
+                  icon: const Icon(Icons.mail_outline),
+                  label: const Text('Invitations'),
+                ),
+              ],
             ),
+            const SizedBox(height: 16),
           ],
         ),
       ),
     );
+  }
+
+  Future<void> _showInviteDialog() async {
+    final emailController = TextEditingController();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Invite Member'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Enter the email address of the SafarSync user you want to invite.',
+              style: TextStyle(color: Colors.grey, fontSize: 13),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: emailController,
+              keyboardType: TextInputType.emailAddress,
+              decoration: const InputDecoration(
+                labelText: 'Email Address',
+                hintText: 'ahmed@example.com',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.email_outlined),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Send Invitation'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+    final email = emailController.text.trim();
+    if (email.isEmpty) return;
+
+    try {
+      final response = await ApiService.postRequest('/invitations/send', {
+        'group_booking_id': widget.groupBookingId,
+        'receiver_email': email,
+      });
+      if (!mounted) return;
+      if (response['success'] == true) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(response['message'] ?? 'Invitation sent'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(response['error'] ?? 'Failed to send invitation')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
+    }
   }
 
   Color _getStatusColor(String? status) {
@@ -446,101 +622,3 @@ class _GroupBookingDetailsScreenState extends State<GroupBookingDetailsScreen> {
   }
 }
 
-class GroupLiveTrackingScreen extends StatefulWidget {
-  final int groupBookingId;
-
-  const GroupLiveTrackingScreen({super.key, required this.groupBookingId});
-
-  @override
-  State<GroupLiveTrackingScreen> createState() => _GroupLiveTrackingScreenState();
-}
-
-class _GroupLiveTrackingScreenState extends State<GroupLiveTrackingScreen> {
-  List<dynamic> memberLocations = [];
-  bool loading = true;
-  dynamic io;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadMemberLocations();
-    _setupSocketListener();
-  }
-
-  Future<void> _loadMemberLocations() async {
-    try {
-      final response = await ApiService
-          .getRequest('/group-bookings/${widget.groupBookingId}/locations');
-      if (mounted && response['success'] == true) {
-        setState(() {
-          memberLocations = response['member_locations'] as List<dynamic>? ?? [];
-          loading = false;
-        });
-      }
-    } catch (e) {
-      if (mounted) setState(() => loading = false);
-    }
-  }
-
-  void _setupSocketListener() {
-    // Socket listener for real-time location updates
-    // Will be connected via the app's main socket manager
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Live Group Tracking')),
-      body: loading
-          ? const Center(child: CircularProgressIndicator())
-          : Column(
-              children: [
-                Expanded(
-                  child: Container(
-                    color: Colors.grey[200],
-                    child: const Center(
-                      child: Text('Map View\n(Integrate Google Maps)'),
-                    ),
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  color: Colors.white,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('Members Tracking',
-                          style: TextStyle(fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 8),
-                      ListView.builder(
-                        shrinkWrap: true,
-                        itemCount: memberLocations.length,
-                        itemBuilder: (context, index) {
-                          final loc = memberLocations[index];
-                          return ListTile(
-                            leading: CircleAvatar(
-                              child: Text(loc['full_name']?[0] ?? '?'),
-                            ),
-                            title: Text(loc['full_name'] ?? 'Unknown'),
-                            subtitle: Text(
-                              loc['city'] != null && loc['country'] != null
-                                  ? '${loc['city']}, ${loc['country']}'
-                                  : loc['captured_at'] ?? 'No location',
-                            ),
-                          );
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-    );
-  }
-
-  @override
-  void dispose() {
-    // Cleanup socket listener
-    super.dispose();
-  }
-}

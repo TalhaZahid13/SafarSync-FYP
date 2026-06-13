@@ -25,7 +25,13 @@
       "Bash(flutter run *)",
       "Bash(keytool -list -v -keystore android/app/debug.keystore -alias androiddebugkey -storepass android -keypass android)",
       "Bash(keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android -keypass android)",
-      "Bash(npm start *)"
+      "Bash(npm start *)",
+      "PowerShell(wc *)",
+      "Bash(New-Item -ItemType File -Path \"D:\\\\University\\\\8th Semester\\\\Final Year Project - 2\\\\safarsync_mobileapp\\\\lib\\\\backend\\\\controllers\\\\emergencyController.js\" -Force)",
+      "Bash(Out-Null)",
+      "Bash(Write-Output \"created\")",
+      "PowerShell(New-Item *)",
+      "Bash(New-Item -ItemType File -Path \"D:\\\\University\\\\8th Semester\\\\Final Year Project - 2\\\\safarsync_mobileapp\\\\lib\\\\backend\\\\routes\\\\emergencyContactRoutes.js\" -Force)"
     ]
   }
 }
