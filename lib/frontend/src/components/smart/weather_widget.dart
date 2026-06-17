@@ -9,6 +9,47 @@ import 'package:intl/intl.dart';
 import '../../utils/api_service.dart';
 import 'dart:convert';
 
+// In-memory weather cache shared across all WeatherWidget instances.
+// Avoids re-fetching GPS + HTTP on every tab switch while data is fresh.
+class _WeatherCache {
+  static _WeatherCache? _data;
+  static DateTime? _fetchedAt;
+  static const _ttl = Duration(minutes: 15);
+
+  final String locationText;
+  final String? city;
+  final double? latitude;
+  final double? longitude;
+  final int? temperature;
+  final int? humidity;
+  final int? windSpeed;
+  final int? feelsLike;
+  final String condition;
+  final int weatherCode;
+  final List<Map<String, dynamic>> forecast;
+
+  const _WeatherCache({
+    required this.locationText, required this.city,
+    required this.latitude, required this.longitude,
+    required this.temperature, required this.humidity,
+    required this.windSpeed, required this.feelsLike,
+    required this.condition, required this.weatherCode,
+    required this.forecast,
+  });
+
+  static bool get isValid =>
+      _data != null &&
+      _fetchedAt != null &&
+      DateTime.now().difference(_fetchedAt!) < _ttl;
+
+  static void save(_WeatherCache cache) {
+    _data = cache;
+    _fetchedAt = DateTime.now();
+  }
+
+  static _WeatherCache? get cached => isValid ? _data : null;
+}
+
 class WeatherWidget extends StatefulWidget {
   const WeatherWidget({super.key});
 
@@ -33,6 +74,25 @@ class _WeatherWidgetState extends State<WeatherWidget> {
   @override
   void initState() {
     super.initState();
+
+    // Serve from cache immediately if data is fresh (< 15 min old)
+    final cached = _WeatherCache.cached;
+    if (cached != null) {
+      _locationText     = cached.locationText;
+      _city             = cached.city;
+      _latitude         = cached.latitude;
+      _longitude        = cached.longitude;
+      _temperature      = cached.temperature;
+      _humidity         = cached.humidity;
+      _windSpeed        = cached.windSpeed;
+      _feelsLike        = cached.feelsLike;
+      _condition        = cached.condition;
+      _weatherCode      = cached.weatherCode;
+      _forecast         = cached.forecast;
+      _isFetchingLocation = false;
+      return; // Skip GPS + HTTP
+    }
+
     // Defer past the first frame so the home page can paint before
     // GPS + network calls begin, preventing main-thread frame skipping.
     WidgetsBinding.instance.addPostFrameCallback((_) {

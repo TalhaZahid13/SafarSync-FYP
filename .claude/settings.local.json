@@ -31,7 +31,12 @@
       "Bash(Out-Null)",
       "Bash(Write-Output \"created\")",
       "PowerShell(New-Item *)",
-      "Bash(New-Item -ItemType File -Path \"D:\\\\University\\\\8th Semester\\\\Final Year Project - 2\\\\safarsync_mobileapp\\\\lib\\\\backend\\\\routes\\\\emergencyContactRoutes.js\" -Force)"
+      "Bash(New-Item -ItemType File -Path \"D:\\\\University\\\\8th Semester\\\\Final Year Project - 2\\\\safarsync_mobileapp\\\\lib\\\\backend\\\\routes\\\\emergencyContactRoutes.js\" -Force)",
+      "Bash(dir \"D:/University/8th Semester/Final Year Project - 2/safarsync_mobileapp\")",
+      "PowerShell(Get-ChildItem -Path \"D:\\\\University\\\\8th Semester\\\\Final Year Project - 2\\\\safarsync_mobileapp\\\\lib\\\\backend\" -Recurse -File | ForEach-Object { $_.FullName.Replace\\(\"D:\\\\University\\\\8th Semester\\\\Final Year Project - 2\\\\safarsync_mobileapp\\\\lib\\\\backend\\\\\",\"\"\\) } | Sort-Object)",
+      "Bash(node -e \"require\\('./app'\\); console.log\\('app.js OK'\\);\")",
+      "Bash(node -e \"const a = require\\('firebase-admin'\\); console.log\\(Object.keys\\(a\\).slice\\(0,20\\)\\);\")",
+      "Bash(dir /s /b \"D:\\\\University\\\\8th Semester\\\\Final Year Project - 2\\\\safarsync_mobileapp\\\\lib\\\\*.dart\")"
     ]
   }
 }

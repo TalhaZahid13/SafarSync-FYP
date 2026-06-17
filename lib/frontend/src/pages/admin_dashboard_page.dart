@@ -42,6 +42,19 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
       ..addListener(() {
         if (!_tabs.indexIsChanging) _loadTabIfNeeded(_tabs.index);
       });
+    _checkAdminAndLoad();
+  }
+
+  Future<void> _checkAdminAndLoad() async {
+    final isAdmin = await ApiService.getIsAdmin();
+    if (!mounted) return;
+    if (!isAdmin) {
+      Navigator.of(context).pop();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Access denied: Admin privileges required')),
+      );
+      return;
+    }
     _loadAll();
   }
 

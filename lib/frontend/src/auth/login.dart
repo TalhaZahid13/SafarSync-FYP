@@ -7,6 +7,7 @@ import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../utils/api_service.dart';
 import '../utils/local_database_service.dart';
+import '../utils/session_manager.dart';
 import 'signup.dart';
 import 'forgot_password.dart';
 
@@ -23,6 +24,21 @@ class _LoginPageState extends State<LoginPage> {
   final _auth = FirebaseAuth.instance;
   bool _isLoading = false;
   bool _obscurePassword = true;
+  bool _rememberMe = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _restoreSavedLogin();
+  }
+
+  Future<void> _restoreSavedLogin() async {
+    final rememberedEmail = await SessionManager.getRememberedEmail();
+    if (!mounted || rememberedEmail == null || rememberedEmail.isEmpty) return;
+
+    _emailController.text = rememberedEmail;
+    setState(() => _rememberMe = true);
+  }
 
   @override
   void dispose() {
@@ -48,6 +64,8 @@ class _LoginPageState extends State<LoginPage> {
       final result = await ApiService.login(email: email, password: password);
 
       if (result['success']) {
+        await SessionManager.setRememberMeEmail(email, _rememberMe);
+        await SessionManager.recordActivity();
         // ✅ Login successful → Go to Home (App)
         if (mounted) {
           Navigator.pushReplacementNamed(context, '/home');
@@ -103,6 +121,9 @@ class _LoginPageState extends State<LoginPage> {
 
       if (user != null) {
         await _persistLocalUser(user);
+        await ApiService.exchangeFirebaseToken(user);
+        await SessionManager.setRememberMeEmail(user.email ?? '', true);
+        await SessionManager.recordActivity();
         if (mounted) {
           Navigator.pushReplacementNamed(context, '/home');
         }
@@ -180,6 +201,9 @@ class _LoginPageState extends State<LoginPage> {
         }
 
         await _persistLocalUser(user);
+        await ApiService.exchangeFirebaseToken(user);
+        await SessionManager.setRememberMeEmail(user.email ?? '', true);
+        await SessionManager.recordActivity();
         if (mounted) {
           Navigator.pushReplacementNamed(context, '/home');
         }
@@ -285,6 +309,22 @@ class _LoginPageState extends State<LoginPage> {
                       _obscurePassword = !_obscurePassword;
                     });
                   },
+                ),
+
+                const SizedBox(height: 8),
+
+                Row(
+                  children: [
+                    Checkbox(
+                      value: _rememberMe,
+                      onChanged: _isLoading
+                          ? null
+                          : (value) {
+                              setState(() => _rememberMe = value ?? false);
+                            },
+                    ),
+                    const Text('Remember Me'),
+                  ],
                 ),
 
                 const SizedBox(height: 24),
@@ -486,7 +526,7 @@ class _LoginPageState extends State<LoginPage> {
         style: OutlinedButton.styleFrom(
           backgroundColor: backgroundColor,
           foregroundColor: foregroundColor,
-          side: BorderSide(color: foregroundColor.withValues(alpha:0.15)),
+          side: BorderSide(color: foregroundColor.withValues(alpha: 0.15)),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
           ),

@@ -1,4 +1,5 @@
 import 'package:intl/intl.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:pdf/pdf.dart';
 import 'package:printing/printing.dart';
@@ -95,9 +96,68 @@ class TripStats {
   });
 }
 
-Future<void> exportTripToPDF(TripData tripData) async {
+class PdfExportUserInfo {
+  final String fullName;
+  final String email;
+  final String userId;
+  final String? profileImageUrl;
+
+  const PdfExportUserInfo({
+    required this.fullName,
+    required this.email,
+    required this.userId,
+    this.profileImageUrl,
+  });
+}
+
+class PdfExportOptions {
+  final String reportType;
+  final String filePrefix;
+  final PdfExportUserInfo userInfo;
+  final String? generatedByRole;
+  final String? generatedByName;
+  final String? generatedByEmail;
+  final DateTime? generatedAt;
+  final List<String> groupMembers;
+  final List<String> travelHistory;
+  final List<String> emergencyEvents;
+  final Map<String, String> bookingDetails;
+  final Map<String, String> routeDetails;
+
+  const PdfExportOptions({
+    required this.reportType,
+    required this.filePrefix,
+    required this.userInfo,
+    this.generatedByRole,
+    this.generatedByName,
+    this.generatedByEmail,
+    this.generatedAt,
+    this.groupMembers = const [],
+    this.travelHistory = const [],
+    this.emergencyEvents = const [],
+    this.bookingDetails = const {},
+    this.routeDetails = const {},
+  });
+}
+
+Future<void> exportTripToPDF(
+  TripData tripData, {
+  PdfExportOptions? options,
+}) async {
   final pdf = pw.Document();
-  final dateStr = DateFormat('MMMM d, yyyy').format(DateTime.now());
+  final exportTime = options?.generatedAt ?? DateTime.now();
+  final dateStr = DateFormat('MMMM d, yyyy').format(exportTime);
+  final dateTimeStr = DateFormat('dd MMMM yyyy - hh:mm a').format(exportTime);
+  final userInfo = options?.userInfo ?? _currentUserInfo();
+  final reportType = options?.reportType ?? 'Trip Report';
+  final fileName = _buildFileName(
+    options?.filePrefix ?? 'Trip_Report',
+    userInfo.fullName,
+    exportTime,
+  );
+  final profileImage = userInfo.profileImageUrl?.trim().isNotEmpty == true
+      ? await networkImage(userInfo.profileImageUrl!.trim())
+      : null;
 
   pdf.addPage(
     pw.MultiPage(
@@ -108,19 +168,41 @@ Future<void> exportTripToPDF(TripData tripData) async {
           // Header
           pw.Container(
             width: double.infinity,
-            height: 40,
+            padding: pw.EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             color: PdfColor.fromInt(0xFF14B8A6),
-            alignment: pw.Alignment.center,
-            child: pw.Column(
-              mainAxisAlignment: pw.MainAxisAlignment.center,
+            child: pw.Row(
+              crossAxisAlignment: pw.CrossAxisAlignment.center,
               children: [
-                pw.Text(
-                  'Travel Companion',
-                  style: pw.TextStyle(fontSize: 24, color: PdfColors.white),
-                ),
-                pw.Text(
-                  'Trip Summary & Itinerary',
-                  style: pw.TextStyle(fontSize: 14, color: PdfColors.white),
+                if (profileImage != null)
+                  pw.Container(
+                    width: 42,
+                    height: 42,
+                    decoration: pw.BoxDecoration(
+                      shape: pw.BoxShape.circle,
+                      border: pw.Border.all(
+                        color: PdfColors.white,
+                        width: 1.5,
+                      ),
+                    ),
+                    child: pw.ClipOval(
+                      child: pw.Image(profileImage, fit: pw.BoxFit.cover),
+                    ),
+                  ),
+                if (profileImage != null) pw.SizedBox(width: 10),
+                pw.Expanded(
+                  child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      pw.Text(
+                        'Travel Companion',
+                        style: pw.TextStyle(fontSize: 24, color: PdfColors.white),
+                      ),
+                      pw.Text(
+                        'Trip Summary & Itinerary',
+                        style: pw.TextStyle(fontSize: 14, color: PdfColors.white),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -129,14 +211,88 @@ Future<void> exportTripToPDF(TripData tripData) async {
 
           // User Info
           pw.Text(
-            'Traveler: ${tripData.userName}',
+            'Generated For: ${userInfo.fullName}',
+            style: pw.TextStyle(fontSize: 12),
+          ),
+          if (userInfo.email.isNotEmpty)
+            pw.Text(
+              'Email: ${userInfo.email}',
+              style: pw.TextStyle(fontSize: 12),
+            ),
+          pw.Text(
+            'User ID: ${userInfo.userId}',
+            style: pw.TextStyle(fontSize: 12),
+          ),
+          pw.Text(
+            'Generated On: $dateTimeStr',
+            style: pw.TextStyle(fontSize: 12),
+          ),
+          pw.Text(
+            'Report Type: $reportType',
             style: pw.TextStyle(fontSize: 12),
           ),
           pw.Text(
             'Trip Name: ${tripData.tripName}',
             style: pw.TextStyle(fontSize: 12),
           ),
-          pw.Text('Generated: $dateStr', style: pw.TextStyle(fontSize: 12)),
+          if (options?.generatedByName != null) ...[
+            pw.Text(
+              'Generated By: ${options!.generatedByName}',
+              style: pw.TextStyle(fontSize: 12),
+            ),
+            if ((options.generatedByEmail ?? '').isNotEmpty)
+              pw.Text(
+                'Admin Email: ${options.generatedByEmail}',
+                style: pw.TextStyle(fontSize: 12),
+              ),
+            if ((options.generatedByRole ?? '').isNotEmpty)
+              pw.Text(
+                'Role: ${options.generatedByRole}',
+                style: pw.TextStyle(fontSize: 12),
+              ),
+          ],
+          if ((options?.bookingDetails ?? {}).isNotEmpty) ...[
+            pw.SizedBox(height: 8),
+            pw.Text('Booking Details', style: pw.TextStyle(fontSize: 14)),
+            ...options!.bookingDetails.entries.map(
+              (entry) => pw.Text(
+                '${entry.key}: ${entry.value}',
+                style: pw.TextStyle(fontSize: 10),
+              ),
+            ),
+          ],
+          if (options?.groupMembers.isNotEmpty == true) ...[
+            pw.SizedBox(height: 8),
+            pw.Text('Group Members', style: pw.TextStyle(fontSize: 14)),
+            ...options!.groupMembers.map(
+              (member) =>
+                  pw.Text('• $member', style: pw.TextStyle(fontSize: 10)),
+            ),
+          ],
+          if (options?.travelHistory.isNotEmpty == true) ...[
+            pw.SizedBox(height: 8),
+            pw.Text('Travel History', style: pw.TextStyle(fontSize: 14)),
+            ...options!.travelHistory.map(
+              (item) => pw.Text('• $item', style: pw.TextStyle(fontSize: 10)),
+            ),
+          ],
+          if (options?.routeDetails.isNotEmpty == true) ...[
+            pw.SizedBox(height: 8),
+            pw.Text('Route Details', style: pw.TextStyle(fontSize: 14)),
+            ...options!.routeDetails.entries.map(
+              (entry) => pw.Text(
+                '${entry.key}: ${entry.value}',
+                style: pw.TextStyle(fontSize: 10),
+              ),
+            ),
+          ],
+          if (options?.emergencyEvents.isNotEmpty == true) ...[
+            pw.SizedBox(height: 8),
+            pw.Text('Emergency Events', style: pw.TextStyle(fontSize: 14)),
+            ...options!.emergencyEvents.map(
+              (item) => pw.Text('• $item', style: pw.TextStyle(fontSize: 10)),
+            ),
+          ],
           pw.SizedBox(height: 10),
 
           // Stats
@@ -265,6 +421,25 @@ Future<void> exportTripToPDF(TripData tripData) async {
 
   // Save or share
   await Printing.layoutPdf(
+    name: fileName,
     onLayout: (PdfPageFormat format) async => pdf.save(),
   );
+}
+
+PdfExportUserInfo _currentUserInfo() {
+  final user = FirebaseAuth.instance.currentUser;
+  return PdfExportUserInfo(
+    fullName: user?.displayName?.trim().isNotEmpty == true
+        ? user!.displayName!.trim()
+        : 'Traveller',
+    email: user?.email ?? '',
+    userId: user?.uid ?? 'unknown-user',
+    profileImageUrl: user?.photoURL,
+  );
+}
+
+String _buildFileName(String prefix, String fullName, DateTime timestamp) {
+  final sanitizedName = fullName.replaceAll(RegExp(r'[^A-Za-z0-9]+'), '');
+  final datePart = DateFormat('yyyy-MM-dd').format(timestamp);
+  return '${prefix}_${sanitizedName.isEmpty ? 'Traveller' : sanitizedName}_$datePart.pdf';
 }

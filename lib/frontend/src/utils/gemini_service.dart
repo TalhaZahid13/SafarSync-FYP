@@ -18,6 +18,26 @@ class GeminiService {
       'Keep replies concise, friendly, and practical. '
       'If the user writes in Urdu or Roman Urdu, reply in the same language mix.';
 
+  static const String _wellnessSystemPrompt =
+      'You are SafarSync\'s wellness companion for travelers. '
+      'You help with travel anxiety, jet lag, culture shock, loneliness, '
+      'and maintaining mental and physical health while traveling. '
+      'Be empathetic, supportive, and give actionable tips. '
+      'Keep responses warm, brief, and practical.';
+
+  /// Wellness chat — uses a dedicated empathetic system prompt.
+  static Future<String> wellnessChat(
+    String userMessage, {
+    List<Map<String, String>> history = const [],
+  }) async {
+    final messages = <Map<String, String>>[
+      {'role': 'system', 'content': _wellnessSystemPrompt},
+      ...history.where((m) => m['role'] != null && m['content'] != null).cast<Map<String, String>>(),
+      {'role': 'user', 'content': userMessage},
+    ];
+    return _callGroq(messages);
+  }
+
   /// [history] entries use keys "role" ("user"/"assistant") and "content".
   static Future<String> chat(
     List<Map<String, String>> history,
@@ -28,14 +48,10 @@ class GeminiService {
       ...history,
       {'role': 'user', 'content': userMessage},
     ];
+    return _callGroq(messages);
+  }
 
-    final requestBody = jsonEncode({
-      'model': _model,
-      'messages': messages,
-      'temperature': 0.7,
-      'max_tokens': 512,
-    });
-
+  static Future<String> _callGroq(List<Map<String, String>> messages) async {
     final response = await http
         .post(
           Uri.parse(_endpoint),
@@ -43,7 +59,7 @@ class GeminiService {
             'Content-Type': 'application/json',
             'Authorization': 'Bearer $_apiKey',
           },
-          body: requestBody,
+          body: jsonEncode({'model': _model, 'messages': messages, 'temperature': 0.7, 'max_tokens': 512}),
         )
         .timeout(const Duration(seconds: 20));
 
