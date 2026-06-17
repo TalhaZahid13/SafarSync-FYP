@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../utils/api_service.dart';
+import '../utils/gemini_service.dart';
 
 class WellnessPage extends StatefulWidget {
   @override
@@ -127,18 +128,44 @@ class _WellnessPageState extends State<WellnessPage> {
 
     setState(() {
       messages.add({'role': 'user', 'content': message});
+      loading = true;
     });
 
-    setState(() => loading = true);
-
-    await Future.delayed(Duration(seconds: 1));
-
-    setState(() => loading = false);
-    setState(() {
-      messages.add({
-        'role': 'assistant',
-        'content': 'I\'m here to listen and support you. Remember, you\'re doing great! 💙\n\nTake a deep breath. You have the strength to handle this.'
+    try {
+      // Try backend wellness endpoint first (persists chat history server-side)
+      final history = messages
+          .where((m) => m['role'] != null && m['content'] != null)
+          .toList();
+      final resp = await ApiService.postRequest('/ai/wellness', {
+        'message': message,
+        'history': history,
       });
-    });
+
+      String reply;
+      if (resp['success'] == true || resp['ai_response'] != null) {
+        reply = resp['ai_response'] as String? ?? resp['message'] as String? ?? '';
+      } else {
+        // Fallback to direct Groq via GeminiService (wellness system prompt)
+        reply = await GeminiService.wellnessChat(message, history: messages);
+      }
+
+      if (mounted) {
+        setState(() {
+          loading = false;
+          messages.add({'role': 'assistant', 'content': reply});
+        });
+      }
+    } catch (_) {
+      // Last-resort fallback
+      if (mounted) {
+        setState(() {
+          loading = false;
+          messages.add({
+            'role': 'assistant',
+            'content': "I'm here to listen and support you. Remember, you're doing great! 💙\n\nTake a deep breath. You have the strength to handle this.",
+          });
+        });
+      }
+    }
   }
 }

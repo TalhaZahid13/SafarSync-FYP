@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'local_database_service.dart';
+import 'auth_storage.dart';
 
 class ApiService {
   // Optional override: flutter run --dart-define=API_BASE_URL=http://192.168.1.10:5000/api
@@ -70,20 +71,17 @@ class ApiService {
 
   /// Get stored JWT token
   static Future<String?> getToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('jwt_token');
+    return AuthStorage.readToken();
   }
 
   /// Save JWT token
   static Future<void> saveToken(String token) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('jwt_token', token);
+    await AuthStorage.writeToken(token);
   }
 
   /// Remove JWT token (logout)
   static Future<void> removeToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('jwt_token');
+    await AuthStorage.clearToken();
   }
 
   /// Get headers with token
@@ -170,11 +168,10 @@ class ApiService {
         return {'success': false, 'message': 'Login failed'};
       }
 
-      await saveToken(user.uid);
+      // Exchange Firebase token for real MySQL-backed JWT
+      await exchangeFirebaseToken(user);
 
-      final existingProfile = await LocalDatabaseService.getUserProfile(
-        user.uid,
-      );
+      final existingProfile = await LocalDatabaseService.getUserProfile(user.uid);
       if (existingProfile == null) {
         await LocalDatabaseService.upsertUserProfile(
           uid: user.uid,
@@ -212,6 +209,7 @@ class ApiService {
   static Future<void> logout() async {
     await _auth.signOut();
     await removeToken();
+    await AuthStorage.clearLastActiveAt();
   }
 
   // ============ USER ENDPOINTS ============
@@ -691,6 +689,65 @@ class ApiService {
     } catch (e) {
       return {'success': false, 'message': 'Error: $e'};
     }
+  }
+
+  // ============ FIREBASE TOKEN EXCHANGE ============
+
+  /// Call after every Firebase sign-in (email, Google, Apple).
+  /// Exchanges the Firebase ID token for a MySQL-backed JWT and stores it.
+  static Future<Map<String, dynamic>> exchangeFirebaseToken(User user) async {
+    try {
+      final idToken = await user.getIdToken();
+      final response = await http.post(
+        Uri.parse('$baseUrl/auth/firebase-exchange'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'firebase_id_token': idToken}),
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        final token = data['token'] as String?;
+        if (token != null) {
+          await saveToken(token);
+          final userData = data['user'] as Map<String, dynamic>?;
+          if (userData != null) await _saveUserData(userData);
+        }
+        return {'success': true, ...data};
+      } else {
+        // Exchange failed — still proceed (offline / backend down)
+        // but don't save uid as JWT token
+        return {'success': false, 'message': 'Backend exchange failed: ${response.statusCode}'};
+      }
+    } catch (e) {
+      return {'success': false, 'message': 'Exchange error: $e'};
+    }
+  }
+
+  /// Save user data (is_admin, user_id, email) to SharedPreferences
+  static Future<void> _saveUserData(Map<String, dynamic> userData) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('is_admin', userData['is_admin'] == true);
+    if (userData['user_id'] != null) {
+      await prefs.setInt('user_id', (userData['user_id'] as num).toInt());
+    }
+    if (userData['email'] != null) {
+      await prefs.setString('user_email', userData['email'] as String);
+    }
+    if (userData['full_name'] != null) {
+      await prefs.setString('user_full_name', userData['full_name'] as String);
+    }
+  }
+
+  /// Returns true if the logged-in user has admin privileges
+  static Future<bool> getIsAdmin() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool('is_admin') ?? false;
+  }
+
+  /// Returns stored MySQL user_id (not Firebase UID)
+  static Future<int?> getMySqlUserId() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt('user_id');
   }
 
   /// Get current user ID (from Firebase)

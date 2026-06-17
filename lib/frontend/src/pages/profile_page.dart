@@ -13,26 +13,63 @@ import '../auth/login.dart';
 import '../utils/responsive.dart';
 import '../utils/theme_controller.dart';
 import '../utils/api_service.dart';
+import '../utils/session_manager.dart';
 
-class ProfilePage extends StatelessWidget {
+class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
 
-  static const Color _bgTop = AppTheme.pureWhite;
-  static const Color _bgMid = AppTheme.offWhite;
-  static const Color _bgBottom = AppTheme.pureWhite;
-  static const Color _cardBg = AppTheme.pureWhite;
-  static const Color _cardOutline = AppTheme.veryLightGray;
-  static const Color _titleColor = AppTheme.darkSlate;
-  static const Color _mutedText = AppTheme.mediumGray;
-  static const Color _gold = AppTheme.turquoise;
-  static const Color _orange = AppTheme.turquoise;
-  static const Color _teal = AppTheme.turquoise;
-  static const Color _violet = AppTheme.lightGray;
-  static const Color _cyan = AppTheme.turquoise;
+  @override
+  State<ProfilePage> createState() => _ProfilePageState();
+}
+
+class _ProfilePageState extends State<ProfilePage> {
+  bool _isAdmin = false;
+  Map<String, dynamic> _stats = {};
+  bool _statsLoaded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    final isAdmin = await ApiService.getIsAdmin();
+    final statsResp = await ApiService.getRequest('/users/stats');
+    if (mounted) {
+      setState(() {
+        _isAdmin = isAdmin;
+        _stats = (statsResp['stats'] as Map<String, dynamic>?) ?? {};
+        _statsLoaded = true;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return _ProfilePageView(
+      isAdmin: _isAdmin,
+      stats: _stats,
+      statsLoaded: _statsLoaded,
+    );
+  }
+}
+
+class _ProfilePageView extends StatelessWidget {
+  final bool isAdmin;
+  final Map<String, dynamic> stats;
+  final bool statsLoaded;
+
+  const _ProfilePageView({
+    required this.isAdmin,
+    required this.stats,
+    required this.statsLoaded,
+  });
 
   void handleExportPDF() {
     final tripData = TripData(
-      userName: 'Muhammad Talha',
+      userName:
+          FirebaseAuth.instance.currentUser?.displayName ?? 'Muhammad Talha',
       tripName: 'Northern Pakistan Adventure',
       destinations: [
         Destination(
@@ -83,7 +120,31 @@ class ProfilePage extends StatelessWidget {
       stats: TripStats(placesVisited: 24, badgesEarned: 12, tripsPlanned: 8),
     );
 
-    exportTripToPDF(tripData);
+    exportTripToPDF(
+      tripData,
+      options: PdfExportOptions(
+        reportType: 'Trip Report',
+        filePrefix: 'Trip_Report',
+        userInfo: PdfExportUserInfo(
+          fullName:
+              FirebaseAuth.instance.currentUser?.displayName ?? 'Traveller',
+          email: FirebaseAuth.instance.currentUser?.email ?? '',
+          userId: FirebaseAuth.instance.currentUser?.uid ?? 'unknown-user',
+          profileImageUrl: FirebaseAuth.instance.currentUser?.photoURL,
+        ),
+        bookingDetails: {
+          'Trip': 'Northern Pakistan Adventure',
+          'Status': 'Confirmed',
+        },
+        routeDetails: {
+          'Primary Route': 'Islamabad → Hunza Valley',
+          'Distance': '615 km',
+        },
+        travelHistory: ['Islamabad', 'Hunza Valley', 'Naran Kaghan'],
+        emergencyEvents: const [],
+        groupMembers: const ['Muhammad Talha'],
+      ),
+    );
   }
 
   @override
@@ -143,15 +204,33 @@ class ProfilePage extends StatelessWidget {
                         children: [
                           SizedBox(
                             width: statWidth,
-                            child: statCard('24', 'Places Visited', _teal),
+                            child: statCard(
+                              statsLoaded
+                                  ? '${stats['completed_trips'] ?? 0}'
+                                  : '—',
+                              'Places Visited',
+                              _teal,
+                            ),
                           ),
                           SizedBox(
                             width: statWidth,
-                            child: statCard('12', 'Badges Earned', _orange),
+                            child: statCard(
+                              statsLoaded
+                                  ? '${stats['group_trips'] ?? 0}'
+                                  : '—',
+                              'Group Trips',
+                              _orange,
+                            ),
                           ),
                           SizedBox(
                             width: statWidth,
-                            child: statCard('8', 'Trips Planned', _violet),
+                            child: statCard(
+                              statsLoaded
+                                  ? '${stats['total_bookings'] ?? 0}'
+                                  : '—',
+                              'Trips Planned',
+                              _violet,
+                            ),
                           ),
                         ],
                       );
@@ -388,17 +467,18 @@ class ProfilePage extends StatelessWidget {
                       ),
                     ),
                   ),
-                  settingsButton(
-                    context,
-                    LucideIcons.layoutDashboard,
-                    'Admin Dashboard',
-                    () => Navigator.push(
+                  if (isAdmin)
+                    settingsButton(
                       context,
-                      MaterialPageRoute(
-                        builder: (_) => const AdminDashboardPage(),
+                      LucideIcons.layoutDashboard,
+                      'Admin Dashboard',
+                      () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const AdminDashboardPage(),
+                        ),
                       ),
                     ),
-                  ),
                   settingsButton(
                     context,
                     LucideIcons.fileDown,
@@ -406,7 +486,7 @@ class ProfilePage extends StatelessWidget {
                     handleExportPDF,
                   ),
                   settingsButton(context, LucideIcons.logOut, 'Log Out', () {
-                    FirebaseAuth.instance.signOut();
+                    SessionManager.clearAuthState(clearRememberMe: true);
                     Navigator.pushAndRemoveUntil(
                       context,
                       MaterialPageRoute(builder: (_) => const LoginPage()),
@@ -452,10 +532,7 @@ class ProfilePage extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 2),
-        Text(
-          email,
-          style: const TextStyle(fontSize: 12, color: _mutedText),
-        ),
+        Text(email, style: const TextStyle(fontSize: 12, color: _mutedText)),
         SizedBox(height: 4),
         Row(
           children: [
@@ -570,10 +647,10 @@ class ProfilePage extends StatelessWidget {
     final activeColor = isSOS
         ? const Color(0xFFB71C1C)
         : isContacts
-            ? const Color(0xFFB71C1C)
-            : isLogout
-                ? const Color(0xFFFF4D6D)
-                : null;
+        ? const Color(0xFFB71C1C)
+        : isLogout
+        ? const Color(0xFFFF4D6D)
+        : null;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(10),
@@ -592,7 +669,9 @@ class ProfilePage extends StatelessWidget {
               style: TextStyle(
                 fontSize: 14,
                 color: activeColor ?? (isPdf ? _gold : _titleColor),
-                fontWeight: (isPdf || isSOS || isContacts) ? FontWeight.w600 : FontWeight.w400,
+                fontWeight: (isPdf || isSOS || isContacts)
+                    ? FontWeight.w600
+                    : FontWeight.w400,
               ),
             ),
           ],
@@ -612,8 +691,7 @@ class _NotificationsBadgeButton extends StatefulWidget {
       _NotificationsBadgeButtonState();
 }
 
-class _NotificationsBadgeButtonState
-    extends State<_NotificationsBadgeButton> {
+class _NotificationsBadgeButtonState extends State<_NotificationsBadgeButton> {
   int _unread = 0;
 
   @override
@@ -625,7 +703,8 @@ class _NotificationsBadgeButtonState
   }
 
   void _onUnreadChanged() {
-    if (mounted) setState(() => _unread = NotificationService.instance.unreadCount);
+    if (mounted)
+      setState(() => _unread = NotificationService.instance.unreadCount);
   }
 
   Future<void> _fetchCount() async {
@@ -659,11 +738,17 @@ class _NotificationsBadgeButtonState
             Badge(
               isLabelVisible: _unread > 0,
               label: Text(_unread > 99 ? '99+' : '$_unread'),
-              child: const Icon(LucideIcons.bell, size: 16, color: Color(0xFF6B7280)),
+              child: const Icon(
+                LucideIcons.bell,
+                size: 16,
+                color: Color(0xFF6B7280),
+              ),
             ),
             const SizedBox(width: 10),
-            const Text('Notifications',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w400)),
+            const Text(
+              'Notifications',
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w400),
+            ),
           ],
         ),
       ),

@@ -7,6 +7,7 @@ import 'profile_settings.dart';
 import '../auth/login.dart';
 import '../utils/responsive.dart';
 import '../utils/theme_controller.dart';
+import '../utils/session_manager.dart';
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
@@ -26,7 +27,8 @@ class ProfilePage extends StatelessWidget {
 
   void handleExportPDF() {
     final tripData = TripData(
-      userName: 'Muhammad Talha',
+      userName:
+          FirebaseAuth.instance.currentUser?.displayName ?? 'Muhammad Talha',
       tripName: 'Northern Pakistan Adventure',
       destinations: [
         Destination(
@@ -77,7 +79,31 @@ class ProfilePage extends StatelessWidget {
       stats: TripStats(placesVisited: 24, badgesEarned: 12, tripsPlanned: 8),
     );
 
-    exportTripToPDF(tripData);
+    exportTripToPDF(
+      tripData,
+      options: PdfExportOptions(
+        reportType: 'Trip Report',
+        filePrefix: 'Trip_Report',
+        userInfo: PdfExportUserInfo(
+          fullName:
+              FirebaseAuth.instance.currentUser?.displayName ?? 'Traveller',
+          email: FirebaseAuth.instance.currentUser?.email ?? '',
+          userId: FirebaseAuth.instance.currentUser?.uid ?? 'unknown-user',
+          profileImageUrl: FirebaseAuth.instance.currentUser?.photoURL,
+        ),
+        bookingDetails: {
+          'Trip': 'Northern Pakistan Adventure',
+          'Status': 'Confirmed',
+        },
+        routeDetails: {
+          'Primary Route': 'Islamabad → Hunza Valley',
+          'Distance': '615 km',
+        },
+        travelHistory: ['Islamabad', 'Hunza Valley', 'Naran Kaghan'],
+        emergencyEvents: const [],
+        groupMembers: const ['Muhammad Talha'],
+      ),
+    );
   }
 
   @override
@@ -366,7 +392,7 @@ class ProfilePage extends StatelessWidget {
                     handleExportPDF,
                   ),
                   settingsButton(context, LucideIcons.logOut, 'Log Out', () {
-                    FirebaseAuth.instance.signOut();
+                    SessionManager.clearAuthState(clearRememberMe: true);
                     Navigator.pushAndRemoveUntil(
                       context,
                       MaterialPageRoute(builder: (_) => const LoginPage()),

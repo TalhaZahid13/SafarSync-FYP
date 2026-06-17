@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import '../../utils/api_service.dart';
 import '../../ui/app_theme.dart';
@@ -155,22 +156,31 @@ class _PopularDestinationsState extends State<PopularDestinations> {
     return <dynamic>[];
   }
 
+  static const _kFallback = SizedBox(
+    height: 108,
+    width: double.infinity,
+    child: ColoredBox(
+      color: Color(0xFF1B3A4C),
+      child: Center(child: Icon(Icons.image_not_supported, color: Colors.white54)),
+    ),
+  );
+
   Widget _buildImage(String src, double height) {
     final isNetwork = src.startsWith('http://') || src.startsWith('https://');
-    final fallback = Container(
-      height: height,
-      color: const Color(0xFF1B3A4C),
-      child: const Center(
-        child: Icon(Icons.image_not_supported, color: Colors.white54),
-      ),
-    );
     if (isNetwork) {
-      return Image.network(
-        src,
+      return CachedNetworkImage(
+        imageUrl: src,
         height: height,
         width: double.infinity,
         fit: BoxFit.cover,
-        errorBuilder: (_, _, _) => fallback,
+        placeholder: (_, __) => SizedBox(
+          height: height,
+          child: const ColoredBox(
+            color: Color(0xFF1B3A4C),
+            child: Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white38))),
+          ),
+        ),
+        errorWidget: (_, __, ___) => _kFallback,
       );
     }
     return Image.asset(
@@ -178,7 +188,7 @@ class _PopularDestinationsState extends State<PopularDestinations> {
       height: height,
       width: double.infinity,
       fit: BoxFit.cover,
-      errorBuilder: (_, _, _) => fallback,
+      errorBuilder: (_, __, ___) => _kFallback,
     );
   }
 
