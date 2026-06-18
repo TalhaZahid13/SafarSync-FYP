@@ -6,7 +6,6 @@ import '../ui/app_theme.dart';
 import 'profile_settings.dart';
 import '../auth/login.dart';
 import '../utils/responsive.dart';
-import '../utils/theme_controller.dart';
 import '../utils/session_manager.dart';
 
 class ProfilePage extends StatelessWidget {

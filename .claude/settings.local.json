@@ -36,7 +36,15 @@
       "PowerShell(Get-ChildItem -Path \"D:\\\\University\\\\8th Semester\\\\Final Year Project - 2\\\\safarsync_mobileapp\\\\lib\\\\backend\" -Recurse -File | ForEach-Object { $_.FullName.Replace\\(\"D:\\\\University\\\\8th Semester\\\\Final Year Project - 2\\\\safarsync_mobileapp\\\\lib\\\\backend\\\\\",\"\"\\) } | Sort-Object)",
       "Bash(node -e \"require\\('./app'\\); console.log\\('app.js OK'\\);\")",
       "Bash(node -e \"const a = require\\('firebase-admin'\\); console.log\\(Object.keys\\(a\\).slice\\(0,20\\)\\);\")",
-      "Bash(dir /s /b \"D:\\\\University\\\\8th Semester\\\\Final Year Project - 2\\\\safarsync_mobileapp\\\\lib\\\\*.dart\")"
+      "Bash(dir /s /b \"D:\\\\University\\\\8th Semester\\\\Final Year Project - 2\\\\safarsync_mobileapp\\\\lib\\\\*.dart\")",
+      "Bash(Get-ChildItem -Path \"D:\\\\University\\\\8th Semester\\\\Final Year Project - 2\\\\safarsync_mobileapp\" -Force)",
+      "Bash(Select-Object Name, Mode)",
+      "PowerShell(-join \\(\\(1..64\\) | ForEach-Object { '{0:x2}' -f \\(Get-Random -Max 256\\) }\\))",
+      "PowerShell(flutter analyze *)",
+      "PowerShell(cd \"D:\\\\University\\\\8th Semester\\\\Final Year Project - 2\\\\safarsync_mobileapp\"; $result = flutter analyze 2>&1; $result | Where-Object { $_ -match \"^\\\\s+error\" }; Write-Host \"Exit: $LASTEXITCODE\")",
+      "Bash(flutter build *)",
+      "Bash(git add *)",
+      "Bash(git push *)"
     ]
   }
 }

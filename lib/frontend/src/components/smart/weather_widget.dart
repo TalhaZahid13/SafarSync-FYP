@@ -42,11 +42,6 @@ class _WeatherCache {
       _fetchedAt != null &&
       DateTime.now().difference(_fetchedAt!) < _ttl;
 
-  static void save(_WeatherCache cache) {
-    _data = cache;
-    _fetchedAt = DateTime.now();
-  }
-
   static _WeatherCache? get cached => isValid ? _data : null;
 }
 
@@ -59,10 +54,8 @@ class WeatherWidget extends StatefulWidget {
 
 class _WeatherWidgetState extends State<WeatherWidget> {
   String _locationText = 'Fetching location...';
-  String? _city;
   double? _latitude;
   double? _longitude;
-  bool _isFetchingLocation = true;
   int? _temperature;
   int? _humidity;
   int? _windSpeed;
@@ -79,7 +72,6 @@ class _WeatherWidgetState extends State<WeatherWidget> {
     final cached = _WeatherCache.cached;
     if (cached != null) {
       _locationText     = cached.locationText;
-      _city             = cached.city;
       _latitude         = cached.latitude;
       _longitude        = cached.longitude;
       _temperature      = cached.temperature;
@@ -89,7 +81,6 @@ class _WeatherWidgetState extends State<WeatherWidget> {
       _condition        = cached.condition;
       _weatherCode      = cached.weatherCode;
       _forecast         = cached.forecast;
-      _isFetchingLocation = false;
       return; // Skip GPS + HTTP
     }
 
@@ -123,11 +114,9 @@ class _WeatherWidgetState extends State<WeatherWidget> {
     setState(() {
       _latitude = lat;
       _longitude = lng;
-      _city = city.isNotEmpty ? city : 'Unknown city';
       _locationText = city.isNotEmpty
           ? (country.isNotEmpty ? '$city, $country' : city)
           : 'Unknown city';
-      _isFetchingLocation = false;
     });
 
     if (lat != null && lng != null) {
@@ -182,9 +171,7 @@ class _WeatherWidgetState extends State<WeatherWidget> {
       setState(() {
         _latitude = position.latitude;
         _longitude = position.longitude;
-        _city = city;
         _locationText = country.isEmpty ? city : '$city, $country';
-        _isFetchingLocation = false;
       });
 
       // Fire-and-forget — backend sync errors must not affect weather loading.
@@ -321,7 +308,6 @@ class _WeatherWidgetState extends State<WeatherWidget> {
     if (!mounted) return;
     setState(() {
       _locationText = text;
-      _isFetchingLocation = false;
     });
   }
 

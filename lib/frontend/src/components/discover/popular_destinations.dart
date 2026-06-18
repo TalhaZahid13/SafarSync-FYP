@@ -146,11 +146,11 @@ class _PopularDestinationsState extends State<PopularDestinations> {
     }
 
     if (directDestinations is List) {
-      return directDestinations as List<dynamic>;
+      return directDestinations;
     }
 
     if (data is List) {
-      return data as List<dynamic>;
+      return data;
     }
 
     return <dynamic>[];

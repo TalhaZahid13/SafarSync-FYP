@@ -13,6 +13,10 @@ import 'package:flutter/foundation.dart';
 class AppConfig {
   static const String googleMapsApiKey = 'YOUR_GOOGLE_MAPS_API_KEY_HERE';
 
+  // Stripe — get from https://dashboard.stripe.com/apikeys
+  // Use pk_test_... for development, pk_live_... for production
+  static const String stripePublishableKey = 'pk_test_YOUR_STRIPE_PUBLISHABLE_KEY_HERE';
+
   // Base URL for Socket.io
   static String get baseUrl {
     if (kIsWeb) {

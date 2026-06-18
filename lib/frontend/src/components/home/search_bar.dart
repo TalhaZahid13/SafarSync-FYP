@@ -256,7 +256,6 @@ class _SearchBarState extends State<SearchBar> {
   }
 
   Widget _buildTypeIcon(BuildContext context, _SearchType type) {
-    final theme = Theme.of(context);
     IconData icon;
     Color color;
 

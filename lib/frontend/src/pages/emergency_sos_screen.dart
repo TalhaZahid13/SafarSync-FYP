@@ -3,7 +3,6 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import '../utils/api_service.dart';
 import '../utils/notification_service.dart';
 
@@ -53,7 +52,6 @@ class _EmergencySOSScreenState extends State<EmergencySOSScreen>
   int _countdownRemaining = _kCountdownSeconds;
 
   // ── User info ──────────────────────────────────────────────────────────────
-  String _userName = 'User';
 
   @override
   void initState() {
@@ -71,9 +69,6 @@ class _EmergencySOSScreenState extends State<EmergencySOSScreen>
       vsync: this,
       duration: Duration(seconds: _kCountdownSeconds),
     );
-
-    final user = FirebaseAuth.instance.currentUser;
-    _userName = user?.displayName ?? user?.email?.split('@').first ?? 'User';
 
     _init();
   }

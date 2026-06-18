@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../utils/api_service.dart';
+import 'payment_page.dart';
 
 class BookingsPage extends StatefulWidget {
   const BookingsPage({super.key});
@@ -440,6 +441,46 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                       ))
                   .toList(),
             ),
+            const SizedBox(height: 24),
+            if (b['payment_status'] == 'Paid')
+              Row(
+                children: [
+                  const Icon(Icons.check_circle, color: Colors.green),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Payment Completed',
+                    style: TextStyle(
+                      color: Colors.green[700],
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                ],
+              )
+            else
+              ElevatedButton.icon(
+                onPressed: () async {
+                  final paid = await Navigator.push<bool>(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => PaymentPage(
+                        bookingId: b['booking_id'] as int,
+                        destinationName: b['destination_name'] as String? ?? 'Booking',
+                        durationDays: (b['estimated_duration_days'] as num?)?.toInt() ?? 1,
+                      ),
+                    ),
+                  );
+                  if (paid == true) _loadBooking();
+                },
+                icon: const Icon(Icons.payment),
+                label: const Text('Pay Now'),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 24),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
           ],
         ),
       ),

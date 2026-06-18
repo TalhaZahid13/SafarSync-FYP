@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../utils/pdf_export.dart'; // TripData, Destination, RouteData, Hotel, Restaurant, TripStats
-import '../ui/app_theme.dart';
 import 'profile_settings.dart';
 import 'admin_dashboard_page.dart';
 import 'emergency_sos_screen.dart';
@@ -11,7 +10,6 @@ import 'notifications_page.dart';
 import '../utils/notification_service.dart';
 import '../auth/login.dart';
 import '../utils/responsive.dart';
-import '../utils/theme_controller.dart';
 import '../utils/api_service.dart';
 import '../utils/session_manager.dart';
 

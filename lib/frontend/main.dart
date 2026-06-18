@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_stripe/flutter_stripe.dart';
 import 'package:provider/provider.dart';
 import 'firebase_options.dart';
+import 'src/utils/app_config.dart';
 import 'src/auth/login.dart';
 import 'src/auth/signup.dart';
 import 'src/components/navigation/top_navigation.dart';
@@ -26,6 +28,8 @@ import 'src/utils/auth_storage.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  Stripe.publishableKey = AppConfig.stripePublishableKey;
+  await Stripe.instance.applySettings();
   try {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,

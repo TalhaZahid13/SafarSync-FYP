@@ -42,6 +42,8 @@ dependencies:
   # PDF export (profile trip report)
   pdf: ^3.11.3
   printing: ^5.10.0
+  # Payments
+  flutter_stripe: ^11.4.0
 
 dev_dependencies:
   flutter_test:

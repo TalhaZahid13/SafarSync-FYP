@@ -24,7 +24,6 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
 
   // ── Admin identity ───────────────────────────────────────────────────────────
   String _adminName = 'Admin';
-  String _adminRole = 'moderator';
   bool _isSuperAdmin = false;
 
   // ── Data ────────────────────────────────────────────────────────────────────
@@ -72,7 +71,6 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
     if (mounted) {
       setState(() {
         _adminName = name;
-        _adminRole = role;
         _isSuperAdmin = role == 'super_admin';
       });
     }
@@ -855,7 +853,6 @@ class _UserTile extends StatelessWidget {
     final email = user['email'] as String? ?? '';
     final single = user['single_bookings'] ?? 0;
     final groups = user['group_trips'] ?? 0;
-    final joined = _fmtDate(user['created_at']);
     final userId = user['user_id'] as int? ?? 0;
     final isBlocked = user['is_blocked'] == true || user['is_blocked'] == 1;
     final isAdmin = user['is_admin'] == true || user['is_admin'] == 1;
@@ -1020,16 +1017,6 @@ class _UserTile extends StatelessWidget {
         ],
       ),
     );
-  }
-
-  static String _fmtDate(dynamic v) {
-    if (v == null) return '—';
-    try {
-      final d = DateTime.parse(v.toString()).toLocal();
-      return '${d.day}/${d.month}/${d.year}';
-    } catch (_) {
-      return '—';
-    }
   }
 }
 
