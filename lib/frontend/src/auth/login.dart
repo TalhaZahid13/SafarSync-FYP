@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
@@ -8,6 +8,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../utils/api_service.dart';
 import '../utils/local_database_service.dart';
 import '../utils/session_manager.dart';
+import '../pages/admin_login_page.dart';
 import 'signup.dart';
 import 'forgot_password.dart';
 
@@ -432,7 +433,7 @@ class _LoginPageState extends State<LoginPage> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     const Text(
-                      'Don’t have an account?',
+                      "Don't have an account?",
                       style: TextStyle(color: Colors.white70),
                     ),
                     TextButton(
@@ -448,6 +449,23 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                     ),
                   ],
+                ),
+
+                // Admin access link
+                TextButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const AdminLoginPage()),
+                    );
+                  },
+                  child: Text(
+                    'Admin Access',
+                    style: TextStyle(
+                      color: theme.textTheme.bodySmall?.color,
+                      fontSize: 12,
+                    ),
+                  ),
                 ),
               ],
             ),

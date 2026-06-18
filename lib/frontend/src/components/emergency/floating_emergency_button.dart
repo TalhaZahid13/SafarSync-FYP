@@ -1,4 +1,3 @@
-import 'package:safarsync/frontend/main.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'dart:typed_data';
@@ -16,6 +15,8 @@ class FloatingEmergencyButton extends StatefulWidget {
 
 class _FloatingEmergencyButtonState extends State<FloatingEmergencyButton>
     with TickerProviderStateMixin {
+  final _notifPlugin = FlutterLocalNotificationsPlugin();
+
   // Blink: opacity 1.0 ↔ 0.25 at 600 ms
   late AnimationController _blinkController;
   late Animation<double> _blinkOpacity;
@@ -142,7 +143,7 @@ class _FloatingEmergencyButtonState extends State<FloatingEmergencyButton>
     );
 
     // Show the notification
-    await flutterLocalNotificationsPlugin.show(
+    await _notifPlugin.show(
       id: 0,
       title: 'Emergency Notice',
       body: message,

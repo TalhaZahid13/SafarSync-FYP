@@ -1,5 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
-
+import 'package:shared_preferences/shared_preferences.dart';
 import 'auth_storage.dart';
 
 class SessionManager {
@@ -28,7 +28,15 @@ class SessionManager {
   static Future<void> clearAuthState({bool clearRememberMe = false}) async {
     await FirebaseAuth.instance.signOut();
     await AuthStorage.clearToken();
+    await AuthStorage.clearAdminToken();
     await AuthStorage.clearLastActiveAt();
+
+    // Clear all cached user/admin data from SharedPreferences
+    final prefs = await SharedPreferences.getInstance();
+    for (final key in ['is_admin', 'user_id', 'user_email', 'user_full_name',
+                        'admin_id', 'admin_email', 'admin_full_name', 'admin_role']) {
+      await prefs.remove(key);
+    }
 
     if (clearRememberMe) {
       await AuthStorage.clearRememberMe();

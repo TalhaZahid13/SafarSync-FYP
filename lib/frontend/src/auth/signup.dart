@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../utils/api_service.dart';
-import 'login.dart';
 
 class SignupPage extends StatefulWidget {
   const SignupPage({super.key});
@@ -76,13 +75,11 @@ class _SignupPageState extends State<SignupPage> {
       if (result['success']) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Account created successfully')),
+            const SnackBar(content: Text('Account created! Welcome to SafarSync.')),
           );
-          // Navigate to login page
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const LoginPage()),
-          );
+          // Firebase + JWT exchange already completed in ApiService.signup()
+          // — go directly to the home screen.
+          Navigator.pushReplacementNamed(context, '/home');
         }
       } else {
         if (mounted) {

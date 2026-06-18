@@ -33,7 +33,7 @@ class NotificationService {
     const androidSettings =
         AndroidInitializationSettings('@mipmap/ic_launcher');
     await _plugin.initialize(
-      const InitializationSettings(android: androidSettings),
+      settings: const InitializationSettings(android: androidSettings),
     );
 
     // Create emergency channel (high-priority, red LED, loud)
@@ -207,10 +207,10 @@ class NotificationService {
     required String body,
   }) async {
     await _plugin.show(
-      id,
-      title,
-      body,
-      NotificationDetails(
+      id: id,
+      title: title,
+      body: body,
+      notificationDetails: NotificationDetails(
         android: AndroidNotificationDetails(
           _kEmergencyChannelId,
           'Emergency SOS',
@@ -235,10 +235,10 @@ class NotificationService {
     required String body,
   }) async {
     await _plugin.show(
-      id,
-      title,
-      body,
-      const NotificationDetails(
+      id: id,
+      title: title,
+      body: body,
+      notificationDetails: const NotificationDetails(
         android: AndroidNotificationDetails(
           _kGeneralChannelId,
           'SafarSync Notifications',

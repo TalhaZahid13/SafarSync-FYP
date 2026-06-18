@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:socket_io_client/socket_io_client.dart' as io;
 import '../utils/api_service.dart';
 
@@ -20,6 +21,11 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
     with SingleTickerProviderStateMixin {
   // ── Tab controller ──────────────────────────────────────────────────────────
   late final TabController _tabs;
+
+  // ── Admin identity ───────────────────────────────────────────────────────────
+  String _adminName = 'Admin';
+  String _adminRole = 'moderator';
+  bool _isSuperAdmin = false;
 
   // ── Data ────────────────────────────────────────────────────────────────────
   Map<String, dynamic> _stats = {};
@@ -46,6 +52,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
   }
 
   Future<void> _checkAdminAndLoad() async {
+    // Support both pure admin JWT (AdminLoginPage) and user-admin JWT (is_admin=1).
     final isAdmin = await ApiService.getIsAdmin();
     if (!mounted) return;
     if (!isAdmin) {
@@ -54,6 +61,20 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
         const SnackBar(content: Text('Access denied: Admin privileges required')),
       );
       return;
+    }
+
+    final prefs = await SharedPreferences.getInstance();
+    final role = prefs.getString('admin_role') ?? 'moderator';
+    final name = prefs.getString('admin_full_name')
+        ?? prefs.getString('user_full_name')
+        ?? 'Admin';
+
+    if (mounted) {
+      setState(() {
+        _adminName = name;
+        _adminRole = role;
+        _isSuperAdmin = role == 'super_admin';
+      });
     }
     _loadAll();
   }
@@ -71,14 +92,14 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
   Future<void> _loadStats() async {
     setState(() => _loadingStats = true);
     try {
-      final r = await ApiService.getRequest('/admin/dashboard');
+      final r = await ApiService.adminGetRequest('/admin/dashboard');
       if (mounted && r['success'] == true) {
         setState(() {
           _stats = Map<String, dynamic>.from(r['stats'] ?? {});
           _loadingStats = false;
         });
       } else {
-        setState(() => _loadingStats = false);
+        if (mounted) setState(() => _loadingStats = false);
       }
     } catch (_) {
       if (mounted) setState(() => _loadingStats = false);
@@ -88,7 +109,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
   Future<void> _loadUsers() async {
     setState(() => _loadingUsers = true);
     try {
-      final r = await ApiService.getRequest('/admin/users');
+      final r = await ApiService.adminGetRequest('/admin/users');
       if (mounted && r['success'] == true) {
         setState(() {
           _users = List<Map<String, dynamic>>.from(
@@ -97,7 +118,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
           _loadingUsers = false;
         });
       } else {
-        setState(() => _loadingUsers = false);
+        if (mounted) setState(() => _loadingUsers = false);
       }
     } catch (_) {
       if (mounted) setState(() => _loadingUsers = false);
@@ -107,7 +128,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
   Future<void> _loadTrips() async {
     setState(() => _loadingTrips = true);
     try {
-      final r = await ApiService.getRequest('/admin/trips');
+      final r = await ApiService.adminGetRequest('/admin/trips');
       if (mounted && r['success'] == true) {
         setState(() {
           _trips = List<Map<String, dynamic>>.from(
@@ -116,7 +137,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
           _loadingTrips = false;
         });
       } else {
-        setState(() => _loadingTrips = false);
+        if (mounted) setState(() => _loadingTrips = false);
       }
     } catch (_) {
       if (mounted) setState(() => _loadingTrips = false);
@@ -126,7 +147,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
   Future<void> _loadAlerts() async {
     setState(() => _loadingAlerts = true);
     try {
-      final r = await ApiService.getRequest('/admin/emergency-alerts');
+      final r = await ApiService.adminGetRequest('/admin/emergency-alerts');
       if (mounted && r['success'] == true) {
         setState(() {
           _alerts = List<Map<String, dynamic>>.from(
@@ -135,7 +156,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
           _loadingAlerts = false;
         });
       } else {
-        setState(() => _loadingAlerts = false);
+        if (mounted) setState(() => _loadingAlerts = false);
       }
     } catch (_) {
       if (mounted) setState(() => _loadingAlerts = false);
@@ -150,9 +171,80 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
     }
   }
 
+  // ── User moderation actions ───────────────────────────────────────────────
+  Future<void> _blockUser(int userId) async {
+    final r = await ApiService.adminPutRequest('/admin/users/$userId/block', {});
+    if (!mounted) return;
+    _snack(r['success'] == true ? 'User blocked' : (r['message'] ?? 'Failed'));
+    if (r['success'] == true) _loadUsers();
+  }
+
+  Future<void> _unblockUser(int userId) async {
+    final r = await ApiService.adminPutRequest('/admin/users/$userId/unblock', {});
+    if (!mounted) return;
+    _snack(r['success'] == true ? 'User unblocked' : (r['message'] ?? 'Failed'));
+    if (r['success'] == true) _loadUsers();
+  }
+
+  Future<void> _deleteUser(int userId) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete User'),
+        content: const Text('This will permanently delete the user and all their data. This cannot be undone.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    final r = await ApiService.adminDeleteRequest('/admin/users/$userId');
+    if (!mounted) return;
+    _snack(r['success'] == true ? 'User deleted' : (r['message'] ?? 'Failed'));
+    if (r['success'] == true) _loadUsers();
+  }
+
+  Future<void> _makeAdmin(int userId) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Promote to Admin'),
+        content: const Text('Grant this user admin privileges in the users table?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Confirm')),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    final r = await ApiService.adminPutRequest('/admin/users/$userId/make-admin', {});
+    if (!mounted) return;
+    _snack(r['success'] == true ? 'User promoted to admin' : (r['message'] ?? 'Failed'));
+    if (r['success'] == true) _loadUsers();
+  }
+
+  Future<void> _broadcastNotification(String title, String message) async {
+    final r = await ApiService.adminPostRequest(
+        '/admin/broadcast-notification', {'title': title, 'message': message});
+    if (!mounted) return;
+    _snack(r['success'] == true
+        ? 'Broadcast sent to ${r['sent_to'] ?? 0} users'
+        : (r['message'] ?? 'Broadcast failed'));
+  }
+
+  void _snack(String msg) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+  }
+
   // ── Resolve alert from admin panel ────────────────────────────────────────
   Future<void> _resolveAlert(int alertId) async {
-    final r = await ApiService.putRequest(
+    final r = await ApiService.adminPutRequest(
         '/admin/emergency-alerts/$alertId/resolve', {});
     if (!mounted) return;
     if (r['success'] == true) {
@@ -175,8 +267,35 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
       appBar: AppBar(
         backgroundColor: _kPrimary,
         foregroundColor: Colors.white,
-        title: const Text('Admin Dashboard',
-            style: TextStyle(fontWeight: FontWeight.bold)),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Admin Dashboard',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            Row(
+              children: [
+                Text(_adminName,
+                    style: const TextStyle(fontSize: 11, color: Colors.white70)),
+                const SizedBox(width: 6),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                  decoration: BoxDecoration(
+                    color: _isSuperAdmin ? Colors.amber : Colors.white24,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    _isSuperAdmin ? 'SUPER ADMIN' : 'MODERATOR',
+                    style: TextStyle(
+                      fontSize: 9,
+                      fontWeight: FontWeight.bold,
+                      color: _isSuperAdmin ? Colors.black87 : Colors.white,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -227,7 +346,12 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
       body: TabBarView(
         controller: _tabs,
         children: [
-          _OverviewTab(stats: _stats, loading: _loadingStats),
+          _OverviewTab(
+            stats: _stats,
+            loading: _loadingStats,
+            isSuperAdmin: _isSuperAdmin,
+            onBroadcast: _broadcastNotification,
+          ),
           _UsersTab(
             users: _users,
             loading: _loadingUsers,
@@ -235,6 +359,11 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
             search: _userSearch,
             onSearch: (v) => setState(() => _userSearch = v.isEmpty ? null : v),
             onRefresh: _loadUsers,
+            isSuperAdmin: _isSuperAdmin,
+            onBlock: _blockUser,
+            onUnblock: _unblockUser,
+            onDelete: _deleteUser,
+            onMakeAdmin: _makeAdmin,
           ),
           _TripsTab(trips: _trips, loading: _loadingTrips, onRefresh: _loadTrips),
           _AlertsTab(
@@ -261,8 +390,15 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
 class _OverviewTab extends StatelessWidget {
   final Map<String, dynamic> stats;
   final bool loading;
+  final bool isSuperAdmin;
+  final Future<void> Function(String title, String message) onBroadcast;
 
-  const _OverviewTab({required this.stats, required this.loading});
+  const _OverviewTab({
+    required this.stats,
+    required this.loading,
+    required this.isSuperAdmin,
+    required this.onBroadcast,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -304,8 +440,133 @@ class _OverviewTab extends StatelessWidget {
           _sectionTitle('Status Breakdown'),
           const SizedBox(height: 12),
           _StatusBreakdown(stats: stats),
+          if (isSuperAdmin) ...[
+            const SizedBox(height: 24),
+            _sectionTitle('Broadcast Notification'),
+            const SizedBox(height: 12),
+            _BroadcastCard(onBroadcast: onBroadcast),
+          ],
           const SizedBox(height: 24),
         ],
+      ),
+    );
+  }
+}
+
+// ── Broadcast card (super_admin only) ─────────────────────────────────────────
+class _BroadcastCard extends StatefulWidget {
+  final Future<void> Function(String, String) onBroadcast;
+  const _BroadcastCard({required this.onBroadcast});
+
+  @override
+  State<_BroadcastCard> createState() => _BroadcastCardState();
+}
+
+class _BroadcastCardState extends State<_BroadcastCard> {
+  final _titleCtrl = TextEditingController();
+  final _msgCtrl = TextEditingController();
+  bool _sending = false;
+
+  @override
+  void dispose() {
+    _titleCtrl.dispose();
+    _msgCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _send() async {
+    final t = _titleCtrl.text.trim();
+    final m = _msgCtrl.text.trim();
+    if (t.isEmpty || m.isEmpty) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Title and message required')));
+      return;
+    }
+    setState(() => _sending = true);
+    await widget.onBroadcast(t, m);
+    if (mounted) {
+      _titleCtrl.clear();
+      _msgCtrl.clear();
+      setState(() => _sending = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      elevation: 0,
+      color: Colors.indigo.shade50,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: BorderSide(color: Colors.indigo.shade200, width: 1),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.campaign, color: Colors.indigo.shade700),
+                const SizedBox(width: 8),
+                Text('Send to All Users',
+                    style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: Colors.indigo.shade800)),
+              ],
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _titleCtrl,
+              decoration: InputDecoration(
+                labelText: 'Notification Title',
+                filled: true,
+                fillColor: Colors.white,
+                border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide.none),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              ),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: _msgCtrl,
+              maxLines: 2,
+              decoration: InputDecoration(
+                labelText: 'Message',
+                filled: true,
+                fillColor: Colors.white,
+                border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide.none),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              ),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                icon: const Icon(Icons.send, size: 16),
+                label: _sending
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Colors.white))
+                    : const Text('Broadcast'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.indigo,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8)),
+                ),
+                onPressed: _sending ? null : _send,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -460,6 +721,11 @@ class _UsersTab extends StatelessWidget {
   final String? search;
   final void Function(String) onSearch;
   final VoidCallback onRefresh;
+  final bool isSuperAdmin;
+  final Future<void> Function(int) onBlock;
+  final Future<void> Function(int) onUnblock;
+  final Future<void> Function(int) onDelete;
+  final Future<void> Function(int) onMakeAdmin;
 
   const _UsersTab({
     required this.users,
@@ -468,6 +734,11 @@ class _UsersTab extends StatelessWidget {
     required this.search,
     required this.onSearch,
     required this.onRefresh,
+    required this.isSuperAdmin,
+    required this.onBlock,
+    required this.onUnblock,
+    required this.onDelete,
+    required this.onMakeAdmin,
   });
 
   List<Map<String, dynamic>> get _filtered {
@@ -546,7 +817,14 @@ class _UsersTab extends StatelessWidget {
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                   itemCount: list.length,
                   separatorBuilder: (_, __) => const SizedBox(height: 6),
-                  itemBuilder: (_, i) => _UserTile(user: list[i]),
+                  itemBuilder: (_, i) => _UserTile(
+                    user: list[i],
+                    isSuperAdmin: isSuperAdmin,
+                    onBlock: onBlock,
+                    onUnblock: onUnblock,
+                    onDelete: onDelete,
+                    onMakeAdmin: onMakeAdmin,
+                  ),
                 ),
         ),
       ],
@@ -556,7 +834,20 @@ class _UsersTab extends StatelessWidget {
 
 class _UserTile extends StatelessWidget {
   final Map<String, dynamic> user;
-  const _UserTile({required this.user});
+  final bool isSuperAdmin;
+  final Future<void> Function(int) onBlock;
+  final Future<void> Function(int) onUnblock;
+  final Future<void> Function(int) onDelete;
+  final Future<void> Function(int) onMakeAdmin;
+
+  const _UserTile({
+    required this.user,
+    required this.isSuperAdmin,
+    required this.onBlock,
+    required this.onUnblock,
+    required this.onDelete,
+    required this.onMakeAdmin,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -565,11 +856,14 @@ class _UserTile extends StatelessWidget {
     final single = user['single_bookings'] ?? 0;
     final groups = user['group_trips'] ?? 0;
     final joined = _fmtDate(user['created_at']);
+    final userId = user['user_id'] as int? ?? 0;
+    final isBlocked = user['is_blocked'] == true || user['is_blocked'] == 1;
+    final isAdmin = user['is_admin'] == true || user['is_admin'] == 1;
 
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      color: Colors.white,
+      color: isBlocked ? Colors.red.shade50 : Colors.white,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         child: Row(
@@ -577,11 +871,13 @@ class _UserTile extends StatelessWidget {
             // Avatar
             CircleAvatar(
               radius: 22,
-              backgroundColor: _kAccent.withValues(alpha: 0.15),
+              backgroundColor: isBlocked
+                  ? Colors.red.withValues(alpha: 0.15)
+                  : _kAccent.withValues(alpha: 0.15),
               child: Text(
                 name.isNotEmpty ? name[0].toUpperCase() : '?',
-                style: const TextStyle(
-                    color: _kPrimary,
+                style: TextStyle(
+                    color: isBlocked ? Colors.red : _kPrimary,
                     fontWeight: FontWeight.bold,
                     fontSize: 16),
               ),
@@ -592,9 +888,48 @@ class _UserTile extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(name,
-                      style: const TextStyle(
-                          fontWeight: FontWeight.w600, fontSize: 14)),
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(name,
+                            style: const TextStyle(
+                                fontWeight: FontWeight.w600, fontSize: 14),
+                            overflow: TextOverflow.ellipsis),
+                      ),
+                      if (isAdmin) ...[
+                        const SizedBox(width: 4),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 5, vertical: 1),
+                          decoration: BoxDecoration(
+                            color: Colors.amber.shade100,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text('admin',
+                              style: TextStyle(
+                                  fontSize: 8,
+                                  color: Colors.amber.shade900,
+                                  fontWeight: FontWeight.bold)),
+                        ),
+                      ],
+                      if (isBlocked) ...[
+                        const SizedBox(width: 4),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 5, vertical: 1),
+                          decoration: BoxDecoration(
+                            color: Colors.red.shade100,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: const Text('blocked',
+                              style: TextStyle(
+                                  fontSize: 8,
+                                  color: Colors.red,
+                                  fontWeight: FontWeight.bold)),
+                        ),
+                      ],
+                    ],
+                  ),
                   Text(email,
                       style: const TextStyle(
                           fontSize: 12, color: Colors.grey),
@@ -610,15 +945,55 @@ class _UserTile extends StatelessWidget {
                 ],
               ),
             ),
-            // Date
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                const Text('Joined',
-                    style: TextStyle(fontSize: 10, color: Colors.grey)),
-                Text(joined,
-                    style: const TextStyle(
-                        fontSize: 11, fontWeight: FontWeight.w500)),
+            // Actions popup
+            PopupMenuButton<String>(
+              icon: const Icon(Icons.more_vert, size: 18, color: Colors.grey),
+              onSelected: (action) {
+                switch (action) {
+                  case 'block': onBlock(userId); break;
+                  case 'unblock': onUnblock(userId); break;
+                  case 'delete': onDelete(userId); break;
+                  case 'make_admin': onMakeAdmin(userId); break;
+                }
+              },
+              itemBuilder: (_) => [
+                if (!isBlocked)
+                  const PopupMenuItem(
+                    value: 'block',
+                    child: Row(children: [
+                      Icon(Icons.block, size: 16, color: Colors.orange),
+                      SizedBox(width: 8),
+                      Text('Block User'),
+                    ]),
+                  )
+                else
+                  const PopupMenuItem(
+                    value: 'unblock',
+                    child: Row(children: [
+                      Icon(Icons.check_circle_outline, size: 16, color: Colors.green),
+                      SizedBox(width: 8),
+                      Text('Unblock User'),
+                    ]),
+                  ),
+                if (isSuperAdmin && !isAdmin)
+                  const PopupMenuItem(
+                    value: 'make_admin',
+                    child: Row(children: [
+                      Icon(Icons.admin_panel_settings, size: 16, color: Colors.indigo),
+                      SizedBox(width: 8),
+                      Text('Make Admin'),
+                    ]),
+                  ),
+                if (isSuperAdmin)
+                  const PopupMenuItem(
+                    value: 'delete',
+                    child: Row(children: [
+                      Icon(Icons.delete_outline, size: 16, color: Colors.red),
+                      SizedBox(width: 8),
+                      Text('Delete User',
+                          style: TextStyle(color: Colors.red)),
+                    ]),
+                  ),
               ],
             ),
           ],

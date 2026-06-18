@@ -5,6 +5,7 @@ class AuthStorage {
   static const FlutterSecureStorage _secureStorage = FlutterSecureStorage();
 
   static const String jwtTokenKey = 'jwt_token';
+  static const String adminJwtTokenKey = 'admin_jwt_token';
   static const String rememberMeEmailKey = 'remember_me_email';
   static const String rememberMeEnabledKey = 'remember_me_enabled';
   static const String lastActiveAtKey = 'last_active_at';
@@ -19,6 +20,19 @@ class AuthStorage {
 
   static Future<void> clearToken() {
     return _secureStorage.delete(key: jwtTokenKey);
+  }
+
+  // ── Admin token (separate from user token) ────────────────────────────────
+  static Future<String?> readAdminToken() {
+    return _secureStorage.read(key: adminJwtTokenKey);
+  }
+
+  static Future<void> writeAdminToken(String token) {
+    return _secureStorage.write(key: adminJwtTokenKey, value: token);
+  }
+
+  static Future<void> clearAdminToken() {
+    return _secureStorage.delete(key: adminJwtTokenKey);
   }
 
   static Future<void> setRememberMe({

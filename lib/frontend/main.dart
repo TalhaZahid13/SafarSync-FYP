@@ -21,6 +21,8 @@ import 'src/ui/app_theme.dart';
 import 'src/utils/notification_service.dart';
 import 'src/pages/emergency_sos_screen.dart';
 import 'src/utils/session_manager.dart';
+import 'src/utils/api_service.dart';
+import 'src/utils/auth_storage.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -101,6 +103,11 @@ class _AuthGateState extends State<AuthGate> {
     if (!mounted) return;
 
     if (expired) {
+      // Session timed out — sign out of Firebase too and clear JWT
+      if (user != null) {
+        await FirebaseAuth.instance.signOut();
+        await ApiService.removeToken();
+      }
       setState(() {
         _isLoggedIn = false;
         _sessionMessage =
@@ -111,8 +118,23 @@ class _AuthGateState extends State<AuthGate> {
     }
 
     if (user != null) {
+      // Feature 2: if Remember Me is OFF, clear the Firebase session on every
+      // cold start so the user must re-enter credentials.
+      final rememberMe = await AuthStorage.isRememberMeEnabled();
+      if (!rememberMe) {
+        await FirebaseAuth.instance.signOut();
+        await ApiService.removeToken();
+        if (!mounted) return;
+        setState(() { _isLoggedIn = false; _isChecking = false; });
+        return;
+      }
+
       await SessionManager.recordActivity();
+      // Silently refresh the backend JWT if it is missing or expired.
+      await ApiService.refreshTokenIfNeeded(user);
     }
+
+    if (!mounted) return;
 
     setState(() {
       _isLoggedIn = user != null;

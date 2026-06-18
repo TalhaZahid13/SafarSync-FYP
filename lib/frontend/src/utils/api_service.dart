@@ -129,6 +129,11 @@ class ApiService {
         );
       }
 
+      // Exchange Firebase token for backend JWT immediately after signup
+      if (credential.user != null) {
+        await exchangeFirebaseToken(credential.user!);
+      }
+
       return {'success': true, 'message': 'User registered successfully'};
     } on FirebaseAuthException catch (e) {
       String message;
@@ -210,6 +215,124 @@ class ApiService {
     await _auth.signOut();
     await removeToken();
     await AuthStorage.clearLastActiveAt();
+    await _clearUserData();
+  }
+
+  // ============ ADMIN AUTH ENDPOINTS ============
+
+  /// Login as admin (direct email/password — no Firebase).
+  static Future<Map<String, dynamic>> adminLogin({
+    required String email,
+    required String password,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/admin/auth/login'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'email': email, 'password': password}),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        final token = data['token'] as String?;
+        if (token != null) {
+          await AuthStorage.writeAdminToken(token);
+          final adminData = data['admin'] as Map<String, dynamic>?;
+          if (adminData != null) await _saveAdminData(adminData);
+        }
+        return {'success': true, ...data};
+      } else {
+        final body = jsonDecode(response.body) as Map<String, dynamic>;
+        return {'success': false, 'message': body['error'] ?? 'Login failed'};
+      }
+    } catch (e) {
+      return {'success': false, 'message': 'Error: $e'};
+    }
+  }
+
+  /// Request admin password reset OTP.
+  static Future<Map<String, dynamic>> adminForgotPassword(String email) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/admin/auth/forgot-password'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'email': email}),
+      );
+      if (response.statusCode == 200) {
+        return {'success': true, 'message': 'Reset code sent if email is registered'};
+      }
+      return {'success': false, 'message': 'Request failed'};
+    } catch (e) {
+      return {'success': false, 'message': 'Error: $e'};
+    }
+  }
+
+  /// Verify OTP and set new admin password.
+  static Future<Map<String, dynamic>> adminResetPassword({
+    required String email,
+    required String otp,
+    required String newPassword,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/admin/auth/reset-password'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'email': email, 'otp': otp, 'new_password': newPassword}),
+      );
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      return {'success': response.statusCode == 200, ...data};
+    } catch (e) {
+      return {'success': false, 'message': 'Error: $e'};
+    }
+  }
+
+  /// Logout admin — clears admin token and SharedPreferences admin data.
+  static Future<void> adminLogout() async {
+    await AuthStorage.clearAdminToken();
+    await _clearAdminData();
+  }
+
+  /// Returns stored admin token.
+  static Future<String?> getAdminToken() => AuthStorage.readAdminToken();
+
+  /// Headers with admin JWT for protected admin API calls.
+  static Future<Map<String, String>> getAdminHeaders() async {
+    final token = await getAdminToken();
+    final headers = <String, String>{'Content-Type': 'application/json'};
+    if (token != null) headers['Authorization'] = 'Bearer $token';
+    return headers;
+  }
+
+  static Future<void> _saveAdminData(Map<String, dynamic> adminData) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (adminData['admin_id'] != null) {
+      await prefs.setInt('admin_id', (adminData['admin_id'] as num).toInt());
+    }
+    if (adminData['email'] != null) {
+      await prefs.setString('admin_email', adminData['email'] as String);
+    }
+    if (adminData['full_name'] != null) {
+      await prefs.setString('admin_full_name', adminData['full_name'] as String);
+    }
+    if (adminData['role'] != null) {
+      await prefs.setString('admin_role', adminData['role'] as String);
+    }
+  }
+
+  static Future<void> _clearAdminData() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('admin_id');
+    await prefs.remove('admin_email');
+    await prefs.remove('admin_full_name');
+    await prefs.remove('admin_role');
+  }
+
+  static Future<void> _clearUserData() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('is_admin');
+    await prefs.remove('user_id');
+    await prefs.remove('user_email');
+    await prefs.remove('user_full_name');
   }
 
   // ============ USER ENDPOINTS ============
@@ -738,10 +861,27 @@ class ApiService {
     }
   }
 
-  /// Returns true if the logged-in user has admin privileges
+  /// Returns true if the logged-in user has admin privileges.
+  /// Checks both user JWT admin flag and presence of a dedicated admin JWT.
   static Future<bool> getIsAdmin() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getBool('is_admin') ?? false;
+    if (prefs.getBool('is_admin') == true) return true;
+    final adminToken = await AuthStorage.readAdminToken();
+    return adminToken != null && adminToken.isNotEmpty;
+  }
+
+  /// Returns the stored admin role ('super_admin' or 'moderator'), or null.
+  static Future<String?> getAdminRole() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('admin_role');
+  }
+
+  /// Returns the stored admin display name.
+  static Future<String> getAdminName() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('admin_full_name')
+        ?? prefs.getString('user_full_name')
+        ?? 'Admin';
   }
 
   /// Returns stored MySQL user_id (not Firebase UID)
@@ -753,5 +893,120 @@ class ApiService {
   /// Get current user ID (from Firebase)
   static String? get userId {
     return _auth.currentUser?.uid;
+  }
+
+  // ============ ADMIN-AUTHENTICATED HTTP METHODS ============
+  // Use these for all /api/admin/* routes — they send the admin JWT, not the
+  // user JWT, so pure-admin accounts (from AdminLoginPage) work correctly.
+
+  static Future<Map<String, dynamic>> adminGetRequest(String endpoint) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl$endpoint'),
+        headers: await getAdminHeaders(),
+      );
+      if (response.statusCode == 200) return jsonDecode(response.body);
+      return {'success': false, 'message': 'Request failed: ${response.statusCode}'};
+    } catch (e) {
+      return {'success': false, 'message': 'Error: $e'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> adminPostRequest(
+      String endpoint, Map<String, dynamic> body) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl$endpoint'),
+        headers: await getAdminHeaders(),
+        body: jsonEncode(body),
+      );
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return jsonDecode(response.body);
+      }
+      final decoded = response.body.isNotEmpty
+          ? jsonDecode(response.body) as Map<String, dynamic>
+          : <String, dynamic>{};
+      return {'success': false, 'message': decoded['error'] ?? 'Request failed: ${response.statusCode}'};
+    } catch (e) {
+      return {'success': false, 'message': 'Error: $e'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> adminPutRequest(
+      String endpoint, Map<String, dynamic> body) async {
+    try {
+      final response = await http.put(
+        Uri.parse('$baseUrl$endpoint'),
+        headers: await getAdminHeaders(),
+        body: jsonEncode(body),
+      );
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return jsonDecode(response.body);
+      }
+      final decoded = response.body.isNotEmpty
+          ? jsonDecode(response.body) as Map<String, dynamic>
+          : <String, dynamic>{};
+      return {'success': false, 'message': decoded['error'] ?? 'Request failed: ${response.statusCode}'};
+    } catch (e) {
+      return {'success': false, 'message': 'Error: $e'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> adminDeleteRequest(String endpoint) async {
+    try {
+      final response = await http.delete(
+        Uri.parse('$baseUrl$endpoint'),
+        headers: await getAdminHeaders(),
+      );
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        if (response.body.isEmpty) return {'success': true};
+        return jsonDecode(response.body);
+      }
+      final decoded = response.body.isNotEmpty
+          ? jsonDecode(response.body) as Map<String, dynamic>
+          : <String, dynamic>{};
+      return {'success': false, 'message': decoded['error'] ?? 'Request failed: ${response.statusCode}'};
+    } catch (e) {
+      return {'success': false, 'message': 'Error: $e'};
+    }
+  }
+
+  // ============ JWT HELPERS ============
+
+  /// Returns true if the stored JWT is missing or its exp claim is in the past.
+  static Future<bool> isJwtExpired() async {
+    final token = await getToken();
+    if (token == null || token.isEmpty) return true;
+    return _isTokenExpired(token);
+  }
+
+  /// Silently re-exchanges the Firebase token for a fresh JWT if the current
+  /// one is missing or expired. Call this on app startup.
+  static Future<void> refreshTokenIfNeeded(User user) async {
+    if (await isJwtExpired()) {
+      try {
+        await exchangeFirebaseToken(user);
+      } catch (_) {
+        // Backend may be offline — proceed without token; API calls will fail
+        // gracefully with 401 which is handled per-screen.
+      }
+    }
+  }
+
+  /// Decodes a JWT (without verifying signature) and checks the exp claim.
+  static bool _isTokenExpired(String token) {
+    try {
+      final parts = token.split('.');
+      if (parts.length != 3) return true;
+      final normalized = base64Url.normalize(parts[1]);
+      final payload = utf8.decode(base64Url.decode(normalized));
+      final data = jsonDecode(payload) as Map<String, dynamic>;
+      final exp = data['exp'] as int?;
+      if (exp == null) return false;
+      return DateTime.fromMillisecondsSinceEpoch(exp * 1000)
+          .isBefore(DateTime.now());
+    } catch (_) {
+      return true;
+    }
   }
 }

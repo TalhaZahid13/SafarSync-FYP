@@ -1,5 +1,6 @@
 import 'package:intl/intl.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:pdf/pdf.dart';
 import 'package:printing/printing.dart';
@@ -148,7 +149,7 @@ Future<void> exportTripToPDF(
   final exportTime = options?.generatedAt ?? DateTime.now();
   final dateStr = DateFormat('MMMM d, yyyy').format(exportTime);
   final dateTimeStr = DateFormat('dd MMMM yyyy - hh:mm a').format(exportTime);
-  final userInfo = options?.userInfo ?? _currentUserInfo();
+  final userInfo = options?.userInfo ?? await _buildCurrentUserInfo();
   final reportType = options?.reportType ?? 'Trip Report';
   final fileName = _buildFileName(
     options?.filePrefix ?? 'Trip_Report',
@@ -426,14 +427,22 @@ Future<void> exportTripToPDF(
   );
 }
 
-PdfExportUserInfo _currentUserInfo() {
+/// Builds user info for the PDF header by combining Firebase auth data with
+/// the MySQL user_id stored in SharedPreferences after login.
+Future<PdfExportUserInfo> _buildCurrentUserInfo() async {
   final user = FirebaseAuth.instance.currentUser;
+  final prefs = await SharedPreferences.getInstance();
+
+  final savedName = prefs.getString('user_full_name');
+  final savedEmail = prefs.getString('user_email');
+  final mysqlId = prefs.getInt('user_id');
+
   return PdfExportUserInfo(
-    fullName: user?.displayName?.trim().isNotEmpty == true
-        ? user!.displayName!.trim()
-        : 'Traveller',
-    email: user?.email ?? '',
-    userId: user?.uid ?? 'unknown-user',
+    fullName: savedName?.trim().isNotEmpty == true
+        ? savedName!.trim()
+        : (user?.displayName?.trim().isNotEmpty == true ? user!.displayName!.trim() : 'Traveller'),
+    email: savedEmail?.isNotEmpty == true ? savedEmail! : (user?.email ?? ''),
+    userId: mysqlId != null ? 'ID-$mysqlId' : (user?.uid ?? 'unknown-user'),
     profileImageUrl: user?.photoURL,
   );
 }

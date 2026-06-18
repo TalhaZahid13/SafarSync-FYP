@@ -15,6 +15,20 @@ import '../utils/theme_controller.dart';
 import '../utils/api_service.dart';
 import '../utils/session_manager.dart';
 
+// ── Profile page palette ──────────────────────────────────────────────────────
+const Color _bgTop      = Color(0xFFF8FFFE);
+const Color _bgMid      = Color(0xFFEFF9FA);
+const Color _bgBottom   = Color(0xFFE3F5F7);
+const Color _teal       = Color(0xFF2CAFBC);
+const Color _orange     = Color(0xFFFF8C42);
+const Color _violet     = Color(0xFF7C6FAF);
+const Color _cyan       = Color(0xFF00BCD4);
+const Color _gold       = Color(0xFFFFB830);
+const Color _titleColor = Color(0xFF404745);
+const Color _mutedText  = Color(0xFF9A9E9D);
+const Color _cardBg     = Color(0xFFFFFFFF);
+const Color _cardOutline = Color(0x1A2CAFBC);
+
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
 
@@ -26,6 +40,7 @@ class _ProfilePageState extends State<ProfilePage> {
   bool _isAdmin = false;
   Map<String, dynamic> _stats = {};
   bool _statsLoaded = false;
+  int? _mysqlUserId;
 
   @override
   void initState() {
@@ -35,10 +50,12 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Future<void> _loadData() async {
     final isAdmin = await ApiService.getIsAdmin();
+    final mysqlUserId = await ApiService.getMySqlUserId();
     final statsResp = await ApiService.getRequest('/users/stats');
     if (mounted) {
       setState(() {
         _isAdmin = isAdmin;
+        _mysqlUserId = mysqlUserId;
         _stats = (statsResp['stats'] as Map<String, dynamic>?) ?? {};
         _statsLoaded = true;
       });
@@ -51,6 +68,7 @@ class _ProfilePageState extends State<ProfilePage> {
       isAdmin: _isAdmin,
       stats: _stats,
       statsLoaded: _statsLoaded,
+      mysqlUserId: _mysqlUserId,
     );
   }
 }
@@ -59,90 +77,57 @@ class _ProfilePageView extends StatelessWidget {
   final bool isAdmin;
   final Map<String, dynamic> stats;
   final bool statsLoaded;
+  final int? mysqlUserId;
 
   const _ProfilePageView({
     required this.isAdmin,
     required this.stats,
     required this.statsLoaded,
+    this.mysqlUserId,
   });
 
   void handleExportPDF() {
+    final user = FirebaseAuth.instance.currentUser;
+    final userName = user?.displayName ?? 'Traveller';
+
+    // Use real stats from the backend; fall back to zeros if not yet loaded.
+    final placesVisited = (stats['total_bookings'] as num?)?.toInt() ?? 0;
+    final tripsPlanned = (stats['total_bookings'] as num?)?.toInt() ?? 0;
+    final groupTrips = (stats['group_bookings'] as num?)?.toInt() ?? 0;
+
     final tripData = TripData(
-      userName:
-          FirebaseAuth.instance.currentUser?.displayName ?? 'Muhammad Talha',
-      tripName: 'Northern Pakistan Adventure',
-      destinations: [
-        Destination(
-          name: 'Hunza Valley',
-          location: 'Gilgit-Baltistan',
-          rating: 4.9,
-          price: 'Rs 45,000',
-        ),
-        Destination(
-          name: 'Naran Kaghan',
-          location: 'Khyber Pakhtunkhwa',
-          rating: 4.8,
-          price: 'Rs 35,000',
-        ),
-      ],
-      routes: [
-        RouteData(
-          name: 'Northern Pakistan Tour',
-          from: 'Islamabad',
-          to: 'Hunza Valley',
-          distance: '615 km',
-          duration: '12h 30m',
-          fuelCost: 'Rs 5,500',
-        ),
-      ],
-      hotels: [
-        Hotel(
-          name: 'Serena Hotel Islamabad',
-          location: 'F-5, Islamabad',
-          rating: 4.8,
-          price: 'Rs 25,000',
-        ),
-      ],
-      restaurants: [
-        Restaurant(
-          name: 'Monal Restaurant',
-          cuisine: 'Pakistani & Continental',
-          rating: 4.9,
-          price: 'Rs 3,000',
-        ),
-        Restaurant(
-          name: 'Bundu Khan',
-          cuisine: 'Traditional BBQ',
-          rating: 4.7,
-          price: 'Rs 2,000',
-        ),
-      ],
-      stats: TripStats(placesVisited: 24, badgesEarned: 12, tripsPlanned: 8),
+      userName: userName,
+      tripName: 'SafarSync Travel Summary',
+      destinations: const [],
+      routes: const [],
+      hotels: const [],
+      restaurants: const [],
+      stats: TripStats(
+        placesVisited: placesVisited,
+        badgesEarned: groupTrips,
+        tripsPlanned: tripsPlanned,
+      ),
     );
 
     exportTripToPDF(
       tripData,
       options: PdfExportOptions(
-        reportType: 'Trip Report',
-        filePrefix: 'Trip_Report',
+        reportType: 'Travel Report',
+        filePrefix: 'Travel_Report',
         userInfo: PdfExportUserInfo(
-          fullName:
-              FirebaseAuth.instance.currentUser?.displayName ?? 'Traveller',
-          email: FirebaseAuth.instance.currentUser?.email ?? '',
-          userId: FirebaseAuth.instance.currentUser?.uid ?? 'unknown-user',
-          profileImageUrl: FirebaseAuth.instance.currentUser?.photoURL,
+          fullName: userName,
+          email: user?.email ?? '',
+          userId: mysqlUserId != null ? 'ID-$mysqlUserId' : (user?.uid ?? 'unknown'),
+          profileImageUrl: user?.photoURL,
         ),
         bookingDetails: {
-          'Trip': 'Northern Pakistan Adventure',
-          'Status': 'Confirmed',
+          'Total Bookings': '${stats['total_bookings'] ?? 0}',
+          'Group Bookings': '${stats['group_bookings'] ?? 0}',
+          'Active Tracking': '${stats['active_tracking'] ?? 0}',
         },
-        routeDetails: {
-          'Primary Route': 'Islamabad → Hunza Valley',
-          'Distance': '615 km',
-        },
-        travelHistory: ['Islamabad', 'Hunza Valley', 'Naran Kaghan'],
+        travelHistory: [],
         emergencyEvents: const [],
-        groupMembers: const ['Muhammad Talha'],
+        groupMembers: const [],
       ),
     );
   }
