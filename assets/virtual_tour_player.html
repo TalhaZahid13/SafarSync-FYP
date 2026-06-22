@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>SafarSync Virtual Tour</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.css">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #0D1B2A; }
+    #panorama { width: 100%; height: 100%; }
+
+    /* Loading */
+    #loading-overlay {
+      position: fixed; inset: 0; background: #0D1B2A;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      z-index: 1000; transition: opacity 0.4s;
+    }
+    #loading-overlay.hidden { opacity: 0; pointer-events: none; }
+    .loader-ring {
+      width: 48px; height: 48px;
+      border: 3px solid #1B3A4C; border-top-color: #2CAFBC;
+      border-radius: 50%; animation: spin 0.9s linear infinite;
+    }
+    .loader-text { color: #2CAFBC; font-family: -apple-system, sans-serif; font-size: 13px; margin-top: 14px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Scene title pill */
+    #scene-title {
+      position: fixed; top: 16px; left: 50%; transform: translateX(-50%);
+      background: rgba(13,27,42,0.80); color: #fff;
+      padding: 6px 20px; border-radius: 24px;
+      font-family: -apple-system, sans-serif; font-size: 14px; font-weight: 600;
+      backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(44,175,188,0.35); z-index: 40;
+      max-width: 75%; text-align: center;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      transition: opacity 0.25s;
+    }
+
+    /* AI narration panel */
+    #ai-overlay {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: linear-gradient(0deg, rgba(13,27,42,0.98) 0%, rgba(13,27,42,0.88) 70%, transparent 100%);
+      padding: 20px 20px 36px; transform: translateY(100%);
+      transition: transform 0.35s cubic-bezier(0.4,0,0.2,1);
+      z-index: 50; max-height: 55vh; overflow-y: auto;
+    }
+    #ai-overlay.visible { transform: translateY(0); }
+    #ai-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: rgba(44,175,188,0.15); border: 1px solid rgba(44,175,188,0.4);
+      border-radius: 12px; padding: 4px 10px; margin-bottom: 10px;
+      color: #2CAFBC; font-family: -apple-system, sans-serif;
+      font-size: 11px; font-weight: 600; letter-spacing: 0.5px;
+    }
+    #ai-overlay-text {
+      color: #D8EEF2; font-family: -apple-system, sans-serif;
+      font-size: 14px; line-height: 1.75;
+    }
+    #ai-close {
+      position: absolute; top: 14px; right: 16px;
+      color: #9A9E9D; font-size: 20px; cursor: pointer;
+      background: none; border: none; padding: 4px;
+    }
+
+    /* Info hotspot popup override */
+    #info-popup {
+      position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      background: rgba(13,27,42,0.95); border: 1px solid rgba(44,175,188,0.4);
+      border-radius: 16px; padding: 20px 20px 16px; z-index: 60;
+      max-width: 80%; display: none;
+      backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+    }
+    #info-popup.visible { display: block; }
+    #info-popup-title {
+      color: #2CAFBC; font-family: -apple-system, sans-serif;
+      font-size: 15px; font-weight: 700; margin-bottom: 10px;
+    }
+    #info-popup-text {
+      color: #C8E8F0; font-family: -apple-system, sans-serif;
+      font-size: 13px; line-height: 1.6;
+    }
+    #info-popup-close {
+      margin-top: 14px; text-align: right;
+      color: #2CAFBC; font-family: -apple-system, sans-serif;
+      font-size: 13px; font-weight: 600; cursor: pointer;
+    }
+
+    /* Error */
+    #error-overlay {
+      position: fixed; inset: 0; background: #0D1B2A;
+      display: none; flex-direction: column; align-items: center; justify-content: center;
+      color: #9A9E9D; font-family: -apple-system, sans-serif;
+      text-align: center; padding: 32px; z-index: 999;
+    }
+    #error-overlay.visible { display: flex; }
+    .error-emoji { font-size: 52px; margin-bottom: 16px; }
+    .error-title { color: #fff; font-size: 18px; font-weight: 700; margin-bottom: 8px; }
+    .error-msg { font-size: 13px; line-height: 1.6; max-width: 280px; }
+
+    /* Pannellum branding override */
+    .pnlm-about-msg { display: none !important; }
+    .pnlm-hotspot-base { width: 34px !important; height: 34px !important; }
+    .pnlm-hotspot-base.pnlm-info {
+      background: rgba(44,175,188,0.9) !important;
+      box-shadow: 0 0 0 2px rgba(44,175,188,0.3);
+    }
+    .pnlm-hotspot-base.pnlm-scene {
+      background: rgba(253,185,19,0.9) !important;
+      box-shadow: 0 0 0 2px rgba(253,185,19,0.3);
+    }
+    .pnlm-sprite { display: none !important; }
+    .pnlm-hotspot-base::after {
+      content: ''; position: absolute; inset: 0;
+      border-radius: 50%; border: 2px solid rgba(255,255,255,0.6);
+      animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%,100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.25); opacity: 0; }
+    }
+  </style>
+</head>
+<body>
+
+<div id="loading-overlay">
+  <div class="loader-ring"></div>
+  <p class="loader-text">Loading Virtual Tour…</p>
+</div>
+
+<div id="scene-title">Virtual Tour</div>
+<div id="panorama"></div>
+
+<div id="ai-overlay">
+  <button id="ai-close" onclick="hideAiNarration()">✕</button>
+  <div id="ai-badge">🎧 AI Tour Guide</div>
+  <div id="ai-overlay-text"></div>
+</div>
+
+<div id="info-popup">
+  <div id="info-popup-title"></div>
+  <div id="info-popup-text"></div>
+  <div id="info-popup-close" onclick="closeInfoPopup()">Close ✕</div>
+</div>
+
+<div id="error-overlay">
+  <div class="error-emoji">🌐</div>
+  <div class="error-title">Tour Unavailable</div>
+  <div class="error-msg" id="error-msg">Could not load the panorama. Please check your connection.</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.js"></script>
+<script>
+  var viewer = null;
+  var currentTour = null;
+
+  // ── Flutter bridge ──────────────────────────────────────────────────────────
+
+  function postToFlutter(type, data) {
+    try {
+      if (window.VirtualTourChannel) {
+        window.VirtualTourChannel.postMessage(JSON.stringify({ type: type, data: data || {} }));
+      }
+    } catch (e) {}
+  }
+
+  // ── Loading / Error helpers ─────────────────────────────────────────────────
+
+  function showLoading(show) {
+    var el = document.getElementById('loading-overlay');
+    if (show) el.classList.remove('hidden');
+    else el.classList.add('hidden');
+  }
+
+  function showError(msg) {
+    showLoading(false);
+    document.getElementById('error-overlay').classList.add('visible');
+    if (msg) document.getElementById('error-msg').textContent = msg;
+  }
+
+  function updateSceneTitle(title) {
+    document.getElementById('scene-title').textContent = title || 'Virtual Tour';
+  }
+
+  // ── AI narration ────────────────────────────────────────────────────────────
+
+  function showAiNarration(text) {
+    document.getElementById('ai-overlay-text').textContent = text;
+    document.getElementById('ai-overlay').classList.add('visible');
+  }
+
+  function hideAiNarration() {
+    document.getElementById('ai-overlay').classList.remove('visible');
+  }
+
+  // ── Info popup ──────────────────────────────────────────────────────────────
+
+  function showInfoPopup(title, text) {
+    document.getElementById('info-popup-title').textContent = title || '';
+    document.getElementById('info-popup-text').textContent = text || '';
+    document.getElementById('info-popup').classList.add('visible');
+  }
+
+  function closeInfoPopup() {
+    document.getElementById('info-popup').classList.remove('visible');
+  }
+
+  document.getElementById('panorama').addEventListener('click', function () {
+    hideAiNarration();
+    closeInfoPopup();
+  });
+
+  // ── Core: load tour ─────────────────────────────────────────────────────────
+
+  function loadTour(tourJson) {
+    try {
+      currentTour = (typeof tourJson === 'string') ? JSON.parse(tourJson) : tourJson;
+      showLoading(true);
+
+      var scenes = currentTour.scenes || [];
+      if (scenes.length === 0) { showError('No scenes in this tour.'); return; }
+
+      var pannellumScenes = {};
+
+      scenes.forEach(function (scene) {
+        var hotSpots = (scene.hotspots || []).map(function (hs) {
+          if (hs.type === 'scene') {
+            return {
+              pitch: hs.pitch || 0,
+              yaw: hs.yaw || 0,
+              type: 'scene',
+              text: hs.title || 'Go',
+              sceneId: hs.targetSceneKey,
+              clickHandlerFunc: (function (h) {
+                return function () {
+                  postToFlutter('hotspot_scene', { sceneKey: h.targetSceneKey, title: h.title });
+                };
+              })(hs),
+            };
+          } else {
+            return {
+              pitch: hs.pitch || 0,
+              yaw: hs.yaw || 0,
+              type: 'info',
+              text: hs.title || 'Info',
+              clickHandlerFunc: (function (h) {
+                return function () {
+                  showInfoPopup(h.title, h.text);
+                  postToFlutter('hotspot_info', { title: h.title, text: h.text });
+                };
+              })(hs),
+              clickHandlerArgs: {},
+            };
+          }
+        });
+
+        pannellumScenes[scene.sceneKey] = {
+          title: scene.name,
+          panorama: scene.panoramaUrl,
+          hotSpots: hotSpots,
+        };
+      });
+
+      var defaultScene = currentTour.defaultSceneKey || scenes[0].sceneKey;
+
+      if (viewer) {
+        try { viewer.destroy(); } catch (e) {}
+        viewer = null;
+      }
+
+      viewer = pannellum.viewer('panorama', {
+        default: {
+          firstScene: defaultScene,
+          sceneFadeDuration: 800,
+          autoLoad: true,
+          showControls: false,
+          mouseZoom: true,
+          keyboardZoom: false,
+          hfov: 100,
+          minHfov: 50,
+          maxHfov: 130,
+        },
+        scenes: pannellumScenes,
+      });
+
+      viewer.on('load', function () {
+        showLoading(false);
+        var first = scenes.find(function (s) { return s.sceneKey === defaultScene; });
+        updateSceneTitle(first ? first.name : scenes[0].name);
+        postToFlutter('tour_loaded', { sceneCount: scenes.length, title: currentTour.title });
+      });
+
+      viewer.on('scenechange', function (sceneKey) {
+        var scene = scenes.find(function (s) { return s.sceneKey === sceneKey; });
+        if (scene) {
+          updateSceneTitle(scene.name);
+          postToFlutter('scene_changed', {
+            sceneKey: sceneKey,
+            sceneId: scene.id,
+            sceneName: scene.name,
+            sceneDescription: scene.description || '',
+          });
+        }
+      });
+
+      viewer.on('error', function (err) {
+        postToFlutter('error', { message: String(err) });
+      });
+
+    } catch (e) {
+      showError('Failed to start tour: ' + e.message);
+      postToFlutter('error', { message: e.message });
+    }
+  }
+
+  // ── Scene navigation (called from Flutter) ──────────────────────────────────
+
+  function goToScene(sceneKey) {
+    if (viewer) {
+      try { viewer.loadScene(sceneKey); } catch (e) {}
+    }
+  }
+
+  // ── Page ready signal ───────────────────────────────────────────────────────
+  window.addEventListener('load', function () {
+    postToFlutter('page_ready', {});
+  });
+</script>
+</body>
+</html>

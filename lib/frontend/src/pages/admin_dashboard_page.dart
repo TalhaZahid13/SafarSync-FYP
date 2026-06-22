@@ -32,12 +32,14 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
   List<Map<String, dynamic>> _trips = [];
   List<Map<String, dynamic>> _alerts = [];
   List<Map<String, dynamic>> _packages = [];
+  List<Map<String, dynamic>> _virtualTours = [];
 
   bool _loadingStats = true;
   bool _loadingUsers = true;
   bool _loadingTrips = true;
   bool _loadingAlerts = true;
   bool _loadingPackages = false;
+  bool _loadingVirtualTours = false;
 
   String? _userSearch;
   final _searchCtrl = TextEditingController();
@@ -45,7 +47,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
   @override
   void initState() {
     super.initState();
-    _tabs = TabController(length: 6, vsync: this)
+    _tabs = TabController(length: 7, vsync: this)
       ..addListener(() {
         if (!_tabs.indexIsChanging) _loadTabIfNeeded(_tabs.index);
       });
@@ -168,8 +170,35 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
       case 1: if (_users.isEmpty) _loadUsers(); break;
       case 2: if (_trips.isEmpty) _loadTrips(); break;
       case 3: if (_alerts.isEmpty) _loadAlerts(); break;
-      case 5: if (_packages.isEmpty) _loadTourPackages(); break;
+      case 5: if (_packages.isEmpty)     _loadTourPackages();    break;
+      case 6: if (_virtualTours.isEmpty) _loadVirtualTours();   break;
     }
+  }
+
+  Future<void> _loadVirtualTours() async {
+    setState(() => _loadingVirtualTours = true);
+    try {
+      final r = await ApiService.adminGetRequest('/admin/virtual-tours');
+      if (mounted && r['success'] == true) {
+        setState(() {
+          _virtualTours = List<Map<String, dynamic>>.from(
+            (r['tours'] as List?)?.map((e) => Map<String, dynamic>.from(e)) ?? [],
+          );
+          _loadingVirtualTours = false;
+        });
+      } else {
+        if (mounted) setState(() => _loadingVirtualTours = false);
+      }
+    } catch (_) {
+      if (mounted) setState(() => _loadingVirtualTours = false);
+    }
+  }
+
+  Future<void> _deleteVirtualTour(int id) async {
+    final r = await ApiService.adminDeleteRequest('/admin/virtual-tours/$id');
+    if (!mounted) return;
+    _snack(r['success'] == true ? 'Tour deleted' : (r['message'] ?? 'Failed'));
+    if (r['success'] == true) _loadVirtualTours();
   }
 
   Future<void> _loadTourPackages() async {
@@ -369,6 +398,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
               text: 'Live Map',
             ),
             const Tab(icon: Icon(Icons.local_offer_rounded), text: 'Packages'),
+            const Tab(icon: Icon(Icons.threed_rotation_rounded), text: 'VR Tours'),
           ],
         ),
       ),
@@ -407,6 +437,12 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
             loading: _loadingPackages,
             onRefresh: _loadTourPackages,
             onDelete: _deleteTourPackage,
+          ),
+          _VirtualToursAdminTab(
+            tours: _virtualTours,
+            loading: _loadingVirtualTours,
+            onRefresh: _loadVirtualTours,
+            onDelete: _deleteVirtualTour,
           ),
         ],
       ),
@@ -2181,6 +2217,134 @@ class _PackageAdminCard extends StatelessWidget {
               tooltip: 'Deactivate package',
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Virtual Tours Admin Tab ──────────────────────────────────────────────────
+
+class _VirtualToursAdminTab extends StatelessWidget {
+  final List<Map<String, dynamic>> tours;
+  final bool loading;
+  final VoidCallback onRefresh;
+  final void Function(int) onDelete;
+
+  const _VirtualToursAdminTab({
+    required this.tours,
+    required this.loading,
+    required this.onRefresh,
+    required this.onDelete,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (loading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    return RefreshIndicator(
+      onRefresh: () async => onRefresh(),
+      child: tours.isEmpty
+          ? ListView(
+              children: const [
+                SizedBox(height: 80),
+                Center(
+                  child: Text(
+                    'No virtual tours yet.\nRun migration_v8.sql and use the API to create tours.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                ),
+              ],
+            )
+          : ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: tours.length,
+              itemBuilder: (ctx, i) => _VTourAdminCard(
+                tour: tours[i],
+                onDelete: () async {
+                  final confirm = await showDialog<bool>(
+                    context: ctx,
+                    builder: (_) => AlertDialog(
+                      title: const Text('Delete Tour?'),
+                      content: Text(
+                          'Delete "${tours[i]['title']}"? All scenes and hotspots will be removed permanently.'),
+                      actions: [
+                        TextButton(
+                            onPressed: () => Navigator.pop(ctx, false),
+                            child: const Text('Cancel')),
+                        TextButton(
+                            onPressed: () => Navigator.pop(ctx, true),
+                            child: const Text('Delete',
+                                style: TextStyle(color: Colors.red))),
+                      ],
+                    ),
+                  );
+                  if (confirm == true) onDelete(tours[i]['id'] as int);
+                },
+              ),
+            ),
+    );
+  }
+}
+
+class _VTourAdminCard extends StatelessWidget {
+  final Map<String, dynamic> tour;
+  final VoidCallback onDelete;
+
+  const _VTourAdminCard({required this.tour, required this.onDelete});
+
+  @override
+  Widget build(BuildContext context) {
+    final isActive = (tour['is_active'] as int? ?? 1) == 1;
+    final destName = tour['destination_name'] as String?;
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 10),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        leading: Container(
+          width: 40, height: 40,
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFF1B3A4C), Color(0xFF2CAFBC)],
+            ),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: const Icon(Icons.threed_rotation_rounded,
+              color: Colors.white, size: 20),
+        ),
+        title: Text(tour['title'] ?? 'Tour',
+            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (destName != null && destName.isNotEmpty)
+              Text('📍 $destName',
+                  style: const TextStyle(fontSize: 12, color: Colors.grey)),
+            const SizedBox(height: 4),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+              decoration: BoxDecoration(
+                color: isActive
+                    ? Colors.green.withValues(alpha: 0.15)
+                    : Colors.grey.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(isActive ? 'Active' : 'Inactive',
+                  style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                      color: isActive ? Colors.green : Colors.grey)),
+            ),
+          ],
+        ),
+        trailing: IconButton(
+          icon: const Icon(Icons.delete_outline, color: Colors.red),
+          onPressed: onDelete,
+          tooltip: 'Delete tour',
         ),
       ),
     );

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../utils/api_service.dart';
 import 'smart_route_page.dart';
 import 'bookings_page.dart';
+import 'virtual_tour_player_page.dart';
 
 class ExplorePage extends StatefulWidget {
   const ExplorePage({super.key});
@@ -327,6 +328,14 @@ class _ExplorePageState extends State<ExplorePage> {
                             ),
                           ),
                         ],
+                      ),
+                      const SizedBox(height: 12),
+                      // Virtual Tour button (shown for all destinations; checks availability)
+                      _VirtualTourButton(
+                        destinationId: int.tryParse('${dest['id'] ?? dest['destination_id'] ?? 0}'),
+                        destinationName: dest['name']?.toString() ?? '',
+                        onClose: () => Navigator.pop(sheetCtx),
+                        parentContext: context,
                       ),
                     ],
                   ),
@@ -728,5 +737,94 @@ class _ExplorePageState extends State<ExplorePage> {
               child: const Icon(Icons.landscape, color: Colors.white54),
             ),
           );
+  }
+}
+
+// ─── Virtual Tour availability button ────────────────────────────────────────
+// Checks if a virtual tour exists for this destination and shows launch button.
+
+class _VirtualTourButton extends StatefulWidget {
+  final int? destinationId;
+  final String destinationName;
+  final VoidCallback onClose;
+  final BuildContext parentContext;
+
+  const _VirtualTourButton({
+    required this.destinationId,
+    required this.destinationName,
+    required this.onClose,
+    required this.parentContext,
+  });
+
+  @override
+  State<_VirtualTourButton> createState() => _VirtualTourButtonState();
+}
+
+class _VirtualTourButtonState extends State<_VirtualTourButton> {
+  bool _checking = true;
+  Map<String, dynamic>? _tour;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkTour();
+  }
+
+  Future<void> _checkTour() async {
+    if (widget.destinationId == null || widget.destinationId == 0) {
+      if (mounted) setState(() => _checking = false);
+      return;
+    }
+    try {
+      final r = await ApiService.getRequest(
+          '/virtual-tours/destination/${widget.destinationId}');
+      if (r['success'] == true) {
+        if (mounted) setState(() { _tour = r['tour'] as Map<String, dynamic>; _checking = false; });
+      } else {
+        if (mounted) setState(() => _checking = false);
+      }
+    } catch (_) {
+      if (mounted) setState(() => _checking = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_checking) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 4),
+        child: LinearProgressIndicator(color: Color(0xFF2CAFBC), minHeight: 2),
+      );
+    }
+    if (_tour == null) return const SizedBox.shrink();
+
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        onPressed: () {
+          widget.onClose();
+          Navigator.push(
+            widget.parentContext,
+            MaterialPageRoute(
+              builder: (_) => VirtualTourPlayerPage(
+                tourId: _tour!['id'] as int,
+                tourTitle: _tour!['title'] as String? ?? 'Virtual Tour',
+                destinationId: widget.destinationId,
+              ),
+            ),
+          );
+        },
+        icon: const Icon(Icons.threed_rotation, size: 18, color: Color(0xFF2CAFBC)),
+        label: const Text(
+          'Start Virtual Tour',
+          style: TextStyle(color: Color(0xFF2CAFBC), fontWeight: FontWeight.w600),
+        ),
+        style: OutlinedButton.styleFrom(
+          side: const BorderSide(color: Color(0xFF2CAFBC)),
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      ),
+    );
   }
 }
