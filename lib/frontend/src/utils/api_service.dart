@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
@@ -740,19 +741,23 @@ class ApiService {
 
   // ============ GENERIC HTTP METHODS ============
 
+  static const Duration _kTimeout = Duration(seconds: 15);
+
   /// Generic GET request
   static Future<Map<String, dynamic>> getRequest(String endpoint) async {
     try {
       final response = await http.get(
         Uri.parse('$baseUrl$endpoint'),
         headers: await getHeaders(needsAuth: true),
-      );
+      ).timeout(_kTimeout);
 
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
       } else {
         return {'success': false, 'message': 'Request failed: ${response.statusCode}'};
       }
+    } on TimeoutException {
+      return {'success': false, 'message': 'Request timed out'};
     } catch (e) {
       return {'success': false, 'message': 'Error: $e'};
     }
@@ -765,13 +770,15 @@ class ApiService {
         Uri.parse('$baseUrl$endpoint'),
         headers: await getHeaders(needsAuth: true),
         body: jsonEncode(body),
-      );
+      ).timeout(_kTimeout);
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         return jsonDecode(response.body);
       } else {
         return {'success': false, 'message': 'Request failed: ${response.statusCode}'};
       }
+    } on TimeoutException {
+      return {'success': false, 'message': 'Request timed out'};
     } catch (e) {
       return {'success': false, 'message': 'Error: $e'};
     }
@@ -784,13 +791,15 @@ class ApiService {
         Uri.parse('$baseUrl$endpoint'),
         headers: await getHeaders(needsAuth: true),
         body: jsonEncode(body),
-      );
+      ).timeout(_kTimeout);
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         return jsonDecode(response.body);
       } else {
         return {'success': false, 'message': 'Request failed: ${response.statusCode}'};
       }
+    } on TimeoutException {
+      return {'success': false, 'message': 'Request timed out'};
     } catch (e) {
       return {'success': false, 'message': 'Error: $e'};
     }
@@ -802,13 +811,16 @@ class ApiService {
       final response = await http.delete(
         Uri.parse('$baseUrl$endpoint'),
         headers: await getHeaders(needsAuth: true),
-      );
+      ).timeout(_kTimeout);
+
       if (response.statusCode == 200 || response.statusCode == 204) {
         if (response.body.isEmpty) return {'success': true};
         return jsonDecode(response.body);
       } else {
         return {'success': false, 'message': 'Request failed: ${response.statusCode}'};
       }
+    } on TimeoutException {
+      return {'success': false, 'message': 'Request timed out'};
     } catch (e) {
       return {'success': false, 'message': 'Error: $e'};
     }
@@ -820,12 +832,14 @@ class ApiService {
   /// Exchanges the Firebase ID token for a MySQL-backed JWT and stores it.
   static Future<Map<String, dynamic>> exchangeFirebaseToken(User user) async {
     try {
-      final idToken = await user.getIdToken();
+      final idToken = await user.getIdToken()
+          .timeout(const Duration(seconds: 5));
+
       final response = await http.post(
         Uri.parse('$baseUrl/auth/firebase-exchange'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'firebase_id_token': idToken}),
-      );
+      ).timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
@@ -838,10 +852,13 @@ class ApiService {
         return {'success': true, ...data};
       } else {
         // Exchange failed — still proceed (offline / backend down)
-        // but don't save uid as JWT token
         return {'success': false, 'message': 'Backend exchange failed: ${response.statusCode}'};
       }
+    } on TimeoutException {
+      debugPrint('[ApiService] exchangeFirebaseToken timed out — backend unreachable');
+      return {'success': false, 'message': 'Token exchange timed out'};
     } catch (e) {
+      debugPrint('[ApiService] exchangeFirebaseToken error: $e');
       return {'success': false, 'message': 'Exchange error: $e'};
     }
   }

@@ -44,7 +44,8 @@
       "PowerShell(cd \"D:\\\\University\\\\8th Semester\\\\Final Year Project - 2\\\\safarsync_mobileapp\"; $result = flutter analyze 2>&1; $result | Where-Object { $_ -match \"^\\\\s+error\" }; Write-Host \"Exit: $LASTEXITCODE\")",
       "Bash(flutter build *)",
       "Bash(git add *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Bash(xargs grep -l \"budget\\\\|Budget\\\\|recommendation\\\\|Recommendation\\\\|mental.*health\\\\|Mental\")"
     ]
   }
 }

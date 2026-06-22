@@ -1,6 +1,36 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../utils/api_service.dart';
+import '../utils/payment_service.dart';
 import 'payment_page.dart';
+
+// ─── Booking Status Helpers ───────────────────────────────────────────────────
+
+Color _statusColor(String? s) {
+  switch (s) {
+    case 'Confirmed': return Colors.green;
+    case 'Active': return Colors.teal;
+    case 'Completed': return Colors.grey;
+    case 'Awaiting Payment': return Colors.orange;
+    case 'Cancelled': return Colors.red;
+    case 'Refunded': return Colors.purple;
+    default: return Colors.blue;
+  }
+}
+
+IconData _statusIcon(String? s) {
+  switch (s) {
+    case 'Confirmed': return Icons.check_circle;
+    case 'Active': return Icons.flight_takeoff;
+    case 'Completed': return Icons.done_all;
+    case 'Awaiting Payment': return Icons.payment;
+    case 'Cancelled': return Icons.cancel;
+    case 'Refunded': return Icons.currency_exchange;
+    default: return Icons.bookmark;
+  }
+}
+
+// ─── BookingsPage ─────────────────────────────────────────────────────────────
 
 class BookingsPage extends StatefulWidget {
   const BookingsPage({super.key});
@@ -9,33 +39,52 @@ class BookingsPage extends StatefulWidget {
   State<BookingsPage> createState() => _BookingsPageState();
 }
 
-class _BookingsPageState extends State<BookingsPage> {
-  List<dynamic> bookings = [];
-  bool loading = true;
+class _BookingsPageState extends State<BookingsPage>
+    with SingleTickerProviderStateMixin {
+  List<dynamic> _bookings = [];
+  bool _loading = true;
+  late TabController _tabController;
+
+  static const _tabs = ['All', 'Active', 'Upcoming', 'Completed', 'Cancelled'];
 
   @override
   void initState() {
     super.initState();
-    _loadBookings();
+    _tabController = TabController(length: _tabs.length, vsync: this);
+    _load();
   }
 
-  Future<void> _loadBookings() async {
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _load() async {
     try {
-      final response = await ApiService.getRequest('/bookings/list');
+      final r = await ApiService.getRequest('/bookings/list');
       if (mounted) {
         setState(() {
-          bookings = response['bookings'] ?? [];
-          loading = false;
+          _bookings = r['bookings'] as List? ?? [];
+          _loading = false;
         });
       }
     } catch (e) {
-      if (mounted) {
-        setState(() => loading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading bookings: $e')),
-        );
-      }
+      if (mounted) setState(() => _loading = false);
     }
+  }
+
+  List<dynamic> _filtered(int tabIdx) {
+    if (tabIdx == 0) return _bookings;
+    final label = _tabs[tabIdx];
+    return _bookings.where((b) {
+      final s = b['status'] as String? ?? '';
+      if (label == 'Active') return s == 'Active' || s == 'Confirmed';
+      if (label == 'Upcoming') return s == 'Pending' || s == 'Awaiting Payment';
+      if (label == 'Completed') return s == 'Completed';
+      if (label == 'Cancelled') return s == 'Cancelled' || s == 'Refunded';
+      return true;
+    }).toList();
   }
 
   @override
@@ -46,104 +95,166 @@ class _BookingsPageState extends State<BookingsPage> {
         actions: [
           IconButton(
             icon: const Icon(Icons.add),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const CreateBookingScreen()),
-              ).then((_) => _loadBookings());
-            },
+            tooltip: 'New Booking',
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const CreateBookingScreen()),
+            ).then((_) => _load()),
           ),
         ],
+        bottom: TabBar(
+          controller: _tabController,
+          isScrollable: true,
+          tabs: _tabs.map((t) => Tab(text: t)).toList(),
+        ),
       ),
-      body: loading
+      body: _loading
           ? const Center(child: CircularProgressIndicator())
-          : bookings.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.bookmark_outline, size: 64, color: Colors.grey),
-                      const SizedBox(height: 16),
-                      const Text('No bookings yet'),
-                      const SizedBox(height: 8),
-                      ElevatedButton(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const CreateBookingScreen(),
-                            ),
-                          ).then((_) => _loadBookings());
-                        },
-                        child: const Text('Create Booking'),
-                      ),
-                    ],
-                  ),
-                )
-              : ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: bookings.length,
-                  itemBuilder: (context, index) {
-                    final booking = bookings[index];
-                    return GestureDetector(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => BookingDetailsScreen(
-                              bookingId: booking['booking_id'] as int,
-                            ),
-                          ),
-                        ).then((_) => _loadBookings());
-                      },
-                      child: Card(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                booking['destination_name'] as String? ?? 'Unknown',
-                                style: const TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Row(
-                                children: [
-                                  Chip(
-                                    label: Text(booking['status'] as String? ?? 'Planned'),
-                                    backgroundColor: _getStatusColor(booking['status'] as String?),
-                                  ),
-                                  const Spacer(),
-                                  Text(booking['booking_date'] as String? ?? ''),
-                                ],
-                              ),
-                            ],
+          : TabBarView(
+              controller: _tabController,
+              children: List.generate(_tabs.length, (i) {
+                final list = _filtered(i);
+                if (list.isEmpty) {
+                  return _emptyState(i == 0
+                      ? 'No bookings yet'
+                      : 'No ${_tabs[i].toLowerCase()} bookings');
+                }
+                return RefreshIndicator(
+                  onRefresh: _load,
+                  child: ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: list.length,
+                    itemBuilder: (_, idx) => _BookingCard(
+                      booking: list[idx],
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => BookingDetailsScreen(
+                            bookingId: list[idx]['booking_id'] as int,
                           ),
                         ),
-                      ),
-                    );
-                  },
-                ),
+                      ).then((_) => _load()),
+                    ),
+                  ),
+                );
+              }),
+            ),
     );
   }
 
-  Color _getStatusColor(String? status) {
-    switch (status) {
-      case 'Planned':
-        return Colors.blue.withValues(alpha: 0.3);
-      case 'Active':
-        return Colors.green.withValues(alpha: 0.3);
-      case 'Completed':
-        return Colors.grey.withValues(alpha: 0.3);
-      default:
-        return Colors.grey.withValues(alpha: 0.3);
-    }
+  Widget _emptyState(String msg) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.bookmark_outline, size: 64, color: Colors.grey),
+          const SizedBox(height: 16),
+          Text(msg, style: const TextStyle(color: Colors.grey)),
+          const SizedBox(height: 16),
+          ElevatedButton(
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const CreateBookingScreen()),
+            ).then((_) => _load()),
+            child: const Text('Create Booking'),
+          ),
+        ],
+      ),
+    );
   }
 }
+
+class _BookingCard extends StatelessWidget {
+  final Map<String, dynamic> booking;
+  final VoidCallback onTap;
+
+  const _BookingCard({required this.booking, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final status = booking['status'] as String? ?? 'Pending';
+    final color = _statusColor(status);
+    final travelDate = booking['travel_date'] as String?;
+    final travelers = booking['num_travelers'] as int? ?? 1;
+    final amount = (booking['total_amount'] as num?)?.toDouble() ?? 0.0;
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      booking['destination_name'] as String? ?? 'Unknown',
+                      style: const TextStyle(
+                          fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: color.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: color.withValues(alpha: 0.4)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(_statusIcon(status), size: 12, color: color),
+                        const SizedBox(width: 4),
+                        Text(status,
+                            style: TextStyle(
+                                color: color,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  _infoChip(Icons.people_outline, '$travelers traveler${travelers > 1 ? 's' : ''}'),
+                  const SizedBox(width: 8),
+                  if (travelDate != null)
+                    _infoChip(Icons.calendar_today, travelDate),
+                  const Spacer(),
+                  Text(
+                    '\$${amount.toStringAsFixed(2)}',
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold, fontSize: 15),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _infoChip(IconData icon, String label) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 13, color: Colors.grey),
+        const SizedBox(width: 3),
+        Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+      ],
+    );
+  }
+}
+
+// ─── CreateBookingScreen ──────────────────────────────────────────────────────
 
 class CreateBookingScreen extends StatefulWidget {
   const CreateBookingScreen({super.key});
@@ -154,12 +265,18 @@ class CreateBookingScreen extends StatefulWidget {
 
 class _CreateBookingScreenState extends State<CreateBookingScreen> {
   final _formKey = GlobalKey<FormState>();
-  int? selectedDestinationId;
-  DateTime? selectedDate;
-  int duration = 1;
-  String notes = '';
-  List<dynamic> destinations = [];
-  bool loading = false;
+  int? _destId;
+  DateTime? _bookingDate;
+  DateTime? _travelDate;
+  int _duration = 1;
+  int _travelers = 1;
+  String _notes = '';
+  List<dynamic> _destinations = [];
+  bool _loading = false;
+  bool _submitting = false;
+
+  double _pricePerDay = 50.0;
+  double get _total => _pricePerDay * _duration * _travelers;
 
   @override
   void initState() {
@@ -168,61 +285,83 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
   }
 
   Future<void> _loadDestinations() async {
+    setState(() => _loading = true);
     try {
-      final response = await ApiService.getDestinations();
-      if (mounted && response['success'] == true) {
+      final r = await ApiService.getDestinations();
+      if (mounted && r['success'] == true) {
         setState(() {
-          destinations = response['destinations'] ?? [];
+          _destinations = r['destinations'] as List? ?? [];
+          _loading = false;
         });
       }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading destinations: $e')),
-        );
-      }
+    } catch (_) {
+      if (mounted) setState(() => _loading = false);
     }
   }
 
-  Future<void> _createBooking() async {
-    if (!_formKey.currentState!.validate() || selectedDate == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill all fields')),
-      );
+  void _onDestinationChange(int? id) {
+    if (id == null) return;
+    setState(() => _destId = id);
+    final dest = _destinations.firstWhere(
+      (d) => d['destination_id'] == id,
+      orElse: () => <String, dynamic>{},
+    );
+    final cost = (dest['average_cost'] as num?)?.toDouble();
+    if (cost != null && cost > 0) setState(() => _pricePerDay = cost);
+  }
+
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate()) return;
+    if (_bookingDate == null) {
+      _snack('Please select a booking date');
       return;
     }
-
     _formKey.currentState!.save();
 
-    setState(() => loading = true);
+    setState(() => _submitting = true);
     try {
-      final response = await ApiService.postRequest('/bookings/create', {
-        'destination_id': selectedDestinationId,
-        'booking_date': selectedDate?.toIso8601String().split('T')[0],
-        'duration_days': duration,
-        'notes': notes,
+      final r = await ApiService.postRequest('/bookings/create', {
+        'destination_id': _destId,
+        'booking_date': _fmt(_bookingDate!),
+        'travel_date': _travelDate != null ? _fmt(_travelDate!) : null,
+        'num_travelers': _travelers,
+        'duration_days': _duration,
+        'notes': _notes,
       });
 
-      if (response['success'] == true) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Booking created successfully')),
-        );
+      if (!mounted) return;
+      if (r['success'] == true) {
+        _snack('Booking created! Total: \$${_total.toStringAsFixed(2)}',
+            success: true);
         Navigator.pop(context);
+      } else {
+        _snack(r['error'] as String? ?? 'Failed to create booking');
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
-      }
+      if (mounted) _snack('Error: $e');
     } finally {
-      setState(() => loading = false);
+      if (mounted) setState(() => _submitting = false);
     }
+  }
+
+  String _fmt(DateTime d) => DateFormat('yyyy-MM-dd').format(d);
+
+  void _snack(String msg, {bool success = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(msg),
+      backgroundColor: success ? Colors.green : null,
+    ));
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_loading) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Create Booking')),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(title: const Text('Create Booking')),
       body: Form(
@@ -233,79 +372,110 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               DropdownButtonFormField<int>(
-                initialValue: selectedDestinationId,
-                decoration: InputDecoration(
-                  labelText: 'Destination',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                items: destinations
+                value: _destId,
+                decoration: _dec('Destination', Icons.place),
+                items: _destinations
                     .map((d) => DropdownMenuItem<int>(
                           value: d['destination_id'] as int,
-                          child: Text(d['name'] as String? ?? 'Unknown'),
+                          child: Text(d['name'] as String? ?? ''),
                         ))
                     .toList(),
-                onChanged: (value) => setState(() => selectedDestinationId = value),
-                validator: (value) =>
-                    value == null ? 'Please select a destination' : null,
+                onChanged: _onDestinationChange,
+                validator: (v) => v == null ? 'Select a destination' : null,
+              ),
+              const SizedBox(height: 16),
+              _DateField(
+                label: 'Booking Date',
+                value: _bookingDate,
+                firstDate: DateTime.now(),
+                onPicked: (d) => setState(() => _bookingDate = d),
+              ),
+              const SizedBox(height: 16),
+              _DateField(
+                label: 'Travel Date (optional)',
+                value: _travelDate,
+                firstDate: _bookingDate ?? DateTime.now(),
+                onPicked: (d) => setState(() => _travelDate = d),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      initialValue: '1',
+                      keyboardType: TextInputType.number,
+                      decoration: _dec('Duration (days)', Icons.schedule),
+                      validator: (v) {
+                        final n = int.tryParse(v ?? '');
+                        if (n == null || n < 1) return 'Min 1 day';
+                        return null;
+                      },
+                      onChanged: (v) =>
+                          setState(() => _duration = int.tryParse(v) ?? 1),
+                      onSaved: (v) => _duration = int.tryParse(v ?? '1') ?? 1,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: TextFormField(
+                      initialValue: '1',
+                      keyboardType: TextInputType.number,
+                      decoration: _dec('Travelers', Icons.people),
+                      validator: (v) {
+                        final n = int.tryParse(v ?? '');
+                        if (n == null || n < 1) return 'Min 1';
+                        return null;
+                      },
+                      onChanged: (v) =>
+                          setState(() => _travelers = int.tryParse(v) ?? 1),
+                      onSaved: (v) =>
+                          _travelers = int.tryParse(v ?? '1') ?? 1,
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 16),
               TextFormField(
-                readOnly: true,
-                decoration: InputDecoration(
-                  labelText: 'Booking Date',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  suffixIcon: const Icon(Icons.calendar_today),
-                ),
-                controller: TextEditingController(
-                  text: selectedDate?.toLocal().toString().split(' ')[0] ?? '',
-                ),
-                onTap: () async {
-                  final picked = await showDatePicker(
-                    context: context,
-                    initialDate: DateTime.now(),
-                    firstDate: DateTime.now(),
-                    lastDate: DateTime.now().add(const Duration(days: 365)),
-                  );
-                  if (picked != null) setState(() => selectedDate = picked);
-                },
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                initialValue: '1',
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                  labelText: 'Duration (days)',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                onSaved: (value) => duration = int.parse(value ?? '1'),
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                decoration: InputDecoration(
-                  labelText: 'Notes (optional)',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
+                decoration: _dec('Notes (optional)', Icons.note),
                 maxLines: 3,
-                onSaved: (value) => notes = value ?? '',
+                onSaved: (v) => _notes = v ?? '',
+              ),
+              const SizedBox(height: 24),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  children: [
+                    _summaryRow('Rate per day', '\$$_pricePerDay'),
+                    _summaryRow('Duration', '$_duration day${_duration > 1 ? 's' : ''}'),
+                    _summaryRow('Travelers', '$_travelers'),
+                    const Divider(),
+                    _summaryRow(
+                      'Estimated Total',
+                      '\$${_total.toStringAsFixed(2)}',
+                      bold: true,
+                    ),
+                  ],
+                ),
               ),
               const SizedBox(height: 24),
               ElevatedButton(
-                onPressed: loading ? null : _createBooking,
-                child: loading
+                onPressed: _submitting ? null : _submit,
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
+                child: _submitting
                     ? const SizedBox(
                         height: 20,
                         width: 20,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : const Text('Create Booking'),
+                    : const Text('Create Booking', style: TextStyle(fontSize: 16)),
               ),
             ],
           ),
@@ -313,7 +483,28 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
       ),
     );
   }
+
+  InputDecoration _dec(String label, IconData icon) => InputDecoration(
+        labelText: label,
+        prefixIcon: Icon(icon),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+      );
+
+  Widget _summaryRow(String label, String value, {bool bold = false}) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(label, style: const TextStyle(color: Colors.grey)),
+            Text(value,
+                style: TextStyle(
+                    fontWeight: bold ? FontWeight.bold : FontWeight.normal)),
+          ],
+        ),
+      );
 }
+
+// ─── BookingDetailsScreen ─────────────────────────────────────────────────────
 
 class BookingDetailsScreen extends StatefulWidget {
   final int bookingId;
@@ -325,196 +516,476 @@ class BookingDetailsScreen extends StatefulWidget {
 }
 
 class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
-  Map<String, dynamic>? booking;
-  bool loading = true;
+  Map<String, dynamic>? _booking;
+  bool _loading = true;
+  bool _cancelling = false;
+  bool _requestingRefund = false;
 
   @override
   void initState() {
     super.initState();
-    _loadBooking();
+    _load();
   }
 
-  Future<void> _loadBooking() async {
+  Future<void> _load() async {
     try {
-      final response =
-          await ApiService.getRequest('/bookings/${widget.bookingId}');
-      if (mounted && response['success'] == true) {
+      final r = await ApiService.getRequest('/bookings/${widget.bookingId}');
+      if (mounted && r['success'] == true) {
         setState(() {
-          booking = response['booking'] as Map<String, dynamic>?;
-          loading = false;
+          _booking = r['booking'] as Map<String, dynamic>?;
+          _loading = false;
         });
+      } else if (mounted) {
+        setState(() => _loading = false);
       }
-    } catch (e) {
-      if (mounted) setState(() => loading = false);
+    } catch (_) {
+      if (mounted) setState(() => _loading = false);
     }
   }
 
-  Future<void> _updateStatus(String newStatus) async {
+  Future<void> _cancel() async {
+    final reason = await _askCancelReason();
+    if (reason == null) return;
+
+    setState(() => _cancelling = true);
     try {
-      final response = await ApiService.putRequest(
-        '/bookings/${widget.bookingId}/status',
-        {'status': newStatus},
+      final r = await ApiService.postRequest(
+        '/bookings/${widget.bookingId}/cancel',
+        {'reason': reason},
       );
-      if (response['success'] == true && mounted) {
-        setState(() => booking!['status'] = newStatus);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Status updated')),
-        );
+      if (!mounted) return;
+      if (r['success'] == true) {
+        _snack('Booking cancelled', success: true);
+        _load();
+      } else {
+        _snack(r['error'] as String? ?? 'Failed to cancel');
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
-      }
+      if (mounted) _snack('Error: $e');
+    } finally {
+      if (mounted) setState(() => _cancelling = false);
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    if (loading) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('Booking Details')),
-        body: const Center(child: CircularProgressIndicator()),
-      );
-    }
-
-    if (booking == null) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('Booking Details')),
-        body: const Center(child: Text('Booking not found')),
-      );
-    }
-
-    final b = booking!;
-    return Scaffold(
-      appBar: AppBar(title: const Text('Booking Details')),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+  Future<String?> _askCancelReason() {
+    final controller = TextEditingController();
+    return showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Cancel Booking'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: Image.network(
-                b['image_url'] as String? ?? '',
-                height: 250,
-                width: double.infinity,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
-                    height: 250,
-                    decoration: BoxDecoration(
-                      color: Colors.grey[300],
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(Icons.image, size: 80),
-                  );
-                },
+            const Text('Are you sure you want to cancel this booking?',
+                style: TextStyle(color: Colors.grey)),
+            const SizedBox(height: 12),
+            TextField(
+              controller: controller,
+              decoration: const InputDecoration(
+                labelText: 'Reason (optional)',
+                border: OutlineInputBorder(),
               ),
+              maxLines: 2,
             ),
-            const SizedBox(height: 16),
-            Text(
-              b['destination_name'] as String? ?? 'Unknown',
-              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            Chip(
-              label: Text(b['status'] as String? ?? 'Planned'),
-              backgroundColor: _getStatusColor(b['status'] as String?),
-            ),
-            const SizedBox(height: 16),
-            _buildInfoRow('Booking Date', b['booking_date'] as String?),
-            _buildInfoRow('Duration', '${b['estimated_duration_days']} days'),
-            _buildInfoRow('User', b['full_name'] as String?),
-            if (b['notes'] != null && (b['notes'] as String).isNotEmpty)
-              _buildInfoRow('Notes', b['notes'] as String?),
-            const SizedBox(height: 24),
-            const Text('Update Status', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              children: ['Planned', 'Active', 'Completed']
-                  .map((status) => OutlinedButton(
-                        onPressed: () => _updateStatus(status),
-                        child: Text(status),
-                      ))
-                  .toList(),
-            ),
-            const SizedBox(height: 24),
-            if (b['payment_status'] == 'Paid')
-              Row(
-                children: [
-                  const Icon(Icons.check_circle, color: Colors.green),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Payment Completed',
-                    style: TextStyle(
-                      color: Colors.green[700],
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
-                  ),
-                ],
-              )
-            else
-              ElevatedButton.icon(
-                onPressed: () async {
-                  final paid = await Navigator.push<bool>(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => PaymentPage(
-                        bookingId: b['booking_id'] as int,
-                        destinationName: b['destination_name'] as String? ?? 'Booking',
-                        durationDays: (b['estimated_duration_days'] as num?)?.toInt() ?? 1,
-                      ),
-                    ),
-                  );
-                  if (paid == true) _loadBooking();
-                },
-                icon: const Icon(Icons.payment),
-                label: const Text('Pay Now'),
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 24),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-              ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildInfoRow(String label, String? value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        children: [
-          Text(
-            '$label:',
-            style: const TextStyle(fontWeight: FontWeight.w500),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Keep Booking'),
           ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(value ?? 'N/A', textAlign: TextAlign.end),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.pop(ctx, controller.text.trim()),
+            child: const Text('Cancel Booking',
+                style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
     );
   }
 
-  Color _getStatusColor(String? status) {
-    switch (status) {
-      case 'Planned':
-        return Colors.blue.withValues(alpha: 0.3);
-      case 'Active':
-        return Colors.green.withValues(alpha: 0.3);
-      case 'Completed':
-        return Colors.grey.withValues(alpha: 0.3);
-      default:
-        return Colors.grey.withValues(alpha: 0.3);
+  Future<void> _requestRefund() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Request Refund'),
+        content: const Text(
+          'Submit a refund request for this booking?\n\n'
+          'Our team will review it within 24-48 hours.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Request Refund'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    setState(() => _requestingRefund = true);
+    try {
+      final ok = await PaymentService.requestRefund(widget.bookingId);
+      if (!mounted) return;
+      _snack(
+        ok
+            ? 'Refund request submitted — admin will review within 24-48 hours'
+            : 'Failed to submit refund request',
+        success: ok,
+      );
+    } catch (e) {
+      if (mounted) _snack('Error: $e');
+    } finally {
+      if (mounted) setState(() => _requestingRefund = false);
     }
+  }
+
+  void _snack(String msg, {bool success = false}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(msg),
+      backgroundColor: success ? Colors.green : null,
+    ));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_loading) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Booking Details')),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+    if (_booking == null) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Booking Details')),
+        body: const Center(child: Text('Booking not found')),
+      );
+    }
+
+    final b = _booking!;
+    final status = b['status'] as String? ?? 'Pending';
+    final payStatus = b['payment_status'] as String? ?? 'Unpaid';
+    final amount = (b['total_amount'] as num?)?.toDouble() ?? 0.0;
+    final canPay = payStatus == 'Unpaid' &&
+        (status == 'Pending' || status == 'Awaiting Payment');
+    final canCancel = !['Completed', 'Cancelled', 'Refunded'].contains(status);
+    final canRequestRefund = payStatus == 'Paid' &&
+        ['Confirmed', 'Active', 'Cancelled'].contains(status);
+    final color = _statusColor(status);
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Booking Details'),
+        actions: [
+          if (canCancel)
+            IconButton(
+              icon: const Icon(Icons.cancel_outlined),
+              tooltip: 'Cancel Booking',
+              onPressed: _cancelling ? null : _cancel,
+            ),
+        ],
+      ),
+      body: RefreshIndicator(
+        onRefresh: _load,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (b['image_url'] != null)
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.network(
+                    b['image_url'] as String,
+                    height: 200,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => Container(
+                      height: 200,
+                      decoration: BoxDecoration(
+                          color: Colors.grey[200],
+                          borderRadius: BorderRadius.circular(12)),
+                      child: const Icon(Icons.image, size: 60),
+                    ),
+                  ),
+                ),
+              const SizedBox(height: 16),
+              Text(
+                b['destination_name'] as String? ?? 'Unknown',
+                style: const TextStyle(
+                    fontSize: 22, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  _StatusBadge(status: status, color: color),
+                  const SizedBox(width: 8),
+                  _PayBadge(payStatus: payStatus),
+                ],
+              ),
+              const SizedBox(height: 20),
+              _Section(
+                title: 'Booking Info',
+                children: [
+                  _InfoRow('Booking ID', '#${b['booking_id']}'),
+                  _InfoRow('Booking Date', b['booking_date'] as String?),
+                  _InfoRow('Travel Date', b['travel_date'] as String?),
+                  _InfoRow(
+                    'Duration',
+                    '${b['estimated_duration_days'] ?? 1} day(s)',
+                  ),
+                  _InfoRow(
+                    'Travelers',
+                    '${b['num_travelers'] ?? 1} person(s)',
+                  ),
+                  if (b['notes'] != null &&
+                      (b['notes'] as String).isNotEmpty)
+                    _InfoRow('Notes', b['notes'] as String),
+                ],
+              ),
+              const SizedBox(height: 16),
+              _Section(
+                title: 'Payment',
+                children: [
+                  _InfoRow('Total Amount',
+                      '\$${amount.toStringAsFixed(2)}'),
+                  _InfoRow('Payment Status', payStatus),
+                  if (b['payment_intent_id'] != null)
+                    _InfoRow('Transaction',
+                        b['payment_intent_id'] as String),
+                ],
+              ),
+              const SizedBox(height: 24),
+              if (canPay)
+                ElevatedButton.icon(
+                  onPressed: () async {
+                    final paid = await Navigator.push<bool>(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => PaymentPage(
+                          bookingId: b['booking_id'] as int,
+                          destinationName:
+                              b['destination_name'] as String? ?? 'Booking',
+                          durationDays:
+                              (b['estimated_duration_days'] as num?)
+                                      ?.toInt() ??
+                                  1,
+                          numTravelers:
+                              (b['num_travelers'] as num?)?.toInt() ?? 1,
+                          pricePerDay:
+                              (b['average_cost'] as num?)?.toDouble() ??
+                                  50.0,
+                          totalAmount: amount,
+                        ),
+                      ),
+                    );
+                    if (paid == true) _load();
+                  },
+                  icon: const Icon(Icons.payment),
+                  label: Text('Pay Now — \$${amount.toStringAsFixed(2)}'),
+                  style: ElevatedButton.styleFrom(
+                    minimumSize: const Size.fromHeight(52),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+              if (canCancel && !canPay) const SizedBox(height: 8),
+              if (canCancel)
+                OutlinedButton.icon(
+                  onPressed: _cancelling ? null : _cancel,
+                  icon: _cancelling
+                      ? const SizedBox(
+                          height: 16,
+                          width: 16,
+                          child:
+                              CircularProgressIndicator(strokeWidth: 2))
+                      : const Icon(Icons.cancel_outlined),
+                  label: const Text('Cancel Booking'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.red,
+                    side: const BorderSide(color: Colors.red),
+                    minimumSize: const Size.fromHeight(52),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+              if (canRequestRefund) ...[
+                const SizedBox(height: 8),
+                OutlinedButton.icon(
+                  onPressed: _requestingRefund ? null : _requestRefund,
+                  icon: _requestingRefund
+                      ? const SizedBox(
+                          height: 16,
+                          width: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2))
+                      : const Icon(Icons.currency_exchange),
+                  label: const Text('Request Refund'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.purple,
+                    side: const BorderSide(color: Colors.purple),
+                    minimumSize: const Size.fromHeight(52),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+              ],
+              const SizedBox(height: 16),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Reusable Widgets ─────────────────────────────────────────────────────────
+
+class _StatusBadge extends StatelessWidget {
+  final String status;
+  final Color color;
+  const _StatusBadge({required this.status, required this.color});
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.15),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: color.withValues(alpha: 0.4)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(_statusIcon(status), size: 14, color: color),
+            const SizedBox(width: 4),
+            Text(status,
+                style: TextStyle(
+                    color: color,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600)),
+          ],
+        ),
+      );
+}
+
+class _PayBadge extends StatelessWidget {
+  final String payStatus;
+  const _PayBadge({required this.payStatus});
+
+  @override
+  Widget build(BuildContext context) {
+    final color = payStatus == 'Paid'
+        ? Colors.green
+        : payStatus == 'Refunded'
+            ? Colors.purple
+            : Colors.orange;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        payStatus,
+        style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w600),
+      ),
+    );
+  }
+}
+
+class _Section extends StatelessWidget {
+  final String title;
+  final List<Widget> children;
+  const _Section({required this.title, required this.children});
+
+  @override
+  Widget build(BuildContext context) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title,
+              style: const TextStyle(
+                  fontSize: 15, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          Card(
+            margin: EdgeInsets.zero,
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12)),
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(children: children),
+            ),
+          ),
+        ],
+      );
+}
+
+class _InfoRow extends StatelessWidget {
+  final String label;
+  final String? value;
+  const _InfoRow(this.label, this.value);
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Row(
+          children: [
+            Text('$label:',
+                style: const TextStyle(
+                    fontWeight: FontWeight.w500, fontSize: 13)),
+            const Spacer(),
+            Flexible(
+              child: Text(
+                value ?? 'N/A',
+                textAlign: TextAlign.end,
+                style: const TextStyle(fontSize: 13),
+              ),
+            ),
+          ],
+        ),
+      );
+}
+
+class _DateField extends StatelessWidget {
+  final String label;
+  final DateTime? value;
+  final DateTime firstDate;
+  final ValueChanged<DateTime> onPicked;
+
+  const _DateField({
+    required this.label,
+    this.value,
+    required this.firstDate,
+    required this.onPicked,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return TextFormField(
+      readOnly: true,
+      controller: TextEditingController(
+        text: value != null ? DateFormat('yyyy-MM-dd').format(value!) : '',
+      ),
+      decoration: InputDecoration(
+        labelText: label,
+        prefixIcon: const Icon(Icons.calendar_today),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+      ),
+      onTap: () async {
+        final picked = await showDatePicker(
+          context: context,
+          initialDate: value ?? firstDate,
+          firstDate: firstDate,
+          lastDate: DateTime.now().add(const Duration(days: 730)),
+        );
+        if (picked != null) onPicked(picked);
+      },
+    );
   }
 }

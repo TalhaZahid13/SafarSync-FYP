@@ -3,32 +3,24 @@ import 'package:flutter_stripe/flutter_stripe.dart';
 import 'api_service.dart';
 
 class PaymentService {
-  /// Creates a Stripe PaymentIntent on the backend, shows the payment sheet,
-  /// then confirms the payment record once the sheet succeeds.
-  ///
-  /// [amountInCents] — e.g. $50.00 = 5000
-  /// Throws [StripeException] if the user cancels the sheet.
-  /// Throws [Exception] for backend/network errors.
-  static Future<void> pay({
+  /// Creates a Stripe PaymentIntent, shows the payment sheet, confirms on backend.
+  /// Returns the backend payment record ID on success, or null if not available.
+  static Future<int?> pay({
     required int bookingId,
     required int amountInCents,
   }) async {
-    // 1. Ask backend to create a PaymentIntent and return clientSecret
     final intentResponse = await ApiService.postRequest(
       '/payments/create-intent',
       {'booking_id': bookingId, 'amount': amountInCents},
     );
 
     if (intentResponse['success'] != true) {
-      throw Exception(
-        intentResponse['error'] ?? 'Failed to create payment intent',
-      );
+      throw Exception(intentResponse['error'] ?? 'Failed to create payment intent');
     }
 
     final clientSecret = intentResponse['clientSecret'] as String;
     final paymentIntentId = intentResponse['paymentIntentId'] as String;
 
-    // 2. Initialize the Stripe payment sheet
     await Stripe.instance.initPaymentSheet(
       paymentSheetParameters: SetupPaymentSheetParameters(
         paymentIntentClientSecret: clientSecret,
@@ -37,10 +29,8 @@ class PaymentService {
       ),
     );
 
-    // 3. Present the sheet — throws StripeException if user cancels
     await Stripe.instance.presentPaymentSheet();
 
-    // 4. Record the confirmed payment on the backend
     final confirmResponse = await ApiService.postRequest('/payments/confirm', {
       'booking_id': bookingId,
       'payment_intent_id': paymentIntentId,
@@ -48,8 +38,28 @@ class PaymentService {
 
     if (confirmResponse['success'] != true) {
       throw Exception(
-        confirmResponse['error'] ?? 'Payment succeeded but confirmation failed',
-      );
+          confirmResponse['error'] ?? 'Payment succeeded but confirmation failed');
     }
+
+    return confirmResponse['payment_id'] as int?;
+  }
+
+  static Future<List<dynamic>> getHistory() async {
+    final r = await ApiService.getRequest('/payments/history');
+    return r['payments'] as List? ?? [];
+  }
+
+  static Future<Map<String, dynamic>?> getReceipt(int paymentId) async {
+    final r = await ApiService.getRequest('/payments/$paymentId/receipt');
+    if (r['success'] == true) return r['receipt'] as Map<String, dynamic>?;
+    return null;
+  }
+
+  static Future<bool> requestRefund(int bookingId) async {
+    final r = await ApiService.postRequest(
+      '/payments/refund',
+      {'booking_id': bookingId},
+    );
+    return r['success'] == true;
   }
 }
