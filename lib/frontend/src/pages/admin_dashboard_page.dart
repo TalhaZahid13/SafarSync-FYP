@@ -31,11 +31,13 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
   List<Map<String, dynamic>> _users = [];
   List<Map<String, dynamic>> _trips = [];
   List<Map<String, dynamic>> _alerts = [];
+  List<Map<String, dynamic>> _packages = [];
 
   bool _loadingStats = true;
   bool _loadingUsers = true;
   bool _loadingTrips = true;
   bool _loadingAlerts = true;
+  bool _loadingPackages = false;
 
   String? _userSearch;
   final _searchCtrl = TextEditingController();
@@ -43,7 +45,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
   @override
   void initState() {
     super.initState();
-    _tabs = TabController(length: 5, vsync: this)
+    _tabs = TabController(length: 6, vsync: this)
       ..addListener(() {
         if (!_tabs.indexIsChanging) _loadTabIfNeeded(_tabs.index);
       });
@@ -166,7 +168,34 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
       case 1: if (_users.isEmpty) _loadUsers(); break;
       case 2: if (_trips.isEmpty) _loadTrips(); break;
       case 3: if (_alerts.isEmpty) _loadAlerts(); break;
+      case 5: if (_packages.isEmpty) _loadTourPackages(); break;
     }
+  }
+
+  Future<void> _loadTourPackages() async {
+    setState(() => _loadingPackages = true);
+    try {
+      final r = await ApiService.adminGetRequest('/admin/tours');
+      if (mounted && r['success'] == true) {
+        setState(() {
+          _packages = List<Map<String, dynamic>>.from(
+            (r['packages'] as List?)?.map((e) => Map<String, dynamic>.from(e)) ?? [],
+          );
+          _loadingPackages = false;
+        });
+      } else {
+        if (mounted) setState(() => _loadingPackages = false);
+      }
+    } catch (_) {
+      if (mounted) setState(() => _loadingPackages = false);
+    }
+  }
+
+  Future<void> _deleteTourPackage(int id) async {
+    final r = await ApiService.adminDeleteRequest('/admin/tours/$id');
+    if (!mounted) return;
+    _snack(r['success'] == true ? 'Package deleted' : (r['message'] ?? 'Failed'));
+    if (r['success'] == true) _loadTourPackages();
   }
 
   // ── User moderation actions ───────────────────────────────────────────────
@@ -317,6 +346,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
             ),
             const Tab(icon: Icon(Icons.people), text: 'Users'),
             const Tab(icon: Icon(Icons.map), text: 'Trips'),
+
             Tab(
               icon: Badge(
                 isLabelVisible: _alerts
@@ -338,6 +368,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
               ),
               text: 'Live Map',
             ),
+            const Tab(icon: Icon(Icons.local_offer_rounded), text: 'Packages'),
           ],
         ),
       ),
@@ -371,6 +402,12 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
             onRefresh: _loadAlerts,
           ),
           const _EmergencyMapTab(),
+          _TourPackagesTab(
+            packages: _packages,
+            loading: _loadingPackages,
+            onRefresh: _loadTourPackages,
+            onDelete: _deleteTourPackage,
+          ),
         ],
       ),
     );
@@ -2006,3 +2043,146 @@ Widget _emptyState(IconData icon, String msg) => Center(
         ],
       ),
     );
+
+// ─── Tour Packages Admin Tab ──────────────────────────────────────────────────
+
+class _TourPackagesTab extends StatelessWidget {
+  final List<Map<String, dynamic>> packages;
+  final bool loading;
+  final VoidCallback onRefresh;
+  final Future<void> Function(int) onDelete;
+
+  const _TourPackagesTab({
+    required this.packages,
+    required this.loading,
+    required this.onRefresh,
+    required this.onDelete,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (loading) return const Center(child: CircularProgressIndicator());
+
+    return RefreshIndicator(
+      onRefresh: () async => onRefresh(),
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: Row(
+              children: [
+                const Expanded(
+                  child: Text(
+                    'Sasta Tour Packages',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                ),
+                Text(
+                  '${packages.length} packages',
+                  style: const TextStyle(color: Colors.grey, fontSize: 12),
+                ),
+                const SizedBox(width: 8),
+                IconButton(
+                  icon: const Icon(Icons.refresh, size: 20),
+                  onPressed: onRefresh,
+                  tooltip: 'Refresh',
+                ),
+              ],
+            ),
+          ),
+          if (packages.isEmpty)
+            Expanded(child: _emptyState(Icons.local_offer_rounded, 'No tour packages found.\nRun migration_v6.sql to seed data.'))
+          else
+            Expanded(
+              child: ListView.separated(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                itemCount: packages.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 10),
+                itemBuilder: (ctx, i) => _PackageAdminCard(
+                  pkg: packages[i],
+                  onDelete: () => onDelete(packages[i]['package_id'] as int),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PackageAdminCard extends StatelessWidget {
+  final Map<String, dynamic> pkg;
+  final VoidCallback onDelete;
+
+  const _PackageAdminCard({required this.pkg, required this.onDelete});
+
+  @override
+  Widget build(BuildContext context) {
+    final price = (pkg['total_price'] as num?)?.toDouble() ?? 0;
+    final days = pkg['duration_days'] as int? ?? 0;
+    final category = pkg['category'] as String? ?? 'General';
+    final active = pkg['is_active'] == true || pkg['is_active'] == 1;
+
+    return Card(
+      elevation: 1,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        leading: CircleAvatar(
+          backgroundColor: const Color(0xFF1B5A6E).withValues(alpha: 0.15),
+          child: const Icon(Icons.local_offer_rounded, color: Color(0xFF1B5A6E), size: 20),
+        ),
+        title: Text(
+          pkg['title'] as String? ?? 'Package',
+          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+        ),
+        subtitle: Text(
+          '$category · $days days · PKR ${price.toStringAsFixed(0)}',
+          style: const TextStyle(fontSize: 12),
+        ),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: active ? Colors.green.withValues(alpha: 0.1) : Colors.red.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                active ? 'Active' : 'Inactive',
+                style: TextStyle(
+                  fontSize: 10,
+                  color: active ? Colors.green.shade700 : Colors.red.shade700,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.delete_outline_rounded, color: Colors.red, size: 20),
+              onPressed: () async {
+                final ok = await showDialog<bool>(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    title: const Text('Delete Package'),
+                    content: const Text('This will deactivate the package. Users won\'t see it anymore.'),
+                    actions: [
+                      TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+                      TextButton(
+                        onPressed: () => Navigator.pop(ctx, true),
+                        style: TextButton.styleFrom(foregroundColor: Colors.red),
+                        child: const Text('Delete'),
+                      ),
+                    ],
+                  ),
+                );
+                if (ok == true) onDelete();
+              },
+              tooltip: 'Deactivate package',
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

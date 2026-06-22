@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../utils/api_service.dart';
 import 'smart_route_page.dart';
+import 'bookings_page.dart';
 
 class ExplorePage extends StatefulWidget {
   const ExplorePage({super.key});
@@ -243,37 +244,34 @@ class _ExplorePageState extends State<ExplorePage> {
                       // Action buttons
                       Row(
                         children: [
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              onPressed: () async {
-                                final rawId =
-                                    dest['id'] ?? dest['destination_id'];
-                                final id = int.tryParse('$rawId');
-                                if (id == null) return;
-                                Navigator.pop(sheetCtx);
-                                final res = await ApiService.addToWishlist(
-                                  destinationId: id,
-                                );
-                                if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                        res['success'] == true
-                                            ? 'Added to wishlist!'
-                                            : res['message'] ??
-                                                'Already in wishlist',
-                                      ),
+                          OutlinedButton.icon(
+                            onPressed: () async {
+                              final rawId =
+                                  dest['id'] ?? dest['destination_id'];
+                              final id = int.tryParse('$rawId');
+                              if (id == null) return;
+                              Navigator.pop(sheetCtx);
+                              final res = await ApiService.addToWishlist(
+                                destinationId: id,
+                              );
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      res['success'] == true
+                                          ? 'Added to wishlist!'
+                                          : res['message'] ??
+                                              'Already in wishlist',
                                     ),
-                                  );
-                                }
-                              },
-                              icon: const Icon(Icons.favorite_border),
-                              label: const Text('Wishlist'),
-                            ),
+                                  ),
+                                );
+                              }
+                            },
+                            icon: const Icon(Icons.favorite_border),
+                            label: const Text('Wishlist'),
                           ),
-                          const SizedBox(width: 12),
+                          const SizedBox(width: 8),
                           Expanded(
-                            flex: 2,
                             child: ElevatedButton.icon(
                               onPressed: () {
                                 Navigator.pop(sheetCtx);
@@ -287,13 +285,41 @@ class _ExplorePageState extends State<ExplorePage> {
                               icon: const Icon(Icons.map_outlined,
                                   color: Colors.white),
                               label: const Text(
-                                'Plan Route',
+                                'Route',
                                 style: TextStyle(color: Colors.white),
                               ),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: colorScheme.primary,
                                 padding:
-                                    const EdgeInsets.symmetric(vertical: 14),
+                                    const EdgeInsets.symmetric(vertical: 12),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: () {
+                                Navigator.pop(sheetCtx);
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const CreateBookingScreen(),
+                                  ),
+                                );
+                              },
+                              icon: const Icon(Icons.confirmation_number_outlined,
+                                  color: Colors.white),
+                              label: const Text(
+                                'Book Now',
+                                style: TextStyle(color: Colors.white),
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF2CAFBC),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 12),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),

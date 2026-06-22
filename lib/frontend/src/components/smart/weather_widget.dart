@@ -1,13 +1,15 @@
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart' show compute;
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 
+import '../../pages/weather_forecast_page.dart';
 import '../../utils/api_service.dart';
-import 'dart:convert';
 
 // In-memory weather cache shared across all WeatherWidget instances.
 // Avoids re-fetching GPS + HTTP on every tab switch while data is fresh.
@@ -340,6 +342,26 @@ class _WeatherWidgetState extends State<WeatherWidget> {
     );
   }
 
+  void _openForecastPage() {
+    if (_latitude == null || _longitude == null) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => WeatherForecastPage(
+          initialLat: _latitude,
+          initialLng: _longitude,
+          initialCity: _locationText,
+          initialTemp: _temperature,
+          initialCondition: _condition,
+          initialWeatherCode: _weatherCode,
+          initialHumidity: _humidity,
+          initialWindSpeed: _windSpeed,
+          initialFeelsLike: _feelsLike,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -347,6 +369,8 @@ class _WeatherWidgetState extends State<WeatherWidget> {
     while (forecastItems.length < 4) {
       forecastItems.add({'date': '', 'high_temp': '--', 'weather_code': -1});
     }
+
+    final canTap = _latitude != null && _longitude != null;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -361,118 +385,151 @@ class _WeatherWidgetState extends State<WeatherWidget> {
           ),
         ),
         const SizedBox(height: 10),
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: theme.cardColor.withValues(alpha: 0.92),
+        Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: canTap ? _openForecastPage : null,
             borderRadius: BorderRadius.circular(18),
-          ),
-          child: Column(
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: theme.cardColor.withValues(alpha: 0.92),
+                borderRadius: BorderRadius.circular(18),
+              ),
+              child: Column(
                 children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          _locationText,
-                          style: TextStyle(
-                            color: theme.textTheme.bodyMedium?.color,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        if (_latitude != null && _longitude != null)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 4),
-                            child: Text(
-                              'Lat ${_latitude!.toStringAsFixed(5)}, Lng ${_longitude!.toStringAsFixed(5)}',
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _locationText,
                               style: TextStyle(
-                                color: theme.textTheme.bodySmall?.color,
-                                fontSize: 10,
+                                color: theme.textTheme.bodyMedium?.color,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
                               ),
                             ),
-                          ),
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            Flexible(
-                              child: Text(
-                                '$_condition ${_temperature ?? '--'}°',
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.w800,
-                                  color: theme.textTheme.bodyMedium?.color,
+                            if (_latitude != null && _longitude != null)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 4),
+                                child: Text(
+                                  'Lat ${_latitude!.toStringAsFixed(5)}, Lng ${_longitude!.toStringAsFixed(5)}',
+                                  style: TextStyle(
+                                    color: theme.textTheme.bodySmall?.color,
+                                    fontSize: 10,
+                                  ),
                                 ),
                               ),
-                            ),
-                            const SizedBox(width: 8),
-                            Icon(
-                              _iconFromWeatherCode(_weatherCode),
-                              color: Color(0xFFF59E0B),
-                              size: 28,
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    '$_condition ${_temperature ?? '--'}°',
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.w800,
+                                      color:
+                                          theme.textTheme.bodyMedium?.color,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Icon(
+                                  _iconFromWeatherCode(_weatherCode),
+                                  color: const Color(0xFFF59E0B),
+                                  size: 28,
+                                ),
+                              ],
                             ),
                           ],
                         ),
+                      ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          _metricChip(
+                            Icons.water_drop_outlined,
+                            '${_humidity ?? '--'}%',
+                          ),
+                          const SizedBox(height: 8),
+                          _metricChip(
+                              Icons.air, '${_windSpeed ?? '--'} km/h'),
+                          const SizedBox(height: 8),
+                          _metricChip(
+                            Icons.thermostat,
+                            'Feels ${_feelsLike ?? '--'}°',
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: forecastItems.map((item) {
+                      return Column(
+                        children: [
+                          Text(
+                            _dayLabel('${item['date'] ?? ''}'),
+                            style: TextStyle(
+                              color: theme.textTheme.bodySmall?.color,
+                              fontSize: 11,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Icon(
+                            _iconFromWeatherCode(
+                              (item['weather_code'] as num?)?.toInt() ??
+                                  -1,
+                            ),
+                            size: 18,
+                            color: theme.colorScheme.primary,
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '${item['high_temp'] ?? '--'}°',
+                            style: TextStyle(
+                              color: theme.textTheme.bodyMedium?.color,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      );
+                    }).toList(),
+                  ),
+                  // Tap hint
+                  if (canTap) ...[
+                    const SizedBox(height: 10),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.open_in_full_rounded,
+                            size: 11,
+                            color:
+                                theme.colorScheme.primary.withValues(alpha: 0.6)),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Tap for full forecast',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: theme.colorScheme.primary
+                                .withValues(alpha: 0.6),
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
                       ],
                     ),
-                  ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      _metricChip(
-                        Icons.water_drop_outlined,
-                        '${_humidity ?? '--'}%',
-                      ),
-                      const SizedBox(height: 8),
-                      _metricChip(Icons.air, '${_windSpeed ?? '--'} mph'),
-                      const SizedBox(height: 8),
-                      _metricChip(
-                        Icons.thermostat,
-                        'Feels ${_feelsLike ?? '--'}°',
-                      ),
-                    ],
-                  ),
+                  ],
                 ],
               ),
-              const SizedBox(height: 14),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: forecastItems.map((item) {
-                  return Column(
-                    children: [
-                      Text(
-                        _dayLabel('${item['date'] ?? ''}'),
-                        style: TextStyle(
-                          color: theme.textTheme.bodySmall?.color,
-                          fontSize: 11,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Icon(
-                        _iconFromWeatherCode(
-                          (item['weather_code'] as num?)?.toInt() ?? -1,
-                        ),
-                        size: 18,
-                        color: theme.colorScheme.primary,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '${item['high_temp'] ?? '--'}°',
-                        style: TextStyle(
-                          color: theme.textTheme.bodyMedium?.color,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  );
-                }).toList(),
-              ),
-            ],
+            ),
           ),
         ),
       ],

@@ -25,6 +25,7 @@ import 'src/pages/emergency_sos_screen.dart';
 import 'src/utils/session_manager.dart';
 import 'src/utils/api_service.dart';
 import 'src/utils/auth_storage.dart';
+import 'src/ui/destination_theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -68,8 +69,19 @@ void main() async {
     debugPrint('[SafarSync] ✗ Theme load failed (non-fatal): $e');
   }
 
+  final destinationThemeProvider = DestinationThemeProvider();
+  try {
+    await destinationThemeProvider.init().timeout(const Duration(seconds: 2));
+    debugPrint('[SafarSync] ✓ Destination theme loaded');
+  } catch (e) {
+    debugPrint('[SafarSync] ✗ Destination theme init (non-fatal): $e');
+  }
+
   debugPrint('[SafarSync] ▶ Calling runApp');
-  runApp(SafarSyncApp(themeController: themeController));
+  runApp(SafarSyncApp(
+    themeController: themeController,
+    destinationThemeProvider: destinationThemeProvider,
+  ));
 
   // ── Notifications ─────────────────────────────────────────────────────────
   // Deferred AFTER runApp so that:
@@ -83,13 +95,21 @@ void main() async {
 // ─────────────────────────────────────────────────────────────────────────────
 class SafarSyncApp extends StatelessWidget {
   final ThemeController themeController;
+  final DestinationThemeProvider destinationThemeProvider;
 
-  const SafarSyncApp({super.key, required this.themeController});
+  const SafarSyncApp({
+    super.key,
+    required this.themeController,
+    required this.destinationThemeProvider,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider.value(
-      value: themeController,
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider.value(value: themeController),
+        ChangeNotifierProvider.value(value: destinationThemeProvider),
+      ],
       child: Consumer<ThemeController>(
         builder: (context, controller, _) {
           return MaterialApp(
@@ -446,7 +466,10 @@ class _AppState extends State<App> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     NotificationService.instance.startListening();
     _sosTileChannel.setMethodCallHandler(_onSosTileMethod);
-    WidgetsBinding.instance.addPostFrameCallback((_) => _checkPendingSos());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkPendingSos();
+      context.read<DestinationThemeProvider>().checkActiveBooking().ignore();
+    });
     SessionManager.recordActivity();
   }
 

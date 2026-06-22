@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../utils/theme_controller.dart';
+import '../ui/destination_theme.dart';
 
 class ProfileSettingsPage extends StatefulWidget {
   const ProfileSettingsPage({super.key});
@@ -127,6 +128,8 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
 
             _buildThemeSelector(context),
 
+            _buildJourneyThemeSelector(context),
+
             const SizedBox(height: 24),
 
             // Form Fields
@@ -227,6 +230,84 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
     );
   }
 
+  Widget _buildJourneyThemeSelector(BuildContext context) {
+    final dtProvider = context.watch<DestinationThemeProvider>();
+    final theme = Theme.of(context);
+
+    // "auto" is represented as defaultTheme with isManual = false
+    final currentValue = dtProvider.isManual ? dtProvider.activeType : null;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(
+                'Journey Theme',
+                style: TextStyle(
+                  color: theme.textTheme.bodyMedium?.color,
+                  fontSize: 12,
+                ),
+              ),
+              const SizedBox(width: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: dtProvider.activeTheme.primary.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  dtProvider.activeTheme.emoji,
+                  style: const TextStyle(fontSize: 11),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Auto-adapts based on your active booking destination',
+            style: TextStyle(
+              color: theme.textTheme.bodySmall?.color,
+              fontSize: 11,
+            ),
+          ),
+          const SizedBox(height: 8),
+          // Auto row
+          _ThemeOptionRow(
+            label: 'Auto (from booking)',
+            emoji: '✨',
+            isSelected: !dtProvider.isManual,
+            color: const Color(0xFF2CAFBC),
+            onTap: () => dtProvider.resetToAuto(),
+          ),
+          const SizedBox(height: 6),
+          // Grid of 7 manual options
+          GridView.count(
+            crossAxisCount: 2,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            mainAxisSpacing: 6,
+            crossAxisSpacing: 6,
+            childAspectRatio: 3.5,
+            children: DestinationTheme.all.map((dt) {
+              final isSelected =
+                  dtProvider.isManual && currentValue == dt.type;
+              return _ThemeOptionRow(
+                label: dt.label,
+                emoji: dt.emoji,
+                isSelected: isSelected,
+                color: dt.primary,
+                onTap: () => dtProvider.setManualTheme(dt.type),
+              );
+            }).toList(),
+          ),
+        ],
+      ),
+    );
+  }
+
   /// Generic text field for most profile inputs
   Widget _inputField(
     String label,
@@ -306,6 +387,66 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ── Journey theme option chip ─────────────────────────────────────────────────
+class _ThemeOptionRow extends StatelessWidget {
+  final String label;
+  final String emoji;
+  final bool isSelected;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _ThemeOptionRow({
+    required this.label,
+    required this.emoji,
+    required this.isSelected,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? color.withValues(alpha: 0.18)
+              : Theme.of(context).cardColor,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: isSelected ? color : Colors.transparent,
+            width: 1.5,
+          ),
+        ),
+        child: Row(
+          children: [
+            Text(emoji, style: const TextStyle(fontSize: 16)),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight:
+                      isSelected ? FontWeight.w600 : FontWeight.normal,
+                  color: isSelected
+                      ? color
+                      : Theme.of(context).textTheme.bodyMedium?.color,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            if (isSelected)
+              Icon(Icons.check_circle_rounded, color: color, size: 14),
+          ],
+        ),
       ),
     );
   }

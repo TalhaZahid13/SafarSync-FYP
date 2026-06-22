@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../utils/responsive.dart';
+import '../../ui/destination_theme.dart';
 
 // Static — allocated once for the lifetime of the app
 const _kNavItems = [
@@ -94,6 +96,7 @@ class _NavButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final inactiveColor = theme.textTheme.bodySmall?.color;
+    final destTheme = context.watch<DestinationThemeProvider>().activeTheme;
 
     return GestureDetector(
       onTap: onTap,
@@ -106,14 +109,7 @@ class _NavButton extends StatelessWidget {
         ),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
-          gradient: isActive
-              ? LinearGradient(
-                  colors: [
-                    theme.colorScheme.secondary,
-                    theme.colorScheme.primary,
-                  ],
-                )
-              : null,
+          gradient: isActive ? destTheme.navActiveGradient : null,
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,

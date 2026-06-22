@@ -8,6 +8,8 @@ import 'emergency_sos_screen.dart';
 import 'emergency_contacts_page.dart';
 import 'notifications_page.dart';
 import 'transaction_history_page.dart';
+import 'wishlist_page.dart';
+import 'wellness_page.dart';
 import '../utils/notification_service.dart';
 import '../auth/login.dart';
 import '../utils/responsive.dart';
@@ -471,6 +473,28 @@ class _ProfilePageView extends StatelessWidget {
                       context,
                       MaterialPageRoute(
                         builder: (_) => const TransactionHistoryPage(),
+                      ),
+                    ),
+                  ),
+                  settingsButton(
+                    context,
+                    LucideIcons.heart,
+                    'My Wishlist',
+                    () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => WishlistPage(),
+                      ),
+                    ),
+                  ),
+                  settingsButton(
+                    context,
+                    LucideIcons.heartPulse,
+                    'Wellness Center',
+                    () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => WellnessPage(),
                       ),
                     ),
                   ),

@@ -5,6 +5,7 @@ import 'bookings_page.dart';
 import 'group_bookings_page.dart';
 import 'group_invitations_page.dart';
 import 'notifications_page.dart';
+import 'sasta_tour_page.dart';
 
 // ─── Brand tokens ─────────────────────────────────────────────────────────────
 const _kPrimary  = Color(0xFF1B5A6E);
@@ -190,6 +191,8 @@ class _SmartDashboardPageState extends State<SmartDashboardPage> {
         onAllBookings:   () => _push(const BookingsPage()),
         onGroupTrips:    () => _push(const GroupBookingsPage()),
         onInvitations:   () => _push(const GroupInvitationsPage()),
+        onSastaTours:    () => _push(const SastaTourPage()),
+        onBudgetPlanner: () => _push(const BudgetPlannerPage()),
         pendingInvites:  _pendingInvites,
       ),
       const SizedBox(height: 24),
@@ -514,6 +517,8 @@ class _QuickActions extends StatelessWidget {
   final VoidCallback onAllBookings;
   final VoidCallback onGroupTrips;
   final VoidCallback onInvitations;
+  final VoidCallback onSastaTours;
+  final VoidCallback onBudgetPlanner;
   final int pendingInvites;
 
   const _QuickActions({
@@ -522,6 +527,8 @@ class _QuickActions extends StatelessWidget {
     required this.onAllBookings,
     required this.onGroupTrips,
     required this.onInvitations,
+    required this.onSastaTours,
+    required this.onBudgetPlanner,
     required this.pendingInvites,
   });
 
@@ -596,6 +603,30 @@ class _QuickActions extends StatelessWidget {
           color: pendingInvites > 0 ? Colors.orange.shade700 : Colors.blueGrey,
           onTap: onInvitations,
           badge: pendingInvites > 0 ? pendingInvites : null,
+        ),
+        const SizedBox(height: 12),
+
+        // ── Budget / Sasta Tours row ─────────────────────────────────────────
+        Row(
+          children: [
+            Expanded(
+              child: _SecondaryCard(
+                icon: Icons.local_offer_rounded,
+                label: 'Sasta Tours',
+                color: const Color(0xFFF59E0B),
+                onTap: onSastaTours,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _SecondaryCard(
+                icon: Icons.account_balance_wallet_rounded,
+                label: 'Budget Planner',
+                color: const Color(0xFF0D47A1),
+                onTap: onBudgetPlanner,
+              ),
+            ),
+          ],
         ),
       ],
     );

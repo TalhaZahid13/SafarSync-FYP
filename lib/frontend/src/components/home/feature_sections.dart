@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../ui/app_theme.dart';
+import '../../pages/virtual_tour_page.dart';
+import '../../pages/sasta_tour_page.dart';
 
 class FeatureSections extends StatelessWidget {
   const FeatureSections({super.key});
@@ -184,50 +186,56 @@ class FeatureSections extends StatelessWidget {
             style: TextStyle(color: Colors.white70, fontSize: 12),
           ),
           const SizedBox(height: 12),
-          Container(
-            height: 132,
-            width: double.infinity,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
-              gradient: const LinearGradient(
-                colors: [Color(0xFF0EA5E9), Color(0xFF2563EB)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
+          GestureDetector(
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const VirtualTourPage()),
             ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(
-                  Icons.play_circle_fill_rounded,
-                  color: Colors.white,
-                  size: 42,
+            child: Container(
+              height: 132,
+              width: double.infinity,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF0EA5E9), Color(0xFF2563EB)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
-                const SizedBox(height: 6),
-                const Text(
-                  'Badshahi Mosque • Lahore',
-                  style: TextStyle(
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.play_circle_fill_rounded,
                     color: Colors.white,
-                    fontWeight: FontWeight.w600,
+                    size: 42,
                   ),
-                ),
-                const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
+                  const SizedBox(height: 6),
+                  const Text(
+                    'Badshahi Mosque • Lahore',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.18),
-                    borderRadius: BorderRadius.circular(999),
-                    border: Border.all(color: Colors.white30),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.18),
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(color: Colors.white30),
+                    ),
+                    child: const Text(
+                      'Start Tour 360°',
+                      style: TextStyle(color: Colors.white, fontSize: 12),
+                    ),
                   ),
-                  child: const Text(
-                    'Start Tour 360°',
-                    style: TextStyle(color: Colors.white, fontSize: 12),
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ],
@@ -237,24 +245,9 @@ class FeatureSections extends StatelessWidget {
 
   Widget _budgetTourPackagesCard(BuildContext context) {
     final packages = [
-      {
-        'name': 'Weekend Gateway',
-        'price': 'Rs 15,000',
-        'days': '3 Days',
-        'locations': '2 Cities',
-      },
-      {
-        'name': 'Adventure Week',
-        'price': 'Rs 30,000',
-        'days': '7 Days',
-        'locations': '4 Cities',
-      },
-      {
-        'name': 'Grand Explorer',
-        'price': 'Rs 50,000',
-        'days': '14 Days',
-        'locations': '6 Cities',
-      },
+      {'name': 'Weekend Escape', 'price': 'Rs 15,000', 'days': '3 Days', 'locations': '3 Cities'},
+      {'name': 'Adventure Week', 'price': 'Rs 35,000', 'days': '7 Days', 'locations': '4 Stops'},
+      {'name': 'Grand Explorer', 'price': 'Rs 55,000', 'days': '14 Days', 'locations': '5 Cities'},
     ];
 
     return _glassCard(
@@ -265,15 +258,21 @@ class FeatureSections extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               _titleRow(Icons.local_offer_rounded, 'Sasta Tour Packages'),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.green.withValues(alpha: 0.25),
-                  borderRadius: BorderRadius.circular(999),
+              GestureDetector(
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const SastaTourPage()),
                 ),
-                child: const Text(
-                  'AI-Curated',
-                  style: TextStyle(color: Colors.white, fontSize: 10),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.green.withValues(alpha: 0.25),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: const Text(
+                    'See All →',
+                    style: TextStyle(color: Colors.white, fontSize: 10),
+                  ),
                 ),
               ),
             ],
@@ -323,35 +322,35 @@ class FeatureSections extends StatelessWidget {
                         const SizedBox(height: 2),
                         Text(
                           '📅 ${pkg['days']}',
-                          style: const TextStyle(
-                            color: Colors.white70,
-                            fontSize: 11,
-                          ),
+                          style: const TextStyle(color: Colors.white70, fontSize: 11),
                         ),
                         Text(
                           '📍 ${pkg['locations']}',
-                          style: const TextStyle(
-                            color: Colors.white70,
-                            fontSize: 11,
-                          ),
+                          style: const TextStyle(color: Colors.white70, fontSize: 11),
                         ),
                         const SizedBox(height: 8),
-                        Container(
-                          width: double.infinity,
-                          alignment: Alignment.center,
-                          padding: const EdgeInsets.symmetric(vertical: 6),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(10),
-                            gradient: const LinearGradient(
-                              colors: [Color(0xFFF59E0B), Color(0xFFEA580C)],
-                            ),
+                        GestureDetector(
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const SastaTourPage()),
                           ),
-                          child: const Text(
-                            'View Details',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 11,
+                          child: Container(
+                            width: double.infinity,
+                            alignment: Alignment.center,
+                            padding: const EdgeInsets.symmetric(vertical: 6),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(10),
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFFF59E0B), Color(0xFFEA580C)],
+                              ),
+                            ),
+                            child: const Text(
+                              'View Details',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 11,
+                              ),
                             ),
                           ),
                         ),

@@ -3,6 +3,8 @@ import '../../pages/safar_ai_chat_page.dart';
 import '../../pages/hotel_finder_page.dart';
 import '../../pages/food_spots_page.dart';
 import '../../pages/smart_route_page.dart';
+import '../../pages/sasta_tour_page.dart';
+import '../../pages/virtual_tour_page.dart';
 
 class QuickAccessCards extends StatelessWidget {
   const QuickAccessCards({super.key});
@@ -38,6 +40,20 @@ class QuickAccessCards extends StatelessWidget {
         gradient: [const Color(0xFF13E8D0), const Color(0xFF72AEBC)],
         destination: const SafarAiChatPage(),
         isPulse: false,
+      ),
+      _CardData(
+        icon: Icons.local_offer_rounded,
+        title: 'Sasta Tours',
+        subtitle: 'Budget Packages',
+        gradient: [const Color(0xFFF59E0B), const Color(0xFFEA580C)],
+        destination: const SastaTourPage(),
+      ),
+      _CardData(
+        icon: Icons.threed_rotation,
+        title: 'Virtual Tour',
+        subtitle: '360° Destinations',
+        gradient: [const Color(0xFF0EA5E9), const Color(0xFF2563EB)],
+        destination: const VirtualTourPage(),
       ),
     ];
 
