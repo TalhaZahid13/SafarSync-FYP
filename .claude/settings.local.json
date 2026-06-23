@@ -55,7 +55,10 @@
       "Bash(python -c \"import sys,json; data=json.load\\(sys.stdin\\); [print\\(x['path']\\) for x in data.get\\('tree',[]\\) if x['type']=='blob']\")",
       "WebFetch(domain:raw.githubusercontent.com)",
       "WebFetch(domain:github.com)",
-      "WebFetch(domain:api.github.com)"
+      "WebFetch(domain:api.github.com)",
+      "Bash(?\\\\w+)",
+      "Bash(grep -oE \"\\(FROM|INTO|JOIN\\)\\\\s+`?\\\\w+`?\")",
+      "Bash(node -e \"require\\('multer'\\); console.log\\('OK'\\)\")"
     ]
   }
 }
