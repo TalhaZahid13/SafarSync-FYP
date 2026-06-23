@@ -3,8 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 class GeminiService {
-  static const String _apiKey =
-      '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';
+  static const String _apiKey = String.fromEnvironment('GROQ_CLIENT_KEY', defaultValue: '');
 
   static const String _endpoint =
       'https://api.groq.com/openai/v1/chat/completions';
@@ -52,6 +51,7 @@ class GeminiService {
   }
 
   static Future<String> _callGroq(List<Map<String, String>> messages) async {
+    if (_apiKey.isEmpty) throw Exception('GROQ_CLIENT_KEY not configured');
     final response = await http
         .post(
           Uri.parse(_endpoint),

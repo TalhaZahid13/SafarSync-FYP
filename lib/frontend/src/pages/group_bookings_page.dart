@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../utils/api_service.dart';
 import 'group_live_tracking_page.dart';
 import 'group_invitations_page.dart';
+import 'group_chat_page.dart';
 
 // ─── Status helpers ───────────────────────────────────────────────────────────
 
@@ -373,8 +374,9 @@ class _CreateGroupBookingScreenState extends State<CreateGroupBookingScreen> {
                   value: _destinationId,
                   decoration: _dec('Destination (optional)', Icons.place),
                   items: _destinations
+                      .where((d) => (d['destination_id'] ?? d['id']) != null)
                       .map((d) => DropdownMenuItem<int>(
-                            value: d['destination_id'] as int,
+                            value: ((d['destination_id'] ?? d['id']) as num).toInt(),
                             child: Text(d['name'] as String? ?? ''),
                           ))
                       .toList(),
@@ -453,8 +455,7 @@ class _GroupBookingDetailsScreenState
   @override
   void initState() {
     super.initState();
-    _loadUserId();
-    _load();
+    _loadUserId().then((_) => _load());
   }
 
   Future<void> _loadUserId() async {
@@ -755,14 +756,28 @@ class _GroupBookingDetailsScreenState
                       label: const Text('Live Tracking'),
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 8),
+                  OutlinedButton.icon(
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => GroupChatPage(
+                          groupId: widget.groupBookingId,
+                          groupName: gb['trip_name'] as String? ?? 'Group Chat',
+                        ),
+                      ),
+                    ),
+                    icon: const Icon(Icons.chat_bubble_outline, size: 16),
+                    label: const Text('Chat'),
+                  ),
+                  const SizedBox(width: 8),
                   OutlinedButton.icon(
                     onPressed: () => Navigator.push(
                       context,
                       MaterialPageRoute(
                           builder: (_) => const GroupInvitationsPage()),
                     ),
-                    icon: const Icon(Icons.mail_outline),
+                    icon: const Icon(Icons.mail_outline, size: 16),
                     label: const Text('Invitations'),
                   ),
                 ],

@@ -260,7 +260,7 @@ class _OfflineMapsPageState extends State<OfflineMapsPage>
                 urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                 userAgentPackageName: 'com.safarsync.safarsync',
                 maxZoom: region.maxZoom.toDouble(),
-                tileBuilder: (ctx, tile, tileImage) => tile,
+                tileProvider: CachedTileProvider(),
               ),
               RichAttributionWidget(
                 attributions: [

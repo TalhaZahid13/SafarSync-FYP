@@ -1,5 +1,8 @@
 import 'dart:math' as math;
+import 'package:flutter/widgets.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart' as p;
 
@@ -113,10 +116,16 @@ class OfflineMapService {
   }
 
   static Future<void> deleteRegion(String name) async {
+    final region = kAvailableRegions.firstWhere(
+      (r) => r.name == name,
+      orElse: () => throw Exception('Region not found: $name'),
+    );
     final db = await _database;
     await db.delete('downloaded_regions', where: 'name = ?', whereArgs: [name]);
-    // Clear all cached tiles (flutter_cache_manager uses shared cache)
-    await DefaultCacheManager().emptyCache();
+    final cache = DefaultCacheManager();
+    for (final url in OfflineMapService.regionTileUrls(region)) {
+      await cache.removeFile(url);
+    }
   }
 
   /// Download all tiles for a region. Calls [onProgress] with 0.0–1.0.
@@ -178,4 +187,27 @@ class OfflineMapService {
 
   static String tileUrl(int z, int x, int y) =>
       _kTileUrl.replaceAll('{z}', '$z').replaceAll('{x}', '$x').replaceAll('{y}', '$y');
+
+  static List<String> regionTileUrls(OfflineRegion region) {
+    final urls = <String>[];
+    for (int z = region.minZoom; z <= region.maxZoom; z++) {
+      final (x0, y0) = _latLonToTile(region.maxLat, region.minLon, z);
+      final (x1, y1) = _latLonToTile(region.minLat, region.maxLon, z);
+      for (int x = x0; x <= x1; x++) {
+        for (int y = y0; y <= y1; y++) {
+          urls.add(tileUrl(z, x, y));
+        }
+      }
+    }
+    return urls;
+  }
+}
+
+class CachedTileProvider extends TileProvider {
+  @override
+  ImageProvider getImage(TileCoordinates coordinates, TileLayer options) {
+    return CachedNetworkImageProvider(
+      getTileUrl(coordinates, options),
+    );
+  }
 }

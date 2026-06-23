@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS virtual_tours (
   is_active       BOOLEAN NOT NULL DEFAULT TRUE,
   created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  FOREIGN KEY (destination_id) REFERENCES destination(destinationId) ON DELETE SET NULL
+  FOREIGN KEY (destination_id) REFERENCES destinations(destination_id) ON DELETE SET NULL
 );
 
 -- ─── virtual_tour_scenes ──────────────────────────────────────────────────────

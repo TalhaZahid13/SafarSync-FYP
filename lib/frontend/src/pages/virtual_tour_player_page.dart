@@ -81,9 +81,20 @@ class _VirtualTourPlayerPageState extends State<VirtualTourPlayerPage> {
   }
 
   Future<void> _loadHtmlAndInjectTour() async {
-    final html = await rootBundle.loadString('assets/virtual_tour_player.html');
+    String html = await rootBundle.loadString('assets/virtual_tour_player.html');
+    // Inline Pannellum assets so the viewer works without internet
+    final pannellumCss = await rootBundle.loadString('assets/pannellum.css');
+    final pannellumJs  = await rootBundle.loadString('assets/pannellum.js');
+    html = html
+        .replaceFirst(
+          '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.css">',
+          '<style>$pannellumCss</style>',
+        )
+        .replaceFirst(
+          '<script src="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.js"></script>',
+          '<script>$pannellumJs</script>',
+        );
     _webCtrl.loadHtmlString(html, baseUrl: 'https://localhost');
-    // Tour data is injected once the page signals 'page_ready'
   }
 
   void _onJsMessage(JavaScriptMessage message) {

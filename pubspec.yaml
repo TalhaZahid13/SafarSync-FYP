@@ -63,6 +63,8 @@ flutter:
   assets:
     - assets/images/logo.png
     - assets/virtual_tour_player.html
+    - assets/pannellum.js
+    - assets/pannellum.css
     - assets/explore_images/fairy_meadows.jpg
     - assets/explore_images/skardu_valley.jpg
     - assets/explore_images/mohenjo_daro.jpg

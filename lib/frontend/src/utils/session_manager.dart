@@ -34,7 +34,8 @@ class SessionManager {
     // Clear all cached user/admin data from SharedPreferences
     final prefs = await SharedPreferences.getInstance();
     for (final key in ['is_admin', 'user_id', 'user_email', 'user_full_name',
-                        'admin_id', 'admin_email', 'admin_full_name', 'admin_role']) {
+                        'admin_id', 'admin_email', 'admin_full_name', 'admin_role',
+                        'firebase_uid', 'auth_provider', 'user_role']) {
       await prefs.remove(key);
     }
 

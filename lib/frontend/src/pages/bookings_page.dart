@@ -677,7 +677,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
         (status == 'Pending' || status == 'Awaiting Payment');
     final canCancel = !['Completed', 'Cancelled', 'Refunded'].contains(status);
     final canRequestRefund = payStatus == 'Paid' &&
-        ['Confirmed', 'Active', 'Cancelled'].contains(status);
+        ['Confirmed', 'Active', 'Cancelled', 'Completed'].contains(status);
     final color = _statusColor(status);
 
     return Scaffold(

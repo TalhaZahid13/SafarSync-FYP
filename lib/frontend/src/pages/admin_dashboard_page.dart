@@ -560,10 +560,10 @@ class _OverviewTab extends StatelessWidget {
     final cards = [
       _StatDef('Total Users',         stats['total_users'],              Icons.people,          Colors.teal),
       _StatDef('Group Bookings',       stats['total_group_bookings'],     Icons.groups,          Colors.purple),
-      _StatDef('Active Trips',         stats['active_trips'],             Icons.map,             Colors.green),
+      _StatDef('Active Trips',         stats['active_group_trips'],        Icons.map,             Colors.green),
       _StatDef('Emergency Alerts',     stats['active_sos'],               Icons.emergency,       Colors.red),
       _StatDef('Single Bookings',      stats['total_bookings'],           Icons.bookmark,        Colors.blue),
-      _StatDef('Live Sessions',        stats['active_tracking_sessions'], Icons.location_on,     Colors.orange),
+      _StatDef('Live Sessions',        stats['active_sessions'],           Icons.location_on,     Colors.orange),
       _StatDef('AI Chats',             stats['ai_chats'],                 Icons.chat_bubble,     Colors.indigo),
       _StatDef('System Health',        stats['system_health'],            Icons.health_and_safety, Colors.cyan),
     ];
@@ -1618,7 +1618,7 @@ class _EmergencyMapTabState extends State<_EmergencyMapTab>
   // ── Data ──────────────────────────────────────────────────────────────────
   Future<void> _load() async {
     try {
-      final resp = await ApiService.getRequest('/admin/emergency-map');
+      final resp = await ApiService.adminGetRequest('/admin/emergency-map');
       if (!mounted) return;
       final rawList = resp['alerts'] as List? ?? [];
       final alerts = rawList.asMap().entries.map((entry) {

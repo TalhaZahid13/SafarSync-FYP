@@ -42,6 +42,8 @@ class _ProfilePageState extends State<ProfilePage> {
   Map<String, dynamic> _stats = {};
   bool _statsLoaded = false;
   int? _mysqlUserId;
+  String? _profileName;
+  String? _city;
 
   @override
   void initState() {
@@ -53,12 +55,22 @@ class _ProfilePageState extends State<ProfilePage> {
     final isAdmin = await ApiService.getIsAdmin();
     final mysqlUserId = await ApiService.getMySqlUserId();
     final statsResp = await ApiService.getRequest('/users/stats');
+    final profileResp = await ApiService.getRequest('/users/profile');
     if (mounted) {
+      String? name;
+      String? city;
+      if (profileResp['success'] == true) {
+        final u = profileResp['user'] as Map<String, dynamic>? ?? {};
+        name = u['full_name'] as String?;
+        city = u['city'] as String?;
+      }
       setState(() {
         _isAdmin = isAdmin;
         _mysqlUserId = mysqlUserId;
         _stats = (statsResp['stats'] as Map<String, dynamic>?) ?? {};
         _statsLoaded = true;
+        _profileName = name;
+        _city = city;
       });
     }
   }
@@ -70,6 +82,8 @@ class _ProfilePageState extends State<ProfilePage> {
       stats: _stats,
       statsLoaded: _statsLoaded,
       mysqlUserId: _mysqlUserId,
+      profileName: _profileName,
+      city: _city,
     );
   }
 }
@@ -79,12 +93,16 @@ class _ProfilePageView extends StatelessWidget {
   final Map<String, dynamic> stats;
   final bool statsLoaded;
   final int? mysqlUserId;
+  final String? profileName;
+  final String? city;
 
   const _ProfilePageView({
     required this.isAdmin,
     required this.stats,
     required this.statsLoaded,
     this.mysqlUserId,
+    this.profileName,
+    this.city,
   });
 
   void handleExportPDF() {
@@ -504,13 +522,15 @@ class _ProfilePageView extends StatelessWidget {
                     'Export Trip Data (PDF)',
                     handleExportPDF,
                   ),
-                  settingsButton(context, LucideIcons.logOut, 'Log Out', () {
-                    SessionManager.clearAuthState(clearRememberMe: true);
-                    Navigator.pushAndRemoveUntil(
-                      context,
-                      MaterialPageRoute(builder: (_) => const LoginPage()),
-                      (route) => false,
-                    );
+                  settingsButton(context, LucideIcons.logOut, 'Log Out', () async {
+                    await SessionManager.clearAuthState(clearRememberMe: true);
+                    if (context.mounted) {
+                      Navigator.pushAndRemoveUntil(
+                        context,
+                        MaterialPageRoute(builder: (_) => const LoginPage()),
+                        (route) => false,
+                      );
+                    }
                   }),
                 ],
               ),
@@ -535,9 +555,11 @@ class _ProfilePageView extends StatelessWidget {
 
   Widget _profileMeta() {
     final user = FirebaseAuth.instance.currentUser;
-    final name = (user?.displayName?.isNotEmpty == true)
-        ? user!.displayName!
-        : 'Traveller';
+    final name = (profileName?.isNotEmpty == true)
+        ? profileName!
+        : (user?.displayName?.isNotEmpty == true)
+            ? user!.displayName!
+            : 'Traveller';
     final email = user?.email ?? '';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -552,32 +574,19 @@ class _ProfilePageView extends StatelessWidget {
         ),
         const SizedBox(height: 2),
         Text(email, style: const TextStyle(fontSize: 12, color: _mutedText)),
-        SizedBox(height: 4),
-        Row(
-          children: [
-            Icon(LucideIcons.mapPin, size: 12, color: _mutedText),
-            SizedBox(width: 4),
-            Text(
-              'Islamabad, Pakistan',
-              style: TextStyle(fontSize: 11, color: _mutedText),
-            ),
-          ],
-        ),
-        SizedBox(height: 3),
-        Row(
-          children: [
-            Icon(LucideIcons.star, size: 12, color: _gold),
-            SizedBox(width: 4),
-            Text(
-              'Explorer Level 12',
-              style: TextStyle(
-                fontSize: 11,
-                color: _gold,
-                fontWeight: FontWeight.w600,
+        if (city != null && city!.isNotEmpty) ...[
+          const SizedBox(height: 4),
+          Row(
+            children: [
+              const Icon(LucideIcons.mapPin, size: 12, color: _mutedText),
+              const SizedBox(width: 4),
+              Text(
+                city!,
+                style: const TextStyle(fontSize: 11, color: _mutedText),
               ),
-            ),
-          ],
-        ),
+            ],
+          ),
+        ],
       ],
     );
   }

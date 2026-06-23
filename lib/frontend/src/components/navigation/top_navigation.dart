@@ -2,6 +2,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../../utils/local_database_service.dart';
 import '../../utils/responsive.dart';
+import '../../utils/notification_service.dart';
+import '../../utils/api_service.dart';
+import '../../pages/notifications_page.dart';
 
 class TopNavigation extends StatefulWidget {
   const TopNavigation({super.key});
@@ -12,11 +15,35 @@ class TopNavigation extends StatefulWidget {
 
 class _TopNavigationState extends State<TopNavigation> {
   String _firstName = '';
+  int _unread = 0;
 
   @override
   void initState() {
     super.initState();
     _loadUserName();
+    _unread = NotificationService.instance.unreadCount;
+    NotificationService.instance.addUnreadListener(_onUnreadChanged);
+    _fetchUnreadCount();
+  }
+
+  @override
+  void dispose() {
+    NotificationService.instance.removeUnreadListener(_onUnreadChanged);
+    super.dispose();
+  }
+
+  void _onUnreadChanged() {
+    if (mounted) setState(() => _unread = NotificationService.instance.unreadCount);
+  }
+
+  Future<void> _fetchUnreadCount() async {
+    try {
+      final resp = await ApiService.getRequest('/notifications/unread-count');
+      if (!mounted) return;
+      final count = resp['count'] as int? ?? 0;
+      NotificationService.instance.setUnreadCount(count);
+      setState(() => _unread = count);
+    } catch (_) {}
   }
 
   Future<void> _loadUserName() async {
@@ -125,21 +152,28 @@ class _TopNavigationState extends State<TopNavigation> {
                 ),
                 child: IconButton(
                   icon: const Icon(Icons.notifications_none, size: 20),
-                  onPressed: () {},
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const NotificationsPage()),
+                    ).then((_) => _fetchUnreadCount());
+                  },
                 ),
               ),
-              Positioned(
-                top: 6,
-                right: 6,
-                child: Container(
-                  width: 8,
-                  height: 8,
-                  decoration: const BoxDecoration(
-                    color: Colors.red,
-                    shape: BoxShape.circle,
+              if (_unread > 0)
+                Positioned(
+                  top: 6,
+                  right: 6,
+                  child: Container(
+                    width: 8,
+                    height: 8,
+                    decoration: const BoxDecoration(
+                      color: Colors.red,
+                      shape: BoxShape.circle,
+                    ),
                   ),
                 ),
-              ),
             ],
           ),
         ],

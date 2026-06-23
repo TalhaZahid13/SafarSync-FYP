@@ -47,12 +47,13 @@ class ApiService {
 
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
-        // Physical devices should use your PC LAN IP.
-        // Emulator users can override with --dart-define=ANDROID_API_HOST=10.0.2.2
+        // Physical device: set host via --dart-define=ANDROID_API_HOST=<your-pc-lan-ip>
+        // Emulator: --dart-define=ANDROID_API_HOST=10.0.2.2
         if (_androidHostOverride.isNotEmpty) {
           return _androidHostOverride;
         }
-        return '192.168.1.5';
+        // Fallback to Android emulator default — override for physical device
+        return '10.0.2.2';
       case TargetPlatform.iOS:
       case TargetPlatform.linux:
       case TargetPlatform.macOS:
@@ -136,11 +137,14 @@ class ApiService {
 
       // Exchange Firebase token — pass phone/blood so MySQL record is complete on first insert
       if (freshUser != null) {
-        await exchangeFirebaseToken(
+        final exchangeResult = await exchangeFirebaseToken(
           freshUser,
           phoneNumber: phoneNumber,
           bloodGroup:  bloodGroup,
         );
+        if (exchangeResult['success'] != true) {
+          return {'success': false, 'message': exchangeResult['message'] as String? ?? 'Could not connect to server. Please check your connection and try again.'};
+        }
       }
 
       return {'success': true, 'message': 'User registered successfully'};
@@ -183,7 +187,11 @@ class ApiService {
       }
 
       // Exchange Firebase token for real MySQL-backed JWT
-      await exchangeFirebaseToken(user);
+      final exchangeResult = await exchangeFirebaseToken(user);
+      if (exchangeResult['success'] != true) {
+        await _auth.signOut();
+        return {'success': false, 'message': exchangeResult['message'] as String? ?? 'Could not connect to server. Please check your connection and try again.'};
+      }
 
       final existingProfile = await LocalDatabaseService.getUserProfile(user.uid);
       if (existingProfile == null) {
