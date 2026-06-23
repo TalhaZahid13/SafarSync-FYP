@@ -95,7 +95,6 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                // Icon
                 Container(
                   width: 80,
                   height: 80,
@@ -130,8 +129,6 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                 ),
 
                 const SizedBox(height: 24),
-
-                // Email Field
                 _inputField(
                   label: 'Email',
                   hint: 'you@example.com',
@@ -141,7 +138,6 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
 
                 const SizedBox(height: 24),
 
-                // Button
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(

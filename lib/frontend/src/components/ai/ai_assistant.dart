@@ -70,7 +70,6 @@ class _AIAssistantButtonState extends State<AIAssistantButton>
   }
 }
 
-// AI Message Model
 class AIMessage {
   final String text;
   final bool isUser;
@@ -109,7 +108,7 @@ class _AIAssistantState extends State<AIAssistant> {
     messages.add(
       AIMessage(
         text:
-            "Assalam-o-Alaikum! I'm your AI travel assistant. How can I help you plan your trip today?",
+            "Assalam-o-Alaikum! I'm your AI travel assistant Safar AI. How can I help you plan your trip today?",
         isUser: false,
         timestamp:
             "${TimeOfDay.now().hour.toString().padLeft(2, '0')}:${TimeOfDay.now().minute.toString().padLeft(2, '0')}",
@@ -133,7 +132,6 @@ class _AIAssistantState extends State<AIAssistant> {
       _controller.clear();
     });
 
-    // Simulate AI response
     Future.delayed(const Duration(seconds: 1), () {
       final responses = [
         'Great choice! Hunza Valley is beautiful this time of year.',
@@ -357,7 +355,6 @@ class _AIAssistantState extends State<AIAssistant> {
                 ),
               ),
 
-            // Input field
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(

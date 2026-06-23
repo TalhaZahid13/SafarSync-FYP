@@ -58,7 +58,9 @@
       "WebFetch(domain:api.github.com)",
       "Bash(?\\\\w+)",
       "Bash(grep -oE \"\\(FROM|INTO|JOIN\\)\\\\s+`?\\\\w+`?\")",
-      "Bash(node -e \"require\\('multer'\\); console.log\\('OK'\\)\")"
+      "Bash(node -e \"require\\('multer'\\); console.log\\('OK'\\)\")",
+      "Bash(curl -sL \"https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.js\" -o \"D:\\\\University\\\\8th Semester\\\\Final Year Project - 2\\\\safarsync_mobileapp\\\\assets\\\\pannellum.js\")",
+      "Bash(curl -sL \"https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.css\" -o \"D:\\\\University\\\\8th Semester\\\\Final Year Project - 2\\\\safarsync_mobileapp\\\\assets\\\\pannellum.css\")"
     ]
   }
 }

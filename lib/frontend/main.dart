@@ -30,9 +30,6 @@ import 'src/ui/destination_theme.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   debugPrint('[SafarSync] ▶ App starting');
-
-  // ── Stripe ────────────────────────────────────────────────────────────────
-  // Non-fatal: payment screens will fail gracefully if this is misconfigured.
   try {
     Stripe.publishableKey = AppConfig.stripePublishableKey;
     await Stripe.instance.applySettings().timeout(const Duration(seconds: 5));
@@ -40,8 +37,6 @@ void main() async {
   } catch (e) {
     debugPrint('[SafarSync] ✗ Stripe init skipped: $e');
   }
-
-  // ── Firebase ──────────────────────────────────────────────────────────────
   try {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
@@ -51,7 +46,6 @@ void main() async {
     debugPrint('[SafarSync] ✗ Firebase init error: $e');
   }
 
-  // ── Local SQLite DB ───────────────────────────────────────────────────────
   try {
     await LocalDatabaseService.ensureInitialized()
         .timeout(const Duration(seconds: 5));
@@ -60,7 +54,6 @@ void main() async {
     debugPrint('[SafarSync] ✗ Local DB init failed (non-fatal): $e');
   }
 
-  // ── Theme ─────────────────────────────────────────────────────────────────
   final themeController = ThemeController();
   try {
     await themeController.loadThemeMode().timeout(const Duration(seconds: 2));
@@ -83,16 +76,10 @@ void main() async {
     destinationThemeProvider: destinationThemeProvider,
   ));
 
-  // ── Notifications ─────────────────────────────────────────────────────────
-  // Deferred AFTER runApp so that:
-  //   • the Flutter UI is visible before any system permission dialog appears
-  //   • on Android 13+ the POST_NOTIFICATIONS dialog shows over Flutter, not
-  //     over the blank native splash — preventing an apparent "stuck" state
   NotificationService.instance.initialize().ignore();
   debugPrint('[SafarSync] ✓ Notification init started in background');
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 class SafarSyncApp extends StatelessWidget {
   final ThemeController themeController;
   final DestinationThemeProvider destinationThemeProvider;
@@ -131,7 +118,6 @@ class SafarSyncApp extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 class AuthGate extends StatefulWidget {
   const AuthGate({super.key});
 
@@ -151,16 +137,12 @@ class _AuthGateState extends State<AuthGate> {
     _checkAuthStatus();
   }
 
-  // ── Public entry-point ────────────────────────────────────────────────────
   Future<void> _checkAuthStatus() async {
     debugPrint('[AuthGate] Auth check started');
     try {
-      // Run auth logic and a 2-second minimum splash timer in parallel.
-      // The splash stays visible until BOTH complete, so the screen never
-      // flashes away instantly even if auth resolves in milliseconds.
       await Future.wait([
         _doAuthCheck().timeout(
-          const Duration(seconds: 8),
+          const Duration(seconds: 2),
           onTimeout: () {
             debugPrint('[AuthGate] ⚠ TIMEOUT — falling back to local Firebase state');
             _resolveWithFirebaseState();
@@ -173,8 +155,6 @@ class _AuthGateState extends State<AuthGate> {
       _resolveWithFirebaseState();
     }
   }
-
-  // Fallback used by both the timeout handler and the catch block.
   void _resolveWithFirebaseState() {
     if (!mounted || !_isChecking) return;
     final user = FirebaseAuth.instance.currentUser;
@@ -185,14 +165,11 @@ class _AuthGateState extends State<AuthGate> {
     });
   }
 
-  // ── Actual auth logic ─────────────────────────────────────────────────────
   Future<void> _doAuthCheck() async {
-    // ── Step 1: local Firebase state (no network) ─────────────────────────
     _setStatus('Checking session…');
     final user = FirebaseAuth.instance.currentUser;
     debugPrint('[AuthGate] Firebase user: ${user?.uid ?? 'none'}');
 
-    // ── Step 2: session-expiry check (reads SharedPreferences) ───────────
     bool expired = false;
     try {
       expired = await SessionManager.clearIfSessionExpired(
@@ -223,7 +200,6 @@ class _AuthGateState extends State<AuthGate> {
     }
 
     if (user != null) {
-      // ── Step 3: RememberMe flag (reads SharedPreferences) ──────────────
       _setStatus('Restoring session…');
       bool rememberMe = false;
       try {
@@ -250,19 +226,7 @@ class _AuthGateState extends State<AuthGate> {
         return;
       }
 
-      // ── Step 4: activity timestamp (fast, SharedPreferences) ───────────
       SessionManager.recordActivity().ignore();
-
-      // ── Step 5: JWT refresh — FIRE AND FORGET ──────────────────────────
-      // FIX: Previously this was `await ApiService.refreshTokenIfNeeded(user)`,
-      // which made an HTTP POST to the backend.  If the backend was unreachable
-      // (different WiFi, server off, etc.) the OS-level TCP timeout blocked
-      // this coroutine for up to 75 seconds, keeping _isChecking=true and
-      // showing the splash screen indefinitely.
-      //
-      // The token refresh is a background optimisation, NOT a prerequisite for
-      // navigation.  The user can reach the home screen immediately; any API
-      // call that needs a fresh token will handle a 401 on its own.
       _setStatus('Preparing your experience…');
       ApiService.refreshTokenIfNeeded(user).ignore();
       debugPrint('[AuthGate] ✓ Token refresh started in background (non-blocking)');
@@ -281,7 +245,6 @@ class _AuthGateState extends State<AuthGate> {
     if (mounted) setState(() => _statusText = msg);
   }
 
-  // ── Build ─────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     if (_isChecking) {
@@ -301,9 +264,6 @@ class _AuthGateState extends State<AuthGate> {
     return _isLoggedIn ? const App() : const LoginPage();
   }
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-/// Professional animated splash / loading screen shown while AuthGate works.
 class _SplashScreen extends StatefulWidget {
   final String statusText;
   const _SplashScreen({required this.statusText});
@@ -352,7 +312,6 @@ class _SplashScreenState extends State<_SplashScreen>
           children: [
             const Spacer(flex: 3),
 
-            // ── Animated logo ─────────────────────────────────────────────
             AnimatedBuilder(
               animation: _ctrl,
               builder: (_, child) => Transform.scale(
@@ -401,8 +360,6 @@ class _SplashScreenState extends State<_SplashScreen>
             ),
 
             const Spacer(flex: 3),
-
-            // ── Progress indicator ────────────────────────────────────────
             const SizedBox(
               width: 28,
               height: 28,
@@ -413,8 +370,6 @@ class _SplashScreenState extends State<_SplashScreen>
             ),
 
             const SizedBox(height: 14),
-
-            // Status text — animated cross-fade on change
             AnimatedSwitcher(
               duration: const Duration(milliseconds: 250),
               child: Text(
@@ -433,7 +388,6 @@ class _SplashScreenState extends State<_SplashScreen>
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 class App extends StatefulWidget {
   const App({super.key});
 
@@ -445,17 +399,10 @@ class _AppState extends State<App> with WidgetsBindingObserver {
   int _activeIndex = 0;
   bool isAIOpen = false;
 
-  // Tab ordering must match navItems in bottom_navigation.dart
   static const _tabIds = ['home', 'explore', 'trips', 'routes', 'profile'];
-
-  // Tracks which tabs have been visited so we only build each page once.
   final Set<int> _visitedTabs = {0};
-  // Cache of already-built page widgets keyed by tab index.
   final Map<int, Widget> _builtPages = {};
-
   String get activeTab => _tabIds[_activeIndex];
-
-  // Channel matches the one declared in MainActivity.kt
   static const _sosTileChannel = MethodChannel(
     'com.example.safarsync_mobileapp/sos_tile',
   );
@@ -502,7 +449,7 @@ class _AppState extends State<App> with WidgetsBindingObserver {
         );
       }
     } catch (_) {
-      // Platform channel not available (e.g., running on iOS or in tests)
+
     }
   }
 
@@ -526,7 +473,6 @@ class _AppState extends State<App> with WidgetsBindingObserver {
     }
   }
 
-  // Returns (and caches) the page widget for [index], creating it on first use.
   Widget _getPage(int index) {
     return _builtPages.putIfAbsent(index, () {
       switch (index) {
@@ -555,8 +501,6 @@ class _AppState extends State<App> with WidgetsBindingObserver {
           children: [
             const TopNavigation(),
             Expanded(
-              // IndexedStack keeps visited pages alive. Unvisited tabs render a
-              // cheap SizedBox until first visited, reducing startup work.
               child: IndexedStack(
                 index: _activeIndex,
                 children: List.generate(

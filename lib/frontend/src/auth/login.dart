@@ -67,12 +67,10 @@ class _LoginPageState extends State<LoginPage> {
       if (result['success']) {
         await SessionManager.setRememberMeEmail(email, _rememberMe);
         await SessionManager.recordActivity();
-        // ✅ Login successful → Go to Home (App)
         if (mounted) {
           Navigator.pushReplacementNamed(context, '/home');
         }
       } else {
-        // ❌ Login failed
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(result['message'] ?? 'Login failed')),
@@ -250,7 +248,6 @@ class _LoginPageState extends State<LoginPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                // App Logo / Icon
                 Container(
                   width: 96,
                   height: 96,
@@ -287,7 +284,6 @@ class _LoginPageState extends State<LoginPage> {
 
                 const SizedBox(height: 32),
 
-                // Email
                 _inputField(
                   label: 'Email',
                   hint: 'you@example.com',
@@ -297,7 +293,6 @@ class _LoginPageState extends State<LoginPage> {
                 ),
                 const SizedBox(height: 16),
 
-                // Password
                 _inputField(
                   label: 'Password',
                   hint: '••••••••',
@@ -329,8 +324,6 @@ class _LoginPageState extends State<LoginPage> {
                 ),
 
                 const SizedBox(height: 24),
-
-                // Login Button
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
@@ -365,7 +358,6 @@ class _LoginPageState extends State<LoginPage> {
 
                 const SizedBox(height: 16),
 
-                // Forgot Password
                 TextButton(
                   onPressed: () {
                     Navigator.push(
@@ -381,8 +373,6 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                 ),
                 const SizedBox(height: 24),
-
-                // Divider
                 Row(
                   children: [
                     Expanded(child: Divider(color: theme.dividerColor)),
@@ -399,7 +389,6 @@ class _LoginPageState extends State<LoginPage> {
 
                 const SizedBox(height: 24),
 
-                // Social sign-in buttons
                 Row(
                   children: [
                     Expanded(
@@ -428,7 +417,6 @@ class _LoginPageState extends State<LoginPage> {
 
                 const SizedBox(height: 24),
 
-                // Sign Up
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -451,7 +439,6 @@ class _LoginPageState extends State<LoginPage> {
                   ],
                 ),
 
-                // Admin access link
                 TextButton(
                   onPressed: () {
                     Navigator.push(
@@ -474,8 +461,6 @@ class _LoginPageState extends State<LoginPage> {
       ),
     );
   }
-
-  /// Reusable input field
   Widget _inputField({
     required String label,
     required String hint,

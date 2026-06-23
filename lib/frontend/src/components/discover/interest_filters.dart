@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../ui/app_theme.dart'; // 👈 IMPORTANT
+import '../../ui/app_theme.dart';
 
 class InterestFilters extends StatefulWidget {
   final List<String> initialFilters;

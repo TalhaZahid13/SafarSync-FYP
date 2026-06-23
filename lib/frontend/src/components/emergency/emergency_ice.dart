@@ -29,7 +29,6 @@ class _EmergencyICEState extends State<EmergencyICE> {
   }
 
   Future<void> _loadLocation() async {
-    // Try live GPS first for accurate emergency location.
     try {
       final serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (serviceEnabled) {
@@ -77,7 +76,6 @@ class _EmergencyICEState extends State<EmergencyICE> {
       }
     } catch (_) {}
 
-    // Fallback: load last known location from backend.
     await _loadLocationFromBackend();
   }
 

@@ -77,8 +77,6 @@ class _SignupPageState extends State<SignupPage> {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Account created! Welcome to SafarSync.')),
           );
-          // Firebase + JWT exchange already completed in ApiService.signup()
-          // — go directly to the home screen.
           Navigator.pushReplacementNamed(context, '/home');
         }
       } else {
@@ -127,7 +125,6 @@ class _SignupPageState extends State<SignupPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                // Icon / Logo
                 Container(
                   width: 80,
                   height: 80,
@@ -165,7 +162,6 @@ class _SignupPageState extends State<SignupPage> {
 
                 const SizedBox(height: 24),
 
-                // Full Name
                 _inputField(
                   label: 'Full Name',
                   hint: 'Muhammad Talha',
@@ -174,7 +170,6 @@ class _SignupPageState extends State<SignupPage> {
                 ),
                 const SizedBox(height: 12),
 
-                // Email
                 _inputField(
                   label: 'Email',
                   hint: 'you@example.com',
@@ -184,7 +179,6 @@ class _SignupPageState extends State<SignupPage> {
                 ),
                 const SizedBox(height: 12),
 
-                // Contact Number
                 _inputField(
                   label: 'Contact Number',
                   hint: '+92 3XX XXXXXXX',
@@ -194,7 +188,6 @@ class _SignupPageState extends State<SignupPage> {
                 ),
                 const SizedBox(height: 12),
 
-                // Password
                 _inputField(
                   label: 'Password',
                   hint: '••••••••',
@@ -210,7 +203,6 @@ class _SignupPageState extends State<SignupPage> {
                 ),
                 const SizedBox(height: 12),
 
-                // Confirm Password
                 _inputField(
                   label: 'Confirm Password',
                   hint: '••••••••',
@@ -226,8 +218,6 @@ class _SignupPageState extends State<SignupPage> {
                 ),
 
                 const SizedBox(height: 24),
-
-                // Sign Up Button
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(

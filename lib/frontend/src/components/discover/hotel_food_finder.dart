@@ -48,7 +48,6 @@ class HotelFoodFinder extends StatelessWidget {
       builder: (context, constraints) {
         final bool isWide = constraints.maxWidth > 500;
 
-        // 👉 On narrow screens: stack vertically (no horizontal overflow)
         if (!isWide) {
           return Column(
             children: [
@@ -69,7 +68,6 @@ class HotelFoodFinder extends StatelessWidget {
           );
         }
 
-        // 👉 On wider screens: show side-by-side
         return Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
