@@ -33,6 +33,8 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
   List<Map<String, dynamic>> _alerts = [];
   List<Map<String, dynamic>> _packages = [];
   List<Map<String, dynamic>> _virtualTours = [];
+  List<Map<String, dynamic>> _payments = [];
+  Map<String, dynamic> _analytics = {};
 
   bool _loadingStats = true;
   bool _loadingUsers = true;
@@ -40,6 +42,8 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
   bool _loadingAlerts = true;
   bool _loadingPackages = false;
   bool _loadingVirtualTours = false;
+  bool _loadingPayments = false;
+  bool _loadingAnalytics = false;
 
   String? _userSearch;
   final _searchCtrl = TextEditingController();
@@ -47,7 +51,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
   @override
   void initState() {
     super.initState();
-    _tabs = TabController(length: 7, vsync: this)
+    _tabs = TabController(length: 9, vsync: this)
       ..addListener(() {
         if (!_tabs.indexIsChanging) _loadTabIfNeeded(_tabs.index);
       });
@@ -172,7 +176,65 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
       case 3: if (_alerts.isEmpty) _loadAlerts(); break;
       case 5: if (_packages.isEmpty)     _loadTourPackages();    break;
       case 6: if (_virtualTours.isEmpty) _loadVirtualTours();   break;
+      case 7: if (_analytics.isEmpty)   _loadAnalytics();       break;
+      case 8: if (_payments.isEmpty)    _loadAdminPayments();   break;
     }
+  }
+
+  Future<void> _loadAnalytics() async {
+    setState(() => _loadingAnalytics = true);
+    try {
+      final r = await ApiService.adminGetRequest('/admin/analytics');
+      if (mounted && r['success'] == true) {
+        setState(() {
+          _analytics = Map<String, dynamic>.from(r['analytics'] ?? {});
+          _loadingAnalytics = false;
+        });
+      } else {
+        if (mounted) setState(() => _loadingAnalytics = false);
+      }
+    } catch (_) {
+      if (mounted) setState(() => _loadingAnalytics = false);
+    }
+  }
+
+  Future<void> _loadAdminPayments() async {
+    setState(() => _loadingPayments = true);
+    try {
+      final r = await ApiService.adminGetRequest('/admin/payments');
+      if (mounted && r['success'] == true) {
+        setState(() {
+          _payments = List<Map<String, dynamic>>.from(
+            (r['payments'] as List?)?.map((e) => Map<String, dynamic>.from(e)) ?? [],
+          );
+          _loadingPayments = false;
+        });
+      } else {
+        if (mounted) setState(() => _loadingPayments = false);
+      }
+    } catch (_) {
+      if (mounted) setState(() => _loadingPayments = false);
+    }
+  }
+
+  Future<void> _approveRefund(int paymentId, {String? notes}) async {
+    final r = await ApiService.adminPutRequest(
+      '/admin/payments/$paymentId/approve-refund',
+      {'notes': notes ?? ''},
+    );
+    if (!mounted) return;
+    _snack(r['success'] == true ? 'Refund approved' : (r['message'] ?? 'Failed'));
+    if (r['success'] == true) _loadAdminPayments();
+  }
+
+  Future<void> _rejectRefund(int paymentId, {String? notes}) async {
+    final r = await ApiService.adminPutRequest(
+      '/admin/payments/$paymentId/reject-refund',
+      {'notes': notes ?? ''},
+    );
+    if (!mounted) return;
+    _snack(r['success'] == true ? 'Refund rejected' : (r['message'] ?? 'Failed'));
+    if (r['success'] == true) _loadAdminPayments();
   }
 
   Future<void> _loadVirtualTours() async {
@@ -399,6 +461,8 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
             ),
             const Tab(icon: Icon(Icons.local_offer_rounded), text: 'Packages'),
             const Tab(icon: Icon(Icons.threed_rotation_rounded), text: 'VR Tours'),
+            const Tab(icon: Icon(Icons.analytics_rounded), text: 'Analytics'),
+            const Tab(icon: Icon(Icons.payments_rounded), text: 'Payments'),
           ],
         ),
       ),
@@ -443,6 +507,18 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
             loading: _loadingVirtualTours,
             onRefresh: _loadVirtualTours,
             onDelete: _deleteVirtualTour,
+          ),
+          _AnalyticsTab(
+            analytics: _analytics,
+            loading: _loadingAnalytics,
+            onRefresh: _loadAnalytics,
+          ),
+          _AdminPaymentsTab(
+            payments: _payments,
+            loading: _loadingPayments,
+            onRefresh: _loadAdminPayments,
+            onApproveRefund: _approveRefund,
+            onRejectRefund: _rejectRefund,
           ),
         ],
       ),
@@ -2347,6 +2423,804 @@ class _VTourAdminCard extends StatelessWidget {
           tooltip: 'Delete tour',
         ),
       ),
+    );
+  }
+}
+
+// ─── Analytics Tab ────────────────────────────────────────────────────────────
+
+class _AnalyticsTab extends StatelessWidget {
+  final Map<String, dynamic> analytics;
+  final bool loading;
+  final VoidCallback onRefresh;
+
+  const _AnalyticsTab({
+    required this.analytics,
+    required this.loading,
+    required this.onRefresh,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (loading) {
+      return const Center(child: CircularProgressIndicator(color: _kPrimary));
+    }
+
+    if (analytics.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.analytics_outlined, size: 64, color: Colors.grey.shade300),
+            const SizedBox(height: 16),
+            const Text('No analytics data', style: TextStyle(color: Colors.grey)),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              icon: const Icon(Icons.refresh),
+              label: const Text('Load Analytics'),
+              style: ElevatedButton.styleFrom(backgroundColor: _kPrimary, foregroundColor: Colors.white),
+              onPressed: onRefresh,
+            ),
+          ],
+        ),
+      );
+    }
+
+    final totals = analytics['totals'] as Map<String, dynamic>? ?? {};
+    final monthlyBookings = (analytics['monthlyBookings'] as List?)
+        ?.map((e) => Map<String, dynamic>.from(e as Map))
+        .toList() ?? [];
+    final monthlyRevenue = (analytics['monthlyRevenue'] as List?)
+        ?.map((e) => Map<String, dynamic>.from(e as Map))
+        .toList() ?? [];
+    final monthlySos = (analytics['monthlySos'] as List?)
+        ?.map((e) => Map<String, dynamic>.from(e as Map))
+        .toList() ?? [];
+    final popularDests = (analytics['popularDestinations'] as List?)
+        ?.map((e) => Map<String, dynamic>.from(e as Map))
+        .toList() ?? [];
+    final bookingsByStatus = (analytics['bookingsByStatus'] as List?)
+        ?.map((e) => Map<String, dynamic>.from(e as Map))
+        .toList() ?? [];
+
+    return RefreshIndicator(
+      onRefresh: () async => onRefresh(),
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          // ── Platform Totals ────────────────────────────────────────────────
+          _sectionTitle('Platform Totals'),
+          const SizedBox(height: 12),
+          _TotalsGrid(totals: totals),
+          const SizedBox(height: 24),
+
+          // ── Bookings by Status Donut ───────────────────────────────────────
+          if (bookingsByStatus.isNotEmpty) ...[
+            _sectionTitle('Bookings by Status'),
+            const SizedBox(height: 12),
+            _BookingStatusBars(data: bookingsByStatus),
+            const SizedBox(height: 24),
+          ],
+
+          // ── Monthly Bookings Chart ─────────────────────────────────────────
+          if (monthlyBookings.isNotEmpty) ...[
+            _sectionTitle('Monthly Bookings (last 12 months)'),
+            const SizedBox(height: 12),
+            _BarChart(
+              data: monthlyBookings,
+              valueKey: 'c',
+              labelKey: 'm',
+              color: _kAccent,
+              unit: '',
+            ),
+            const SizedBox(height: 24),
+          ],
+
+          // ── Monthly Revenue Chart ──────────────────────────────────────────
+          if (monthlyRevenue.isNotEmpty) ...[
+            _sectionTitle('Monthly Revenue USD (last 12 months)'),
+            const SizedBox(height: 12),
+            _BarChart(
+              data: monthlyRevenue,
+              valueKey: 'c',
+              labelKey: 'm',
+              color: Colors.teal,
+              unit: '\$',
+              formatValue: (v) => v >= 1000 ? '${(v / 1000).toStringAsFixed(1)}k' : v.toStringAsFixed(0),
+            ),
+            const SizedBox(height: 24),
+          ],
+
+          // ── Monthly SOS Chart ──────────────────────────────────────────────
+          if (monthlySos.isNotEmpty) ...[
+            _sectionTitle('Monthly SOS Alerts (last 12 months)'),
+            const SizedBox(height: 12),
+            _BarChart(
+              data: monthlySos,
+              valueKey: 'c',
+              labelKey: 'm',
+              color: Colors.red.shade600,
+              unit: '',
+            ),
+            const SizedBox(height: 24),
+          ],
+
+          // ── Popular Destinations ───────────────────────────────────────────
+          if (popularDests.isNotEmpty) ...[
+            _sectionTitle('Top Destinations by Bookings'),
+            const SizedBox(height: 12),
+            _PopularDestsTable(data: popularDests),
+            const SizedBox(height: 24),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+// ── Totals grid ───────────────────────────────────────────────────────────────
+class _TotalsGrid extends StatelessWidget {
+  final Map<String, dynamic> totals;
+  const _TotalsGrid({required this.totals});
+
+  num totalsNum(String k) => (totals[k] as num?) ?? 0;
+
+  @override
+  Widget build(BuildContext context) {
+    final items = [
+      _StatDef('Users',          totalsNum('total_users').toInt(),          Icons.people,          Colors.teal),
+      _StatDef('Bookings',       totalsNum('total_bookings').toInt(),       Icons.bookmark,        Colors.blue),
+      _StatDef('Group Bookings', totalsNum('total_group_bookings').toInt(), Icons.groups,          Colors.purple),
+      _StatDef('SOS Alerts',     totalsNum('total_sos').toInt(),            Icons.emergency,       Colors.red),
+      _StatDef('Revenue (USD)',  '\$${(totalsNum('total_revenue')).toStringAsFixed(0)}', Icons.attach_money, Colors.green),
+    ];
+
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: items.length,
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        mainAxisSpacing: 10,
+        crossAxisSpacing: 10,
+        childAspectRatio: 1.5,
+      ),
+      itemBuilder: (_, i) => _BigStatCard(def: items[i]),
+    );
+  }
+}
+
+// ── Booking status horizontal bars ────────────────────────────────────────────
+class _BookingStatusBars extends StatelessWidget {
+  final List<Map<String, dynamic>> data;
+  const _BookingStatusBars({required this.data});
+
+  Color _colorFor(String s) {
+    switch (s.toLowerCase()) {
+      case 'active': return Colors.green;
+      case 'completed': return Colors.blue;
+      case 'cancelled': return Colors.red;
+      case 'pending': return Colors.orange;
+      case 'refunded': return Colors.purple;
+      default: return Colors.grey;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final total = data.fold<int>(0, (acc, e) => acc + ((e['c'] as num?)?.toInt() ?? 0));
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: data.map((e) {
+            final status = e['status'] as String? ?? '?';
+            final count = (e['c'] as num?)?.toInt() ?? 0;
+            final fraction = total == 0 ? 0.0 : count / total;
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: _BarRow(status, count, fraction, _colorFor(status)),
+            );
+          }).toList(),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Bar chart (custom paint) ──────────────────────────────────────────────────
+class _BarChart extends StatelessWidget {
+  final List<Map<String, dynamic>> data;
+  final String valueKey;
+  final String labelKey;
+  final Color color;
+  final String unit;
+  final String Function(double)? formatValue;
+
+  const _BarChart({
+    required this.data,
+    required this.valueKey,
+    required this.labelKey,
+    required this.color,
+    required this.unit,
+    this.formatValue,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (data.isEmpty) return const SizedBox.shrink();
+
+    final values = data.map((e) => (e[valueKey] as num?)?.toDouble() ?? 0.0).toList();
+    final maxVal = values.reduce((a, b) => a > b ? a : b);
+
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 16, 12, 12),
+        child: SizedBox(
+          height: 180,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: List.generate(data.length, (i) {
+              final val = values[i];
+              final frac = maxVal == 0 ? 0.0 : (val / maxVal).clamp(0.0, 1.0);
+              final label = (data[i][labelKey] as String? ?? '').replaceFirst(RegExp(r'^\d{4}-'), '');
+              final fmt = formatValue != null ? formatValue!(val) : '$unit${val.toStringAsFixed(0)}';
+
+              return Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 2),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      if (val > 0)
+                        Text(
+                          fmt,
+                          style: TextStyle(fontSize: 8, color: color, fontWeight: FontWeight.w600),
+                          textAlign: TextAlign.center,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      const SizedBox(height: 2),
+                      Flexible(
+                        child: FractionallySizedBox(
+                          heightFactor: frac < 0.04 ? 0.04 : frac,
+                          alignment: Alignment.bottomCenter,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: color.withValues(alpha: 0.85),
+                              borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        label,
+                        style: const TextStyle(fontSize: 8, color: Colors.grey),
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Popular destinations table ────────────────────────────────────────────────
+class _PopularDestsTable extends StatelessWidget {
+  final List<Map<String, dynamic>> data;
+  const _PopularDestsTable({required this.data});
+
+  @override
+  Widget build(BuildContext context) {
+    final maxCount = data.fold<int>(0, (a, e) {
+      final c = (e['c'] as num?)?.toInt() ?? 0;
+      return c > a ? c : a;
+    });
+
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: List.generate(data.length, (i) {
+            final name = data[i]['name'] as String? ?? '?';
+            final city = data[i]['city'] as String? ?? '';
+            final count = (data[i]['c'] as num?)?.toInt() ?? 0;
+            final frac = maxCount == 0 ? 0.0 : (count / maxCount).clamp(0.0, 1.0);
+
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Row(
+                children: [
+                  Container(
+                    width: 22, height: 22,
+                    decoration: BoxDecoration(
+                      color: _kPrimary,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Center(
+                      child: Text(
+                        '${i + 1}',
+                        style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                city.isNotEmpty ? '$name, $city' : name,
+                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            Text('$count', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: _kAccent)),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(3),
+                          child: LinearProgressIndicator(
+                            value: frac,
+                            minHeight: 5,
+                            backgroundColor: _kAccent.withValues(alpha: 0.1),
+                            valueColor: AlwaysStoppedAnimation(_kAccent),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Admin Payments Tab ───────────────────────────────────────────────────────
+
+class _AdminPaymentsTab extends StatefulWidget {
+  final List<Map<String, dynamic>> payments;
+  final bool loading;
+  final VoidCallback onRefresh;
+  final Future<void> Function(int, {String? notes}) onApproveRefund;
+  final Future<void> Function(int, {String? notes}) onRejectRefund;
+
+  const _AdminPaymentsTab({
+    required this.payments,
+    required this.loading,
+    required this.onRefresh,
+    required this.onApproveRefund,
+    required this.onRejectRefund,
+  });
+
+  @override
+  State<_AdminPaymentsTab> createState() => _AdminPaymentsTabState();
+}
+
+class _AdminPaymentsTabState extends State<_AdminPaymentsTab> {
+  String _filterStatus = 'all';
+  bool _refundPendingOnly = false;
+
+  List<Map<String, dynamic>> get _filtered {
+    return widget.payments.where((p) {
+      final status = p['status'] as String? ?? '';
+      if (_refundPendingOnly) {
+        return p['refund_requested_at'] != null &&
+            p['refund_approved_at'] == null &&
+            p['refund_rejected_at'] == null;
+      }
+      if (_filterStatus == 'all') return true;
+      return status == _filterStatus;
+    }).toList();
+  }
+
+  double get _totalRevenue => widget.payments
+      .where((p) => p['status'] == 'succeeded')
+      .fold(0.0, (sum, p) => sum + ((p['amount'] as num?)?.toDouble() ?? 0));
+
+  int get _pendingRefundCount => widget.payments
+      .where((p) =>
+          p['refund_requested_at'] != null &&
+          p['refund_approved_at'] == null &&
+          p['refund_rejected_at'] == null)
+      .length;
+
+  Future<void> _handleAction(int paymentId, bool approve) async {
+    final notesCtrl = TextEditingController();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(approve ? 'Approve Refund' : 'Reject Refund'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(approve
+                ? 'This will trigger a refund via Stripe and mark the booking as Refunded.'
+                : 'The refund request will be rejected.'),
+            const SizedBox(height: 12),
+            TextField(
+              controller: notesCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Admin notes (optional)',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: approve ? Colors.green : Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(approve ? 'Approve' : 'Reject'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+    final notes = notesCtrl.text.trim();
+    if (approve) {
+      await widget.onApproveRefund(paymentId, notes: notes);
+    } else {
+      await widget.onRejectRefund(paymentId, notes: notes);
+    }
+  }
+
+  Color _statusColor(String? s) {
+    switch (s) {
+      case 'succeeded': return Colors.green;
+      case 'refunded': return Colors.purple;
+      case 'failed': return Colors.red;
+      default: return Colors.orange;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.loading) {
+      return const Center(child: CircularProgressIndicator(color: _kPrimary));
+    }
+
+    final filtered = _filtered;
+
+    return Column(
+      children: [
+        // ── Revenue summary ──────────────────────────────────────────────────
+        Container(
+          color: _kPrimary,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Row(
+            children: [
+              Expanded(
+                child: _MiniStat(
+                  label: 'Total Revenue',
+                  value: '\$${_totalRevenue.toStringAsFixed(2)}',
+                  icon: Icons.attach_money,
+                  color: Colors.greenAccent,
+                ),
+              ),
+              Expanded(
+                child: _MiniStat(
+                  label: 'Total Payments',
+                  value: widget.payments.length.toString(),
+                  icon: Icons.receipt_long,
+                  color: Colors.lightBlueAccent,
+                ),
+              ),
+              if (_pendingRefundCount > 0)
+                Expanded(
+                  child: _MiniStat(
+                    label: 'Pending Refunds',
+                    value: _pendingRefundCount.toString(),
+                    icon: Icons.pending_actions,
+                    color: Colors.orangeAccent,
+                  ),
+                ),
+            ],
+          ),
+        ),
+
+        // ── Filters ──────────────────────────────────────────────────────────
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
+          child: Row(
+            children: [
+              Expanded(
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: ['all', 'succeeded', 'refunded', 'failed', 'pending'].map((s) {
+                      final isActive = _filterStatus == s && !_refundPendingOnly;
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 6),
+                        child: FilterChip(
+                          label: Text(s == 'all' ? 'All' : s),
+                          selected: isActive,
+                          onSelected: (_) => setState(() {
+                            _filterStatus = s;
+                            _refundPendingOnly = false;
+                          }),
+                          selectedColor: _kAccent.withValues(alpha: 0.2),
+                          checkmarkColor: _kPrimary,
+                          labelStyle: TextStyle(
+                            fontSize: 12,
+                            color: isActive ? _kPrimary : Colors.grey.shade700,
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ),
+              if (_pendingRefundCount > 0)
+                TextButton.icon(
+                  onPressed: () => setState(() {
+                    _refundPendingOnly = !_refundPendingOnly;
+                    _filterStatus = 'all';
+                  }),
+                  icon: Icon(
+                    Icons.pending_actions,
+                    color: _refundPendingOnly ? Colors.orange : Colors.grey,
+                    size: 16,
+                  ),
+                  label: Text(
+                    'Refunds ($_pendingRefundCount)',
+                    style: TextStyle(
+                      color: _refundPendingOnly ? Colors.orange : Colors.grey,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+
+        // ── Payment list ─────────────────────────────────────────────────────
+        Expanded(
+          child: RefreshIndicator(
+            onRefresh: () async => widget.onRefresh(),
+            child: filtered.isEmpty
+                ? ListView(
+                    children: [
+                      const SizedBox(height: 80),
+                      Center(
+                        child: Column(
+                          children: [
+                            Icon(Icons.receipt_long, size: 64, color: Colors.grey.shade300),
+                            const SizedBox(height: 12),
+                            Text(
+                              _refundPendingOnly
+                                  ? 'No pending refund requests'
+                                  : 'No payments found',
+                              style: const TextStyle(color: Colors.grey),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 80),
+                    itemCount: filtered.length,
+                    itemBuilder: (_, i) {
+                      final p = filtered[i];
+                      final status = p['status'] as String? ?? 'pending';
+                      final amount = (p['amount'] as num?)?.toDouble() ?? 0;
+                      final hasRefundRequest = p['refund_requested_at'] != null;
+                      final refundApproved = p['refund_approved_at'] != null;
+                      final refundRejected = p['refund_rejected_at'] != null;
+                      final paymentId = p['id'] as int;
+
+                      return Card(
+                        margin: const EdgeInsets.only(bottom: 10),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          side: hasRefundRequest && !refundApproved && !refundRejected
+                              ? const BorderSide(color: Colors.orange, width: 1.5)
+                              : BorderSide.none,
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(14),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  // Status badge
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                    decoration: BoxDecoration(
+                                      color: _statusColor(status).withValues(alpha: 0.12),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Text(
+                                      status.toUpperCase(),
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                        color: _statusColor(status),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  // Refund badge
+                                  if (hasRefundRequest && !refundApproved && !refundRejected)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                      decoration: BoxDecoration(
+                                        color: Colors.orange.withValues(alpha: 0.12),
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: const Text(
+                                        'REFUND REQUESTED',
+                                        style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.orange),
+                                      ),
+                                    ),
+                                  const Spacer(),
+                                  Text(
+                                    '\$${amount.toStringAsFixed(2)}',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: _statusColor(status),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              // User & destination
+                              Row(
+                                children: [
+                                  const Icon(Icons.person, size: 13, color: Colors.grey),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    '${p['full_name'] ?? '?'} · ${p['email'] ?? ''}',
+                                    style: const TextStyle(fontSize: 12),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
+                              ),
+                              if (p['destination_name'] != null) ...[
+                                const SizedBox(height: 2),
+                                Row(
+                                  children: [
+                                    const Icon(Icons.place, size: 13, color: Colors.grey),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      p['destination_name'].toString(),
+                                      style: const TextStyle(fontSize: 12, color: Colors.grey),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                              // Refund action buttons
+                              if (hasRefundRequest && !refundApproved && !refundRejected) ...[
+                                const SizedBox(height: 10),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: OutlinedButton.icon(
+                                        icon: const Icon(Icons.close, size: 14),
+                                        label: const Text('Reject', style: TextStyle(fontSize: 12)),
+                                        style: OutlinedButton.styleFrom(
+                                          foregroundColor: Colors.red,
+                                          side: const BorderSide(color: Colors.red),
+                                          padding: const EdgeInsets.symmetric(vertical: 6),
+                                        ),
+                                        onPressed: () => _handleAction(paymentId, false),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: ElevatedButton.icon(
+                                        icon: const Icon(Icons.check, size: 14),
+                                        label: const Text('Approve', style: TextStyle(fontSize: 12)),
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Colors.green,
+                                          foregroundColor: Colors.white,
+                                          padding: const EdgeInsets.symmetric(vertical: 6),
+                                        ),
+                                        onPressed: () => _handleAction(paymentId, true),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                              if (refundApproved)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 6),
+                                  child: Row(
+                                    children: [
+                                      const Icon(Icons.check_circle, size: 14, color: Colors.green),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        'Refund approved${p['refund_admin_notes']?.toString().isNotEmpty == true ? ' · ${p['refund_admin_notes']}' : ''}',
+                                        style: const TextStyle(fontSize: 11, color: Colors.green),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              if (refundRejected)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 6),
+                                  child: Row(
+                                    children: [
+                                      const Icon(Icons.cancel, size: 14, color: Colors.red),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        'Refund rejected${p['refund_admin_notes']?.toString().isNotEmpty == true ? ' · ${p['refund_admin_notes']}' : ''}',
+                                        style: const TextStyle(fontSize: 11, color: Colors.red),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _MiniStat extends StatelessWidget {
+  final String label;
+  final String value;
+  final IconData icon;
+  final Color color;
+
+  const _MiniStat({
+    required this.label,
+    required this.value,
+    required this.icon,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Icon(icon, color: color, size: 20),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 14),
+        ),
+        Text(
+          label,
+          style: const TextStyle(color: Colors.white70, fontSize: 10),
+          textAlign: TextAlign.center,
+        ),
+      ],
     );
   }
 }
