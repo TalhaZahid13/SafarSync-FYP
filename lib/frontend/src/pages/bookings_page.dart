@@ -3,9 +3,6 @@ import 'package:intl/intl.dart';
 import '../utils/api_service.dart';
 import '../utils/payment_service.dart';
 import 'payment_page.dart';
-
-// ─── Booking Status Helpers ───────────────────────────────────────────────────
-
 Color _statusColor(String? s) {
   switch (s) {
     case 'Confirmed': return Colors.green;
@@ -30,7 +27,6 @@ IconData _statusIcon(String? s) {
   }
 }
 
-// ─── BookingsPage ─────────────────────────────────────────────────────────────
 
 class BookingsPage extends StatefulWidget {
   const BookingsPage({super.key});
