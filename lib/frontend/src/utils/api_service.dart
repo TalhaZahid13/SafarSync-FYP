@@ -130,9 +130,17 @@ class ApiService {
         );
       }
 
-      // Exchange Firebase token for backend JWT immediately after signup
-      if (credential.user != null) {
-        await exchangeFirebaseToken(credential.user!);
+      // Reload so displayName is visible in providerData
+      await credential.user?.reload();
+      final freshUser = _auth.currentUser;
+
+      // Exchange Firebase token — pass phone/blood so MySQL record is complete on first insert
+      if (freshUser != null) {
+        await exchangeFirebaseToken(
+          freshUser,
+          phoneNumber: phoneNumber,
+          bloodGroup:  bloodGroup,
+        );
       }
 
       return {'success': true, 'message': 'User registered successfully'};
@@ -830,15 +838,31 @@ class ApiService {
 
   /// Call after every Firebase sign-in (email, Google, Apple).
   /// Exchanges the Firebase ID token for a MySQL-backed JWT and stores it.
-  static Future<Map<String, dynamic>> exchangeFirebaseToken(User user) async {
+  /// Detects the auth provider from user.providerData and sends it to the backend
+  /// so MySQL records the correct auth method.
+  static Future<Map<String, dynamic>> exchangeFirebaseToken(
+    User user, {
+    String? phoneNumber,
+    String? bloodGroup,
+  }) async {
     try {
       final idToken = await user.getIdToken()
           .timeout(const Duration(seconds: 5));
 
+      // Detect provider from Firebase user's linked provider data
+      final provider = _detectAuthProvider(user);
+
       final response = await http.post(
         Uri.parse('$baseUrl/auth/firebase-exchange'),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'firebase_id_token': idToken}),
+        body: jsonEncode({
+          'firebase_id_token':    idToken,
+          'auth_provider':        provider,
+          'full_name':            user.displayName,
+          'profile_picture_url':  user.photoURL,
+          if (phoneNumber != null) 'phone_number': phoneNumber,
+          if (bloodGroup  != null) 'blood_group':  bloodGroup,
+        }),
       ).timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200 || response.statusCode == 201) {
@@ -851,7 +875,6 @@ class ApiService {
         }
         return {'success': true, ...data};
       } else {
-        // Exchange failed — still proceed (offline / backend down)
         return {'success': false, 'message': 'Backend exchange failed: ${response.statusCode}'};
       }
     } on TimeoutException {
@@ -863,7 +886,20 @@ class ApiService {
     }
   }
 
-  /// Save user data (is_admin, user_id, email) to SharedPreferences
+  /// Resolves the auth provider string from a Firebase [User]'s providerData.
+  static String _detectAuthProvider(User user) {
+    for (final info in user.providerData) {
+      switch (info.providerId) {
+        case 'google.com':   return 'GOOGLE';
+        case 'apple.com':    return 'APPLE';
+        case 'facebook.com': return 'FACEBOOK';
+        case 'password':     return 'EMAIL';
+      }
+    }
+    return 'EMAIL';
+  }
+
+  /// Save user data from firebase-exchange response to SharedPreferences
   static Future<void> _saveUserData(Map<String, dynamic> userData) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('is_admin', userData['is_admin'] == true);
@@ -876,6 +912,21 @@ class ApiService {
     if (userData['full_name'] != null) {
       await prefs.setString('user_full_name', userData['full_name'] as String);
     }
+    if (userData['firebase_uid'] != null) {
+      await prefs.setString('firebase_uid', userData['firebase_uid'] as String);
+    }
+    if (userData['auth_provider'] != null) {
+      await prefs.setString('auth_provider', userData['auth_provider'] as String);
+    }
+    if (userData['role'] != null) {
+      await prefs.setString('user_role', userData['role'] as String);
+    }
+  }
+
+  /// Returns the stored auth provider (EMAIL / GOOGLE / APPLE)
+  static Future<String> getAuthProvider() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('auth_provider') ?? 'EMAIL';
   }
 
   /// Returns true if the logged-in user has admin privileges.
