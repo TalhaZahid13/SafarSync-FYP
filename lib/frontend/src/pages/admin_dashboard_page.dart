@@ -1,7 +1,11 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:intl/intl.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:socket_io_client/socket_io_client.dart' as io;
 import '../utils/api_service.dart';
@@ -2552,6 +2556,12 @@ class _AnalyticsTab extends StatelessWidget {
             _PopularDestsTable(data: popularDests),
             const SizedBox(height: 24),
           ],
+
+          // ── Export Reports ─────────────────────────────────────────────────
+          _sectionTitle('Export Reports'),
+          const SizedBox(height: 12),
+          _ExportReportsCard(analytics: analytics),
+          const SizedBox(height: 24),
         ],
       ),
     );
@@ -3221,6 +3231,309 @@ class _MiniStat extends StatelessWidget {
           textAlign: TextAlign.center,
         ),
       ],
+    );
+  }
+}
+
+// ─── Export Reports Card ──────────────────────────────────────────────────────
+
+class _ExportReportsCard extends StatefulWidget {
+  final Map<String, dynamic> analytics;
+  const _ExportReportsCard({required this.analytics});
+
+  @override
+  State<_ExportReportsCard> createState() => _ExportReportsCardState();
+}
+
+class _ExportReportsCardState extends State<_ExportReportsCard> {
+  bool _exporting = false;
+
+  Future<void> _exportPdf(String reportType) async {
+    setState(() => _exporting = true);
+    try {
+      Map<String, dynamic> reportData = {};
+
+      if (reportType == 'revenue') {
+        final r = await ApiService.adminGetRequest('/admin/reports/revenue');
+        reportData = r['success'] == true ? r : {};
+      } else if (reportType == 'sos') {
+        final r = await ApiService.adminGetRequest('/admin/reports/sos');
+        reportData = r['success'] == true ? r : {};
+      } else {
+        reportData = widget.analytics;
+      }
+
+      await _generatePdf(reportType, reportData);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Export failed: $e'), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _exporting = false);
+    }
+  }
+
+  Future<void> _generatePdf(String type, Map<String, dynamic> data) async {
+    final pdf = pw.Document();
+    final now = DateTime.now();
+    final dateStr = DateFormat('dd MMMM yyyy, hh:mm a').format(now);
+    final totals = (data['totals'] ?? data['analytics']?['totals'] ?? {}) as Map;
+    final summary = data['summary'] as Map? ?? {};
+
+    pdf.addPage(
+      pw.MultiPage(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(24),
+        build: (ctx) => [
+          // Header
+          pw.Container(
+            width: double.infinity,
+            padding: const pw.EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            color: const PdfColor(0.10, 0.13, 0.49),
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Text(
+                  'SafarSync Admin Report',
+                  style: pw.TextStyle(fontSize: 22, color: PdfColors.white, fontWeight: pw.FontWeight.bold),
+                ),
+                pw.SizedBox(height: 4),
+                pw.Text(
+                  _reportTitle(type),
+                  style: const pw.TextStyle(fontSize: 14, color: PdfColors.white),
+                ),
+              ],
+            ),
+          ),
+          pw.SizedBox(height: 16),
+          pw.Text('Generated: $dateStr', style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey)),
+          pw.SizedBox(height: 20),
+
+          // Analytics summary
+          if (type == 'analytics' && totals.isNotEmpty) ...[
+            pw.Text('Platform Totals', style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
+            pw.SizedBox(height: 8),
+            pw.Table(
+              border: pw.TableBorder.all(color: PdfColors.grey300),
+              children: [
+                pw.TableRow(
+                  decoration: const pw.BoxDecoration(color: PdfColor(0.22, 0.29, 0.67)),
+                  children: [
+                    _pdfCell('Metric', isHeader: true),
+                    _pdfCell('Value', isHeader: true),
+                  ],
+                ),
+                ...(totals.entries.map((e) => pw.TableRow(children: [
+                  _pdfCell(e.key.replaceAll('_', ' ')),
+                  _pdfCell(e.value?.toString() ?? ''),
+                ]))),
+              ],
+            ),
+          ],
+
+          // Revenue report
+          if (type == 'revenue' && summary.isNotEmpty) ...[
+            pw.Text('Revenue Summary', style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
+            pw.SizedBox(height: 8),
+            pw.Table(
+              border: pw.TableBorder.all(color: PdfColors.grey300),
+              children: [
+                pw.TableRow(
+                  decoration: const pw.BoxDecoration(color: PdfColor(0.05, 0.60, 0.35)),
+                  children: [
+                    _pdfCell('Metric', isHeader: true),
+                    _pdfCell('Value', isHeader: true),
+                  ],
+                ),
+                pw.TableRow(children: [_pdfCell('Total Revenue'), _pdfCell('\$${summary['total_revenue'] ?? 0}')]),
+                pw.TableRow(children: [_pdfCell('Total Refunded'), _pdfCell('\$${summary['total_refunded'] ?? 0}')]),
+                pw.TableRow(children: [_pdfCell('Successful Payments'), _pdfCell('${summary['successful_payments'] ?? 0}')]),
+                pw.TableRow(children: [_pdfCell('Failed Payments'), _pdfCell('${summary['failed_payments'] ?? 0}')]),
+              ],
+            ),
+            pw.SizedBox(height: 16),
+            if ((data['monthly'] as List?)?.isNotEmpty == true) ...[
+              pw.Text('Monthly Revenue', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
+              pw.SizedBox(height: 6),
+              pw.Table(
+                border: pw.TableBorder.all(color: PdfColors.grey300),
+                children: [
+                  pw.TableRow(
+                    decoration: const pw.BoxDecoration(color: PdfColors.grey300),
+                    children: [_pdfCell('Month'), _pdfCell('Revenue'), _pdfCell('Transactions')],
+                  ),
+                  ...(data['monthly'] as List).map((r) => pw.TableRow(children: [
+                    _pdfCell(r['month']?.toString() ?? ''),
+                    _pdfCell('\$${r['revenue'] ?? 0}'),
+                    _pdfCell('${r['transactions'] ?? 0}'),
+                  ])),
+                ],
+              ),
+            ],
+          ],
+
+          // SOS report
+          if (type == 'sos') ...[
+            pw.Text('SOS Alert Report', style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
+            pw.SizedBox(height: 8),
+            if ((data['alerts'] as List?)?.isEmpty != false)
+              pw.Text('No SOS alerts found.', style: const pw.TextStyle(fontSize: 11))
+            else
+              pw.Table(
+                border: pw.TableBorder.all(color: PdfColors.grey300),
+                children: [
+                  pw.TableRow(
+                    decoration: const pw.BoxDecoration(color: PdfColor(0.72, 0.11, 0.11)),
+                    children: [
+                      _pdfCell('User', isHeader: true),
+                      _pdfCell('Status', isHeader: true),
+                      _pdfCell('Date', isHeader: true),
+                    ],
+                  ),
+                  ...(data['alerts'] as List).take(50).map((a) => pw.TableRow(children: [
+                    _pdfCell(a['full_name']?.toString() ?? '?'),
+                    _pdfCell(a['status']?.toString() ?? ''),
+                    _pdfCell(a['created_at']?.toString().split('T').first ?? ''),
+                  ])),
+                ],
+              ),
+          ],
+        ],
+        footer: (ctx) => pw.Center(
+          child: pw.Text(
+            'Page ${ctx.pageNumber} of ${ctx.pagesCount}  •  SafarSync Admin  •  $dateStr',
+            style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey),
+          ),
+        ),
+      ),
+    );
+
+    await Printing.layoutPdf(
+      name: 'SafarSync_${_reportTitle(type).replaceAll(' ', '_')}_${DateFormat('yyyyMMdd').format(now)}.pdf',
+      onLayout: (PdfPageFormat fmt) async => pdf.save(),
+    );
+  }
+
+  static pw.Widget _pdfCell(String text, {bool isHeader = false}) => pw.Padding(
+        padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+        child: pw.Text(
+          text,
+          style: pw.TextStyle(
+            fontSize: isHeader ? 11 : 10,
+            fontWeight: isHeader ? pw.FontWeight.bold : null,
+            color: isHeader ? PdfColors.white : PdfColors.black,
+          ),
+        ),
+      );
+
+  static String _reportTitle(String type) {
+    switch (type) {
+      case 'revenue': return 'Revenue Report';
+      case 'sos': return 'SOS Alerts Report';
+      default: return 'Platform Analytics Report';
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: BorderSide(color: Colors.indigo.shade100),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.picture_as_pdf, color: Colors.indigo.shade700, size: 20),
+                const SizedBox(width: 8),
+                Text('Download PDF Reports',
+                    style: TextStyle(fontWeight: FontWeight.w600, color: Colors.indigo.shade800)),
+                const Spacer(),
+                if (_exporting)
+                  const SizedBox(
+                    width: 18, height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: [
+                _ExportChip(
+                  label: 'Analytics Report',
+                  icon: Icons.analytics,
+                  color: _kPrimary,
+                  onTap: _exporting ? null : () => _exportPdf('analytics'),
+                ),
+                _ExportChip(
+                  label: 'Revenue Report',
+                  icon: Icons.attach_money,
+                  color: Colors.teal,
+                  onTap: _exporting ? null : () => _exportPdf('revenue'),
+                ),
+                _ExportChip(
+                  label: 'SOS Report',
+                  icon: Icons.emergency,
+                  color: Colors.red,
+                  onTap: _exporting ? null : () => _exportPdf('sos'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ExportChip extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final Color color;
+  final VoidCallback? onTap;
+
+  const _ExportChip({
+    required this.label,
+    required this.icon,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedOpacity(
+        opacity: onTap == null ? 0.5 : 1.0,
+        duration: const Duration(milliseconds: 200),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: color.withValues(alpha: 0.4)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, color: color, size: 16),
+              const SizedBox(width: 6),
+              Text(label, style: TextStyle(color: color, fontWeight: FontWeight.w600, fontSize: 13)),
+              const SizedBox(width: 6),
+              Icon(Icons.download_rounded, color: color, size: 14),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
