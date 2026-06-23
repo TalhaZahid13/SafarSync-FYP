@@ -6,6 +6,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../pages/emergency_sos_screen.dart';
 import '../../pages/emergency_contacts_page.dart';
+import '../../utils/api_service.dart';
 
 class FloatingEmergencyButton extends StatefulWidget {
   const FloatingEmergencyButton({super.key});
@@ -110,16 +111,35 @@ class _FloatingEmergencyButtonState extends State<FloatingEmergencyButton>
     }
   }
 
-  Future<void> _dial(String number) async {
+  Future<void> _dial(String number, String eventType) async {
     _closeMenu();
     await Future.delayed(const Duration(milliseconds: 200));
     HapticFeedback.heavyImpact();
 
-    final label = await _getLocationLabel();
+    Position? pos;
+    try {
+      final perm = await Geolocator.checkPermission();
+      if (perm != LocationPermission.denied && perm != LocationPermission.deniedForever) {
+        pos = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.medium)
+            .timeout(const Duration(seconds: 8));
+      }
+    } catch (_) {}
+
+    final label = pos != null
+        ? '${pos.latitude.toStringAsFixed(5)}, ${pos.longitude.toStringAsFixed(5)}'
+        : await _getLocationLabel();
+
+    // Log the event to backend (fire-and-forget — don't block the dialer)
+    ApiService.postRequest('/emergency/event', {
+      'type': eventType,
+      'latitude': pos?.latitude ?? 0,
+      'longitude': pos?.longitude ?? 0,
+    }).ignore();
+
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Calling $number — your location: $label'),
+          content: Text('Calling $number — location: $label'),
           backgroundColor: Colors.red.shade800,
           duration: const Duration(seconds: 4),
         ),
@@ -199,21 +219,21 @@ class _FloatingEmergencyButtonState extends State<FloatingEmergencyButton>
                       label: 'Tourist Police 1422',
                       icon: Icons.shield_rounded,
                       color: Colors.blue.shade700,
-                      onTap: () => _dial('1422'),
+                      onTap: () => _dial('1422', 'tourist_police'),
                     ),
                     const SizedBox(height: 10),
                     _SOSOption(
                       label: 'Police 15',
                       icon: Icons.local_police_rounded,
                       color: const Color(0xFF1A237E),
-                      onTap: () => _dial('15'),
+                      onTap: () => _dial('15', 'police'),
                     ),
                     const SizedBox(height: 10),
                     _SOSOption(
                       label: 'Ambulance 1122',
                       icon: Icons.medical_services_rounded,
                       color: Colors.green.shade700,
-                      onTap: () => _dial('1122'),
+                      onTap: () => _dial('1122', 'ambulance'),
                     ),
                     const SizedBox(height: 14),
                   ],
