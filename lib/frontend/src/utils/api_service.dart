@@ -372,12 +372,36 @@ class ApiService {
 
   // ============ DESTINATION ENDPOINTS ============
 
-  /// Get all destinations from local SQLite
+  /// Get all destinations — tries backend first, falls back to local SQLite.
+  /// Always normalises the result so both `id` and `destination_id` are present.
   static Future<Map<String, dynamic>> getDestinations({
     int page = 1,
-    int limit = 10,
+    int limit = 50,
     String? category,
   }) async {
+    List<dynamic> normalize(List<dynamic> raw) => raw.map((d) {
+      final m = Map<String, dynamic>.from(d as Map);
+      final resolved = (m['destination_id'] ?? m['id']) as int?;
+      m['destination_id'] = resolved;
+      m['id'] = resolved;
+      return m;
+    }).toList();
+
+    // 1. Try backend endpoint
+    try {
+      final queryParams = 'page=$page&limit=$limit${category != null ? '&category=$category' : ''}';
+      final response = await http.get(
+        Uri.parse('$baseUrl/destinations?$queryParams'),
+        headers: await getHeaders(),
+      ).timeout(_kTimeout);
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final list = (data['destinations'] as List?) ?? [];
+        return {'success': true, 'destinations': normalize(list)};
+      }
+    } catch (_) {}
+
+    // 2. Fall back to local SQLite seed data
     try {
       await LocalDatabaseService.ensureInitialized();
       final destinations = await LocalDatabaseService.getDestinations(
@@ -385,8 +409,7 @@ class ApiService {
         limit: limit,
         category: category,
       );
-
-      return {'success': true, 'destinations': destinations};
+      return {'success': true, 'destinations': normalize(destinations)};
     } catch (e) {
       return {'success': false, 'message': 'Error: $e'};
     }
@@ -831,6 +854,34 @@ class ApiService {
       return {'success': false, 'message': 'Request timed out'};
     } catch (e) {
       return {'success': false, 'message': 'Error: $e'};
+    }
+  }
+
+  // ============ PROFILE PHOTO UPLOAD ============
+
+  /// Upload profile photo bytes to backend. Returns {success, url}.
+  static Future<Map<String, dynamic>> uploadProfilePhoto(
+    List<int> bytes,
+    String filename,
+  ) async {
+    try {
+      final token = await AuthStorage.readToken();
+      final request = http.MultipartRequest(
+        'POST',
+        Uri.parse('$baseUrl/users/profile/photo'),
+      );
+      if (token != null) request.headers['Authorization'] = 'Bearer $token';
+      request.files.add(http.MultipartFile.fromBytes(
+        'photo', bytes, filename: filename,
+      ));
+      final streamed = await request.send().timeout(_kTimeout);
+      final body = await streamed.stream.bytesToString();
+      final data = jsonDecode(body) as Map<String, dynamic>;
+      return data;
+    } on TimeoutException {
+      return {'success': false, 'message': 'Upload timed out'};
+    } catch (e) {
+      return {'success': false, 'message': 'Upload error: $e'};
     }
   }
 

@@ -303,7 +303,7 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
     if (id == null) return;
     setState(() => _destId = id);
     final dest = _destinations.firstWhere(
-      (d) => d['destination_id'] == id,
+      (d) => ((d['destination_id'] ?? d['id']) as num?)?.toInt() == id,
       orElse: () => <String, dynamic>{},
     );
     final cost = (dest['average_cost'] as num?)?.toDouble();
@@ -375,8 +375,9 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
                 value: _destId,
                 decoration: _dec('Destination', Icons.place),
                 items: _destinations
+                    .where((d) => (d['destination_id'] ?? d['id']) != null)
                     .map((d) => DropdownMenuItem<int>(
-                          value: d['destination_id'] as int,
+                          value: ((d['destination_id'] ?? d['id']) as num).toInt(),
                           child: Text(d['name'] as String? ?? ''),
                         ))
                     .toList(),

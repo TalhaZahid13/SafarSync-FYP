@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../ui/app_theme.dart';
 import '../../pages/virtual_tour_page.dart';
 import '../../pages/sasta_tour_page.dart';
+import '../../pages/offline_maps_page.dart';
 
 class FeatureSections extends StatelessWidget {
   const FeatureSections({super.key});
@@ -57,23 +58,47 @@ class FeatureSections extends StatelessWidget {
   }
 
   Widget _offlineModeCard(BuildContext context) {
-    return _glassCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _titleRow(Icons.download_rounded, 'Offline Mode'),
-          const SizedBox(height: 8),
-          const Text(
-            'Download maps for offline navigation',
-            style: TextStyle(color: Colors.white70, fontSize: 12),
-          ),
-          const SizedBox(height: 12),
-          _offlineItem('Islamabad', '45 MB', 'Downloaded', 1.0),
-          const SizedBox(height: 8),
-          _offlineItem('Lahore', '38 MB', 'Available', 0.0),
-          const SizedBox(height: 8),
-          _offlineItem('Hunza Valley', '28 MB', 'Available', 0.0),
-        ],
+    return GestureDetector(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const OfflineMapsPage()),
+      ),
+      child: _glassCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _titleRow(Icons.download_rounded, 'Offline Mode'),
+            const SizedBox(height: 8),
+            const Text(
+              'Download maps for offline navigation',
+              style: TextStyle(color: Colors.white70, fontSize: 12),
+            ),
+            const SizedBox(height: 12),
+            _offlineItem('Islamabad', '~45 MB', 'Tap to manage', 0.0),
+            const SizedBox(height: 8),
+            _offlineItem('Lahore', '~38 MB', 'Tap to manage', 0.0),
+            const SizedBox(height: 8),
+            _offlineItem('Hunza Valley', '~28 MB', 'Tap to manage', 0.0),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              decoration: BoxDecoration(
+                color: const Color(0xFF2CAFBC).withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFF2CAFBC).withValues(alpha: 0.4)),
+              ),
+              child: const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.map_rounded, color: Color(0xFF2CAFBC), size: 16),
+                  SizedBox(width: 8),
+                  Text('Open Offline Maps Manager',
+                    style: TextStyle(color: Color(0xFF2CAFBC), fontSize: 12, fontWeight: FontWeight.w600)),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
