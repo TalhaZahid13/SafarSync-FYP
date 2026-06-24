@@ -253,7 +253,17 @@ class _BookingCard extends StatelessWidget {
 // ─── CreateBookingScreen ──────────────────────────────────────────────────────
 
 class CreateBookingScreen extends StatefulWidget {
-  const CreateBookingScreen({super.key});
+  /// When provided the destination is pre-selected and the dropdown is hidden.
+  final int? initialDestinationId;
+  final String? initialDestinationName;
+  final double? initialAvgCost;
+
+  const CreateBookingScreen({
+    super.key,
+    this.initialDestinationId,
+    this.initialDestinationName,
+    this.initialAvgCost,
+  });
 
   @override
   State<CreateBookingScreen> createState() => _CreateBookingScreenState();
@@ -262,6 +272,7 @@ class CreateBookingScreen extends StatefulWidget {
 class _CreateBookingScreenState extends State<CreateBookingScreen> {
   final _formKey = GlobalKey<FormState>();
   int? _destId;
+  String? _destName;
   DateTime? _bookingDate;
   DateTime? _travelDate;
   int _duration = 1;
@@ -274,10 +285,20 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
   double _pricePerDay = 50.0;
   double get _total => _pricePerDay * _duration * _travelers;
 
+  bool get _isPreset => widget.initialDestinationId != null;
+
   @override
   void initState() {
     super.initState();
-    _loadDestinations();
+    if (_isPreset) {
+      _destId   = widget.initialDestinationId;
+      _destName = widget.initialDestinationName;
+      if (widget.initialAvgCost != null && widget.initialAvgCost! > 0) {
+        _pricePerDay = widget.initialAvgCost!;
+      }
+    } else {
+      _loadDestinations();
+    }
   }
 
   Future<void> _loadDestinations() async {
@@ -327,11 +348,14 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
 
       if (!mounted) return;
       if (r['success'] == true) {
-        _snack('Booking created! Total: \$${_total.toStringAsFixed(2)}',
+        _snack('Booking created! Total: PKR ${_total.toStringAsFixed(0)}',
             success: true);
         Navigator.pop(context);
       } else {
-        _snack(r['error'] as String? ?? 'Failed to create booking');
+        final msg = r['error'] as String?
+            ?? r['message'] as String?
+            ?? 'Failed to create booking';
+        _snack(msg);
       }
     } catch (e) {
       if (mounted) _snack('Error: $e');
@@ -359,7 +383,11 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Create Booking')),
+      appBar: AppBar(
+        title: Text(_isPreset && _destName != null
+            ? 'Book — $_destName'
+            : 'Create Booking'),
+      ),
       body: Form(
         key: _formKey,
         child: SingleChildScrollView(
@@ -367,19 +395,50 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              DropdownButtonFormField<int>(
-                value: _destId,
-                decoration: _dec('Destination', Icons.place),
-                items: _destinations
-                    .where((d) => (d['destination_id'] ?? d['id']) != null)
-                    .map((d) => DropdownMenuItem<int>(
-                          value: ((d['destination_id'] ?? d['id']) as num).toInt(),
-                          child: Text(d['name'] as String? ?? ''),
-                        ))
-                    .toList(),
-                onChanged: _onDestinationChange,
-                validator: (v) => v == null ? 'Select a destination' : null,
-              ),
+              // Destination — read-only when preset, dropdown otherwise
+              if (_isPreset) ...[
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE8F4F8),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: const Color(0xFF2CAFBC).withValues(alpha: 0.4)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.place, color: Color(0xFF2CAFBC), size: 20),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text('Destination', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                            Text(
+                              _destName ?? 'Selected Destination',
+                              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Icon(Icons.lock_outline, size: 14, color: Colors.grey),
+                    ],
+                  ),
+                ),
+              ] else ...[
+                DropdownButtonFormField<int>(
+                  value: _destId,
+                  decoration: _dec('Destination', Icons.place),
+                  items: _destinations
+                      .where((d) => (d['destination_id'] ?? d['id']) != null)
+                      .map((d) => DropdownMenuItem<int>(
+                            value: ((d['destination_id'] ?? d['id']) as num).toInt(),
+                            child: Text(d['name'] as String? ?? ''),
+                          ))
+                      .toList(),
+                  onChanged: _onDestinationChange,
+                  validator: (v) => v == null ? 'Select a destination' : null,
+                ),
+              ],
               const SizedBox(height: 16),
               _DateField(
                 label: 'Booking Date',

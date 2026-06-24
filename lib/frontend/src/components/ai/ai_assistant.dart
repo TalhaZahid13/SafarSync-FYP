@@ -35,34 +35,30 @@ class _AIAssistantButtonState extends State<AIAssistantButton>
 
   @override
   Widget build(BuildContext context) {
-    return Positioned(
-      bottom: 96,
-      right: 96,
-      child: ScaleTransition(
-        scale: _floatAnimation,
-        child: GestureDetector(
-          onTap: widget.onClick,
-          child: Container(
-            width: 64,
-            height: 64,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: const LinearGradient(
-                colors: [Color(0xFFFDB913), Color(0xFF1B5A6E)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
+    return ScaleTransition(
+      scale: _floatAnimation,
+      child: GestureDetector(
+        onTap: widget.onClick,
+        child: Container(
+          width: 64,
+          height: 64,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: const LinearGradient(
+              colors: [Color(0xFFFDB913), Color(0xFF1B5A6E)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black26,
+                blurRadius: 10,
+                offset: Offset(0, 5),
               ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black26,
-                  blurRadius: 10,
-                  offset: Offset(0, 5),
-                ),
-              ],
-            ),
-            child: const Center(
-              child: Icon(Icons.smart_toy, color: Colors.white, size: 32),
-            ),
+            ],
+          ),
+          child: const Center(
+            child: Icon(Icons.smart_toy, color: Colors.white, size: 32),
           ),
         ),
       ),
@@ -133,6 +129,7 @@ class _AIAssistantState extends State<AIAssistant> {
     });
 
     Future.delayed(const Duration(seconds: 1), () {
+      if (!mounted) return;
       final responses = [
         'Great choice! Hunza Valley is beautiful this time of year.',
         'I recommend visiting Monal Restaurant for the best views!',

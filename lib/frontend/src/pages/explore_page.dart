@@ -303,11 +303,20 @@ class _ExplorePageState extends State<ExplorePage> {
                           Expanded(
                             child: ElevatedButton.icon(
                               onPressed: () {
+                                final rawId = dest['destination_id'] ?? dest['id'];
+                                final destId = rawId != null ? int.tryParse('$rawId') : null;
+                                final destName = dest['name']?.toString();
+                                final rawCost = dest['average_cost'] ?? dest['price'];
+                                final avgCost = rawCost != null ? double.tryParse('$rawCost') : null;
                                 Navigator.pop(sheetCtx);
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                    builder: (_) => const CreateBookingScreen(),
+                                    builder: (_) => CreateBookingScreen(
+                                      initialDestinationId: destId,
+                                      initialDestinationName: destName,
+                                      initialAvgCost: avgCost,
+                                    ),
                                   ),
                                 );
                               },

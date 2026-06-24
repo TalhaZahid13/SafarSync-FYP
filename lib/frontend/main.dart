@@ -11,7 +11,6 @@ import 'src/auth/signup.dart';
 import 'src/components/navigation/top_navigation.dart';
 import 'src/components/navigation/bottom_navigation.dart';
 import 'src/components/emergency/floating_emergency_button.dart';
-import 'src/components/ai/ai_assistant.dart';
 import 'src/pages/home_page.dart';
 import 'src/pages/explore_page.dart';
 import 'src/pages/routes_page.dart';
@@ -30,6 +29,15 @@ import 'src/ui/destination_theme.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   debugPrint('[SafarSync] ▶ App starting');
+
+  // Load user-saved server URL before anything else touches ApiService.baseUrl
+  try {
+    await ApiService.initBaseUrl().timeout(const Duration(seconds: 3));
+    debugPrint('[SafarSync] ✓ Server URL: ${ApiService.baseUrl}');
+  } catch (e) {
+    debugPrint('[SafarSync] ✗ Server URL init failed (using default): $e');
+  }
+
   try {
     Stripe.publishableKey = AppConfig.stripePublishableKey;
     await Stripe.instance.applySettings().timeout(const Duration(seconds: 5));
@@ -142,13 +150,13 @@ class _AuthGateState extends State<AuthGate> {
     try {
       await Future.wait([
         _doAuthCheck().timeout(
-          const Duration(seconds: 2),
+          const Duration(seconds: 8),
           onTimeout: () {
             debugPrint('[AuthGate] ⚠ TIMEOUT — falling back to local Firebase state');
             _resolveWithFirebaseState();
           },
         ),
-        Future.delayed(const Duration(seconds: 2)),
+        Future.delayed(const Duration(milliseconds: 800)),
       ]);
     } catch (e) {
       debugPrint('[AuthGate] ✗ Unexpected error: $e');
@@ -397,7 +405,6 @@ class App extends StatefulWidget {
 
 class _AppState extends State<App> with WidgetsBindingObserver {
   int _activeIndex = 0;
-  bool isAIOpen = false;
 
   static const _tabIds = ['home', 'explore', 'trips', 'routes', 'profile'];
   final Set<int> _visitedTabs = {0};
@@ -519,22 +526,6 @@ class _AppState extends State<App> with WidgetsBindingObserver {
         onTabChange: _onTabChange,
       ),
       extendBody: true,
-      bottomSheet: Stack(
-        children: [
-          if (!isAIOpen)
-            Positioned(
-              bottom: 80,
-              right: 16,
-              child: AIAssistantButton(
-                onClick: () => setState(() => isAIOpen = true),
-              ),
-            ),
-          AIAssistant(
-            isOpen: isAIOpen,
-            onClose: () => setState(() => isAIOpen = false),
-          ),
-        ],
-      ),
     );
   }
 }

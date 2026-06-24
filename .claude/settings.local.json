@@ -60,7 +60,25 @@
       "Bash(grep -oE \"\\(FROM|INTO|JOIN\\)\\\\s+`?\\\\w+`?\")",
       "Bash(node -e \"require\\('multer'\\); console.log\\('OK'\\)\")",
       "Bash(curl -sL \"https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.js\" -o \"D:\\\\University\\\\8th Semester\\\\Final Year Project - 2\\\\safarsync_mobileapp\\\\assets\\\\pannellum.js\")",
-      "Bash(curl -sL \"https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.css\" -o \"D:\\\\University\\\\8th Semester\\\\Final Year Project - 2\\\\safarsync_mobileapp\\\\assets\\\\pannellum.css\")"
+      "Bash(curl -sL \"https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.css\" -o \"D:\\\\University\\\\8th Semester\\\\Final Year Project - 2\\\\safarsync_mobileapp\\\\assets\\\\pannellum.css\")",
+      "PowerShell(Get-Process *)",
+      "PowerShell(netstat *)",
+      "Bash(node -e ' *)",
+      "Bash(curl *)",
+      "PowerShell(flutter devices *)",
+      "PowerShell(flutter emulators *)",
+      "PowerShell(Get-ChildItem *)",
+      "PowerShell(Get-ChildItem \"D:\\\\University\\\\8th Semester\\\\Final Year Project - 2\\\\safarsync_mobileapp\\\\android\" -Recurse | Where-Object { $_.Name -match \"build.gradle|gradle.properties\" } | Select-Object FullName)",
+      "PowerShell(Test-Path *)",
+      "PowerShell(flutter *)",
+      "Bash(node server.js)",
+      "Bash(grep -v \"//.*getRequest\\\\|//.*postRequest\")",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); [print\\(f\\\\\"  [{g['group_id']}] {g['group_name']} | code={g['invite_code']} | role={g['my_role']} | members={g['member_count']}\\\\\"\\) for g in d.get\\('groups',[]\\)]\")",
+      "Bash(npx kill-port *)",
+      "Bash(Get-Process -Name \"node\" -ErrorAction SilentlyContinue)",
+      "Bash(Stop-Process -Force -ErrorAction SilentlyContinue)",
+      "Bash(Start-Sleep -Seconds 1)",
+      "Bash(Write-Host \"Killed node\")"
     ]
   }
 }

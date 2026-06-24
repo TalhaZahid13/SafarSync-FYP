@@ -272,8 +272,8 @@ class _MainSOSButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 250),
-      width: 62,
-      height: 62,
+      width: 48,
+      height: 48,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         gradient: RadialGradient(
@@ -297,7 +297,7 @@ class _MainSOSButton extends StatelessWidget {
             isOpen ? Icons.close_rounded : Icons.warning_amber_rounded,
             key: ValueKey(isOpen),
             color: Colors.white,
-            size: 30,
+            size: 22,
           ),
         ),
       ),

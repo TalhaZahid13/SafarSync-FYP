@@ -813,12 +813,12 @@ class _WeatherForecastPageState extends State<WeatherForecastPage> {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: color.withValues(alpha: 0.15)),
       ),
-      padding: const EdgeInsets.all(8),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(icon, color: color, size: 20),
-          const SizedBox(height: 4),
+          const SizedBox(height: 3),
           Text(value,
               style: TextStyle(
                   color: color,

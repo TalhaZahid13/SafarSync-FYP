@@ -20,7 +20,15 @@ class ApiService {
     defaultValue: '',
   );
 
-  static final String baseUrl = _resolveBaseUrl();
+  static const String _kServerUrlPrefKey = 'server_base_url';
+
+  // Mutable so it can be updated at runtime via setServerUrl()
+  static String baseUrl = _resolveBaseUrlSync();
+
+  /// True only when the user has explicitly saved a server URL.
+  /// False on first launch → login page uses this to auto-open the config dialog.
+  static bool _hasCustomUrl = false;
+  static bool get isServerConfigured => _hasCustomUrl;
 
   /// Socket.io server URL (same host, no /api path)
   static String get socketUrl {
@@ -29,30 +37,55 @@ class ApiService {
     }
     return baseUrl;
   }
+
   static final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  static String _resolveBaseUrl() {
+  /// Called once in main() — loads user-saved URL from SharedPreferences.
+  static Future<void> initBaseUrl() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final saved = prefs.getString(_kServerUrlPrefKey);
+      if (saved != null && saved.isNotEmpty) {
+        baseUrl = _normalizeBaseUrl(saved);
+        _hasCustomUrl = true;
+        return;
+      }
+    } catch (_) {}
+    // Fall back to compile-time / platform default (already set by _resolveBaseUrlSync)
+    _hasCustomUrl = false;
+  }
+
+  /// Persist a new server base URL and update the runtime value immediately.
+  static Future<void> setServerUrl(String url) async {
+    final trimmed = url.trim();
+    // Accept either base (http://host:port) or full (http://host:port/api)
+    final normalized = trimmed.endsWith('/api')
+        ? _normalizeBaseUrl(trimmed)
+        : _normalizeBaseUrl('$trimmed/api');
+    baseUrl = normalized;
+    _hasCustomUrl = true;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_kServerUrlPrefKey, normalized);
+  }
+
+  /// Returns the currently configured server base URL (without /api suffix).
+  static String get serverHost => socketUrl;
+
+  static String _resolveBaseUrlSync() {
     if (_baseUrlOverride.isNotEmpty) {
       return _normalizeBaseUrl(_baseUrlOverride);
     }
-
     final host = _defaultHostForPlatform();
     return 'http://$host:5000/api';
   }
 
   static String _defaultHostForPlatform() {
-    if (kIsWeb) {
-      return 'localhost';
-    }
-
+    if (kIsWeb) return 'localhost';
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
-        // Physical device: set host via --dart-define=ANDROID_API_HOST=<your-pc-lan-ip>
-        // Emulator: --dart-define=ANDROID_API_HOST=10.0.2.2
-        if (_androidHostOverride.isNotEmpty) {
-          return _androidHostOverride;
-        }
-        // Fallback to Android emulator default — override for physical device
+        // Emulator: 10.0.2.2 reaches host machine.
+        // Physical device: set server URL in app Settings → Server Config.
+        if (_androidHostOverride.isNotEmpty) return _androidHostOverride;
         return '10.0.2.2';
       case TargetPlatform.iOS:
       case TargetPlatform.linux:
@@ -532,7 +565,7 @@ class ApiService {
       final response = await http.get(
         Uri.parse('$baseUrl/wishlist?page=$page&limit=$limit'),
         headers: await getHeaders(needsAuth: true),
-      );
+      ).timeout(_kTimeout);
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -540,8 +573,10 @@ class ApiService {
       } else {
         return {'success': false, 'message': 'Failed to fetch wishlist'};
       }
+    } on TimeoutException {
+      return {'success': false, 'wishlist': [], 'message': 'Request timed out'};
     } catch (e) {
-      return {'success': false, 'message': 'Error: $e'};
+      return {'success': false, 'wishlist': [], 'message': 'Error: $e'};
     }
   }
 
@@ -644,7 +679,7 @@ class ApiService {
       final response = await http.get(
         Uri.parse('$baseUrl/weather/$lat/$lng'),
         headers: await getHeaders(),
-      );
+      ).timeout(_kTimeout);
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -652,6 +687,8 @@ class ApiService {
       } else {
         return {'success': false, 'message': 'Failed to fetch weather'};
       }
+    } on TimeoutException {
+      return {'success': false, 'message': 'Weather request timed out'};
     } catch (e) {
       return {'success': false, 'message': 'Error: $e'};
     }
@@ -667,7 +704,7 @@ class ApiService {
       final response = await http.get(
         Uri.parse('$baseUrl/weather/$lat/$lng/forecast?days=$days'),
         headers: await getHeaders(),
-      );
+      ).timeout(_kTimeout);
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -675,6 +712,8 @@ class ApiService {
       }
 
       return {'success': false, 'message': 'Failed to fetch forecast'};
+    } on TimeoutException {
+      return {'success': false, 'message': 'Forecast request timed out'};
     } catch (e) {
       return {'success': false, 'message': 'Error: $e'};
     }
@@ -713,7 +752,7 @@ class ApiService {
         Uri.parse('$baseUrl/ai/chat'),
         headers: await getHeaders(needsAuth: true),
         body: jsonEncode({'message': message}),
-      );
+      ).timeout(const Duration(seconds: 30));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -721,6 +760,8 @@ class ApiService {
       } else {
         return {'success': false, 'message': 'AI request failed'};
       }
+    } on TimeoutException {
+      return {'success': false, 'message': 'AI response timed out. Try again.'};
     } catch (e) {
       return {'success': false, 'message': 'Error: $e'};
     }
@@ -737,7 +778,7 @@ class ApiService {
   }) async {
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/emergency/sos'),
+        Uri.parse('$baseUrl/emergency/trigger'),
         headers: await getHeaders(needsAuth: true),
         body: jsonEncode({
           'latitude': latitude,
@@ -745,13 +786,15 @@ class ApiService {
           'location_description': locationDescription,
           'severity': severity,
         }),
-      );
+      ).timeout(_kTimeout);
 
       if (response.statusCode == 200) {
         return {'success': true, 'message': 'SOS activated'};
       } else {
         return {'success': false, 'message': 'Failed to activate SOS'};
       }
+    } on TimeoutException {
+      return {'success': false, 'message': 'SOS request timed out. Check server connection.'};
     } catch (e) {
       return {'success': false, 'message': 'Error: $e'};
     }
@@ -765,7 +808,7 @@ class ApiService {
       final response = await http.get(
         Uri.parse('$baseUrl/notifications?limit=$limit'),
         headers: await getHeaders(needsAuth: true),
-      );
+      ).timeout(_kTimeout);
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -773,8 +816,10 @@ class ApiService {
       } else {
         return {'success': false, 'message': 'Failed to fetch notifications'};
       }
+    } on TimeoutException {
+      return {'success': false, 'notifications': [], 'message': 'Request timed out'};
     } catch (e) {
-      return {'success': false, 'message': 'Error: $e'};
+      return {'success': false, 'notifications': [], 'message': 'Error: $e'};
     }
   }
 
@@ -803,13 +848,17 @@ class ApiService {
   }
 
   /// Generic POST request
-  static Future<Map<String, dynamic>> postRequest(String endpoint, Map<String, dynamic> body) async {
+  static Future<Map<String, dynamic>> postRequest(
+    String endpoint,
+    Map<String, dynamic> body, {
+    Duration? timeout,
+  }) async {
     try {
       final response = await http.post(
         Uri.parse('$baseUrl$endpoint'),
         headers: await getHeaders(needsAuth: true),
         body: jsonEncode(body),
-      ).timeout(_kTimeout);
+      ).timeout(timeout ?? _kTimeout);
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         return jsonDecode(response.body);
@@ -865,6 +914,30 @@ class ApiService {
     }
   }
 
+  // ============ CURRENT USER ============
+
+  /// Decode the stored JWT to extract the current user's DB id.
+  static Future<int?> getCurrentUserId() async {
+    try {
+      final token = await AuthStorage.readToken();
+      if (token == null) return null;
+      final parts = token.split('.');
+      if (parts.length < 2) return null;
+      // Pad base64 to a multiple of 4
+      String payload = parts[1];
+      payload = payload.padRight(
+          payload.length + (4 - payload.length % 4) % 4, '=');
+      final decoded = utf8.decode(base64Url.decode(payload));
+      final map = jsonDecode(decoded) as Map<String, dynamic>;
+      final id = map['userId'];
+      if (id is int) return id;
+      if (id is String) return int.tryParse(id);
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
   // ============ PROFILE PHOTO UPLOAD ============
 
   /// Upload profile photo bytes to backend. Returns {success, url}.
@@ -906,7 +979,7 @@ class ApiService {
   }) async {
     try {
       final idToken = await user.getIdToken()
-          .timeout(const Duration(seconds: 5));
+          .timeout(const Duration(seconds: 15));
 
       // Detect provider from Firebase user's linked provider data
       final provider = _detectAuthProvider(user);
@@ -922,7 +995,7 @@ class ApiService {
           if (phoneNumber != null) 'phone_number': phoneNumber,
           if (bloodGroup  != null) 'blood_group':  bloodGroup,
         }),
-      ).timeout(const Duration(seconds: 10));
+      ).timeout(const Duration(seconds: 20));
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
@@ -937,11 +1010,20 @@ class ApiService {
         return {'success': false, 'message': 'Backend exchange failed: ${response.statusCode}'};
       }
     } on TimeoutException {
-      debugPrint('[ApiService] exchangeFirebaseToken timed out — backend unreachable');
-      return {'success': false, 'message': 'Token exchange timed out'};
+      debugPrint('[ApiService] exchangeFirebaseToken timed out — backend unreachable at $baseUrl');
+      return {
+        'success': false,
+        'message': 'Cannot reach server. Please check your server URL in Settings.',
+      };
     } catch (e) {
       debugPrint('[ApiService] exchangeFirebaseToken error: $e');
-      return {'success': false, 'message': 'Exchange error: $e'};
+      if (e.toString().contains('SocketException') || e.toString().contains('Connection refused')) {
+        return {
+          'success': false,
+          'message': 'Cannot connect to server ($serverHost). Please check your server URL in Settings.',
+        };
+      }
+      return {'success': false, 'message': 'Connection error: $e'};
     }
   }
 

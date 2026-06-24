@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+import 'api_service.dart';
 
 /// App-level configuration constants.
 ///
@@ -17,20 +17,6 @@ class AppConfig {
   // Use pk_test_... for development, pk_live_... for production
   static const String stripePublishableKey = 'pk_test_YOUR_STRIPE_PUBLISHABLE_KEY_HERE';
 
-  // Base URL for Socket.io
-  static String get baseUrl {
-    if (kIsWeb) {
-      return 'http://localhost:5000';
-    }
-    switch (defaultTargetPlatform) {
-      case TargetPlatform.android:
-        return 'http://192.168.1.5:5000';
-      case TargetPlatform.iOS:
-      case TargetPlatform.linux:
-      case TargetPlatform.macOS:
-      case TargetPlatform.windows:
-      case TargetPlatform.fuchsia:
-        return 'http://localhost:5000';
-    }
-  }
+  // Socket.io server URL — always derived from ApiService so there is one source of truth.
+  static String get baseUrl => ApiService.socketUrl;
 }

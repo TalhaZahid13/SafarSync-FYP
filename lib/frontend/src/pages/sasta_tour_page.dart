@@ -605,6 +605,12 @@ class _DayCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final activities = (day['activities'] as List?)?.cast<String>() ?? [];
+    final desc = day['desc'] as String? ?? day['description'] as String? ?? '';
+    final transport = day['transport'] as String?;
+    final accommodation = day['accommodation'] as String?;
+    final cost = day['estimated_cost'] as num?;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(14),
@@ -635,20 +641,61 @@ class _DayCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(day['title'] as String? ?? day['location'] as String? ?? 'Day ${day['day']}',
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.darkSlate)),
-                if ((day['desc'] as String? ?? '').isNotEmpty) ...[
-                  const SizedBox(height: 3),
-                  Text(day['desc'] as String,
-                      style: const TextStyle(fontSize: 12, color: AppTheme.mediumGray)),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        day['title'] as String? ?? day['location'] as String? ?? 'Day ${day['day']}',
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.darkSlate),
+                      ),
+                    ),
+                    if (cost != null)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.shade50,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.orange.shade200),
+                        ),
+                        child: Text(
+                          'PKR ${cost >= 1000 ? '${(cost / 1000).toStringAsFixed(0)}K' : cost.toStringAsFixed(0)}',
+                          style: TextStyle(fontSize: 10, color: Colors.orange.shade800, fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                  ],
+                ),
+                if (desc.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(desc, style: const TextStyle(fontSize: 12, color: AppTheme.mediumGray)),
                 ],
-                if (day['transport'] != null) ...[
-                  const SizedBox(height: 3),
+                if (activities.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  ...activities.map((act) => Padding(
+                    padding: const EdgeInsets.only(bottom: 2),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Icon(Icons.star_rounded, size: 11, color: AppTheme.turquoise),
+                        const SizedBox(width: 4),
+                        Expanded(child: Text(act, style: const TextStyle(fontSize: 11, color: AppTheme.darkSlate))),
+                      ],
+                    ),
+                  )),
+                ],
+                if (accommodation != null) ...[
+                  const SizedBox(height: 4),
+                  Row(children: [
+                    const Icon(Icons.hotel_rounded, size: 11, color: AppTheme.mediumGray),
+                    const SizedBox(width: 4),
+                    Expanded(child: Text(accommodation, style: const TextStyle(fontSize: 11, color: AppTheme.mediumGray))),
+                  ]),
+                ],
+                if (transport != null) ...[
+                  const SizedBox(height: 2),
                   Row(children: [
                     const Icon(Icons.directions_bus_rounded, size: 11, color: AppTheme.mediumGray),
                     const SizedBox(width: 4),
-                    Expanded(child: Text(day['transport'] as String,
-                        style: const TextStyle(fontSize: 11, color: AppTheme.mediumGray))),
+                    Expanded(child: Text(transport, style: const TextStyle(fontSize: 11, color: AppTheme.mediumGray))),
                   ]),
                 ],
               ],
@@ -691,14 +738,28 @@ class _BudgetPlannerPageState extends State<BudgetPlannerPage> {
     if (!_formKey.currentState!.validate()) return;
     setState(() { _loading = true; _result = null; });
     try {
-      final resp = await ApiService.postRequest('/tours/budget-plan', {
-        'budget_amount': double.parse(_budgetCtrl.text.replaceAll(',', '')),
-        'num_travelers': _travelers,
-        'duration_days': _days,
-        'start_city': _cityCtrl.text.trim(),
-        'preferences': _prefCtrl.text.trim(),
-      });
+      final resp = await ApiService.postRequest(
+        '/tours/budget-plan',
+        {
+          'budget_amount': double.parse(_budgetCtrl.text.replaceAll(',', '')),
+          'num_travelers': _travelers,
+          'duration_days': _days,
+          'start_city': _cityCtrl.text.trim(),
+          'preferences': _prefCtrl.text.trim(),
+        },
+        timeout: const Duration(seconds: 35),
+      );
       if (!mounted) return;
+      if (resp['success'] != true) {
+        setState(() => _loading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(resp['message'] as String? ?? 'Failed to generate plan'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
       setState(() { _result = resp; _loading = false; });
     } catch (e) {
       if (!mounted) return;
@@ -932,6 +993,14 @@ class _BudgetPlanResult extends StatelessWidget {
   final Map<String, dynamic> result;
   const _BudgetPlanResult({required this.result});
 
+  String _fmt(dynamic v) {
+    if (v == null) return '--';
+    final n = (v is num) ? v.toDouble() : double.tryParse(v.toString());
+    if (n == null) return v.toString();
+    if (n >= 1000) return '${(n / 1000).toStringAsFixed(0)}K';
+    return n.toStringAsFixed(0);
+  }
+
   @override
   Widget build(BuildContext context) {
     final plan = result['budget_plan'] as Map<String, dynamic>? ?? {};
@@ -939,6 +1008,8 @@ class _BudgetPlanResult extends StatelessWidget {
     final tips = (plan['money_saving_tips'] as List?)?.cast<String>() ?? [];
     final included = (plan['included_in_budget'] as List?)?.cast<String>() ?? [];
     final dests = (plan['recommended_destinations'] as List?)?.cast<String>() ?? [];
+    final affordableDests = (result['affordable_destinations'] as List?)
+        ?.cast<Map<String, dynamic>>() ?? [];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -963,9 +1034,9 @@ class _BudgetPlanResult extends StatelessWidget {
                   style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
               Row(children: [
-                _stat('Total Cost', 'PKR ${plan['total_estimated_cost'] ?? '--'}'),
+                _stat('Total Cost', 'PKR ${_fmt(plan['total_estimated_cost'])}'),
                 const SizedBox(width: 16),
-                _stat('Daily Budget', 'PKR ${plan['daily_budget'] ?? '--'}'),
+                _stat('Daily Budget', 'PKR ${_fmt(plan['daily_budget'])}'),
                 const SizedBox(width: 16),
                 _stat('Best Season', plan['best_time_to_go'] as String? ?? '--'),
               ]),
@@ -973,7 +1044,7 @@ class _BudgetPlanResult extends StatelessWidget {
           ),
         ),
 
-        // Destinations
+        // Recommended destinations (AI-suggested names)
         if (dests.isNotEmpty) ...[
           const SizedBox(height: 16),
           const Text('Recommended Destinations',
@@ -987,6 +1058,15 @@ class _BudgetPlanResult extends StatelessWidget {
               label: Text(d, style: const TextStyle(fontSize: 12)),
             )).toList(),
           ),
+        ],
+
+        // Affordable destinations with cost breakdown
+        if (affordableDests.isNotEmpty) ...[
+          const SizedBox(height: 16),
+          const Text('Places Within Your Budget',
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppTheme.darkSlate)),
+          const SizedBox(height: 8),
+          ...affordableDests.map((dest) => _DestinationCostCard(dest: dest)),
         ],
 
         // Itinerary
@@ -1059,4 +1139,82 @@ class _BudgetPlanResult extends StatelessWidget {
       Text(value, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
     ],
   );
+}
+
+// ─── Destination Cost Card ────────────────────────────────────────────────────
+
+class _DestinationCostCard extends StatelessWidget {
+  final Map<String, dynamic> dest;
+  const _DestinationCostCard({required this.dest});
+
+  @override
+  Widget build(BuildContext context) {
+    final name = dest['name'] as String? ?? 'Unknown';
+    final city = dest['city'] as String? ?? '';
+    final category = dest['category'] as String? ?? '';
+    final avgCost = (dest['average_cost'] as num?)?.toDouble();
+    final description = dest['description'] as String? ?? '';
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE8F4F8)),
+        boxShadow: const [BoxShadow(color: Color(0x08000000), blurRadius: 8, offset: Offset(0, 2))],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: AppTheme.turquoise.withValues(alpha: 0.12),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.place_rounded, color: AppTheme.turquoise, size: 22),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.darkSlate)),
+                if (city.isNotEmpty)
+                  Text(city, style: const TextStyle(fontSize: 11, color: AppTheme.mediumGray)),
+                if (description.isNotEmpty)
+                  Text(description,
+                      style: const TextStyle(fontSize: 11, color: AppTheme.mediumGray),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis),
+                if (category.isNotEmpty)
+                  Container(
+                    margin: const EdgeInsets.only(top: 4),
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: AppTheme.turquoise.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(category, style: const TextStyle(fontSize: 10, color: AppTheme.turquoise, fontWeight: FontWeight.w600)),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          if (avgCost != null)
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  'PKR ${avgCost >= 1000 ? '${(avgCost / 1000).toStringAsFixed(0)}K' : avgCost.toStringAsFixed(0)}',
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF1B5A6E)),
+                ),
+                const Text('avg/day', style: TextStyle(fontSize: 10, color: AppTheme.mediumGray)),
+              ],
+            ),
+        ],
+      ),
+    );
+  }
 }

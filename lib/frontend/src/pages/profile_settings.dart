@@ -7,6 +7,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../utils/api_service.dart';
 import '../utils/theme_controller.dart';
 import '../ui/destination_theme.dart';
+import '../auth/server_config_dialog.dart';
 
 class ProfileSettingsPage extends StatefulWidget {
   const ProfileSettingsPage({super.key});
@@ -270,6 +271,27 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
                               strokeWidth: 2, color: Colors.white))
                       : const Text('Save Changes',
                           style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                ),
+              ),
+
+              const SizedBox(height: 12),
+
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  icon: const Icon(Icons.settings_ethernet, size: 18),
+                  label: const Text('Server Configuration'),
+                  onPressed: () {
+                    showDialog(
+                      context: context,
+                      builder: (_) => const ServerConfigDialog(),
+                    );
+                  },
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14)),
+                  ),
                 ),
               ),
             ],

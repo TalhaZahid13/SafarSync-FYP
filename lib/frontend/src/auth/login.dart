@@ -11,6 +11,7 @@ import '../utils/session_manager.dart';
 import '../pages/admin_login_page.dart';
 import 'signup.dart';
 import 'forgot_password.dart';
+import 'server_config_dialog.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -31,6 +32,20 @@ class _LoginPageState extends State<LoginPage> {
   void initState() {
     super.initState();
     _restoreSavedLogin();
+    _checkServerConfig();
+  }
+
+  void _checkServerConfig() {
+    if (!ApiService.isServerConfigured) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (_) => const ServerConfigDialog(isFirstLaunch: true),
+        );
+      });
+    }
   }
 
   Future<void> _restoreSavedLogin() async {
@@ -98,6 +113,13 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
+  void _openServerConfig(BuildContext ctx) {
+    showDialog(
+      context: ctx,
+      builder: (_) => const ServerConfigDialog(isFirstLaunch: false),
+    );
+  }
+
   Future<void> _loginWithGoogle() async {
     setState(() => _isLoading = true);
 
@@ -120,7 +142,21 @@ class _LoginPageState extends State<LoginPage> {
 
       if (user != null) {
         await _persistLocalUser(user);
-        await ApiService.exchangeFirebaseToken(user);
+        final exchangeResult = await ApiService.exchangeFirebaseToken(user);
+        if (exchangeResult['success'] != true) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(exchangeResult['message'] as String? ?? 'Could not connect to server.'),
+                action: SnackBarAction(
+                  label: 'Configure',
+                  onPressed: () => _openServerConfig(context),
+                ),
+              ),
+            );
+          }
+          return;
+        }
         await SessionManager.setRememberMeEmail(user.email ?? '', true);
         await SessionManager.recordActivity();
         if (mounted) {
@@ -200,7 +236,21 @@ class _LoginPageState extends State<LoginPage> {
         }
 
         await _persistLocalUser(user);
-        await ApiService.exchangeFirebaseToken(user);
+        final exchangeResult = await ApiService.exchangeFirebaseToken(user);
+        if (exchangeResult['success'] != true) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(exchangeResult['message'] as String? ?? 'Could not connect to server.'),
+                action: SnackBarAction(
+                  label: 'Configure',
+                  onPressed: () => _openServerConfig(context),
+                ),
+              ),
+            );
+          }
+          return;
+        }
         await SessionManager.setRememberMeEmail(user.email ?? '', true);
         await SessionManager.recordActivity();
         if (mounted) {
@@ -242,7 +292,18 @@ class _LoginPageState extends State<LoginPage> {
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       body: SafeArea(
-        child: Center(
+        child: Stack(
+          children: [
+            Positioned(
+              top: 8,
+              right: 8,
+              child: IconButton(
+                tooltip: 'Server Config',
+                icon: Icon(Icons.settings_ethernet, color: theme.iconTheme.color?.withValues(alpha: 0.5), size: 20),
+                onPressed: () => _openServerConfig(context),
+              ),
+            ),
+          Center(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(24),
             child: Column(
@@ -457,6 +518,8 @@ class _LoginPageState extends State<LoginPage> {
               ],
             ),
           ),
+        ),
+          ],
         ),
       ),
     );

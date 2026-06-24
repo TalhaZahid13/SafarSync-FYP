@@ -4,6 +4,7 @@ import '../utils/api_service.dart';
 import 'bookings_page.dart';
 import 'group_bookings_page.dart';
 import 'group_invitations_page.dart';
+import 'groups_page.dart';
 import 'notifications_page.dart';
 import 'sasta_tour_page.dart';
 
@@ -193,6 +194,7 @@ class _SmartDashboardPageState extends State<SmartDashboardPage> {
         onInvitations:   () => _push(const GroupInvitationsPage()),
         onSastaTours:    () => _push(const SastaTourPage()),
         onBudgetPlanner: () => _push(const BudgetPlannerPage()),
+        onGroups:        () => _push(const GroupsPage()),
         pendingInvites:  _pendingInvites,
       ),
       const SizedBox(height: 24),
@@ -519,6 +521,7 @@ class _QuickActions extends StatelessWidget {
   final VoidCallback onInvitations;
   final VoidCallback onSastaTours;
   final VoidCallback onBudgetPlanner;
+  final VoidCallback onGroups;
   final int pendingInvites;
 
   const _QuickActions({
@@ -529,6 +532,7 @@ class _QuickActions extends StatelessWidget {
     required this.onInvitations,
     required this.onSastaTours,
     required this.onBudgetPlanner,
+    required this.onGroups,
     required this.pendingInvites,
   });
 
@@ -603,6 +607,15 @@ class _QuickActions extends StatelessWidget {
           color: pendingInvites > 0 ? Colors.orange.shade700 : Colors.blueGrey,
           onTap: onInvitations,
           badge: pendingInvites > 0 ? pendingInvites : null,
+        ),
+        const SizedBox(height: 12),
+
+        // ── Travel Groups full-width ─────────────────────────────────────────
+        _SecondaryCard(
+          icon: Icons.group_outlined,
+          label: 'Travel Groups',
+          color: const Color(0xFF00796B),
+          onTap: onGroups,
         ),
         const SizedBox(height: 12),
 
