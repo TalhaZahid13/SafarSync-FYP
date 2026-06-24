@@ -225,7 +225,7 @@ class _BookingCard extends StatelessWidget {
                     _infoChip(Icons.calendar_today, travelDate),
                   const Spacer(),
                   Text(
-                    '\$${amount.toStringAsFixed(2)}',
+                    'PKR ${amount.toStringAsFixed(0)}',
                     style: const TextStyle(
                         fontWeight: FontWeight.bold, fontSize: 15),
                   ),
@@ -258,11 +258,19 @@ class CreateBookingScreen extends StatefulWidget {
   final String? initialDestinationName;
   final double? initialAvgCost;
 
+  /// For hotel/restaurant bookings: 'hotel' | 'restaurant'
+  final String? presetType;
+  final String? presetItemName;
+  final double? presetPricePerUnit;
+
   const CreateBookingScreen({
     super.key,
     this.initialDestinationId,
     this.initialDestinationName,
     this.initialAvgCost,
+    this.presetType,
+    this.presetItemName,
+    this.presetPricePerUnit,
   });
 
   @override
@@ -282,19 +290,23 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
   bool _loading = false;
   bool _submitting = false;
 
-  double _pricePerDay = 50.0;
+  double _pricePerDay = 5000.0;
   double get _total => _pricePerDay * _duration * _travelers;
 
-  bool get _isPreset => widget.initialDestinationId != null;
+  bool get _isPreset => widget.initialDestinationId != null || widget.presetType != null;
+  bool get _isHotel => widget.presetType == 'hotel';
+  bool get _isRestaurant => widget.presetType == 'restaurant';
 
   @override
   void initState() {
     super.initState();
     if (_isPreset) {
       _destId   = widget.initialDestinationId;
-      _destName = widget.initialDestinationName;
+      _destName = widget.initialDestinationName ?? widget.presetItemName;
       if (widget.initialAvgCost != null && widget.initialAvgCost! > 0) {
         _pricePerDay = widget.initialAvgCost!;
+      } else if (widget.presetPricePerUnit != null && widget.presetPricePerUnit! > 0) {
+        _pricePerDay = widget.presetPricePerUnit!;
       }
     } else {
       _loadDestinations();
@@ -337,14 +349,30 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
 
     setState(() => _submitting = true);
     try {
-      final r = await ApiService.postRequest('/bookings/create', {
-        'destination_id': _destId,
-        'booking_date': _fmt(_bookingDate!),
-        'travel_date': _travelDate != null ? _fmt(_travelDate!) : null,
-        'num_travelers': _travelers,
-        'duration_days': _duration,
-        'notes': _notes,
-      });
+      final Map<String, dynamic> payload;
+      if (widget.presetType != null) {
+        payload = {
+          'booking_type': widget.presetType,
+          'item_name': widget.presetItemName ?? _destName,
+          'item_price_per_unit': _pricePerDay,
+          'total_amount': _total,
+          'booking_date': _fmt(_bookingDate!),
+          'travel_date': _travelDate != null ? _fmt(_travelDate!) : null,
+          'num_travelers': _travelers,
+          'duration_days': _duration,
+          'notes': _notes,
+        };
+      } else {
+        payload = {
+          'destination_id': _destId,
+          'booking_date': _fmt(_bookingDate!),
+          'travel_date': _travelDate != null ? _fmt(_travelDate!) : null,
+          'num_travelers': _travelers,
+          'duration_days': _duration,
+          'notes': _notes,
+        };
+      }
+      final r = await ApiService.postRequest('/bookings/create', payload);
 
       if (!mounted) return;
       if (r['success'] == true) {
@@ -384,9 +412,11 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(_isPreset && _destName != null
-            ? 'Book — $_destName'
-            : 'Create Booking'),
+        title: Text(
+          _isHotel ? 'Book Hotel — ${widget.presetItemName ?? ''}' :
+          _isRestaurant ? 'Reserve Table — ${widget.presetItemName ?? ''}' :
+          (_isPreset && _destName != null ? 'Book — $_destName' : 'Create Booking'),
+        ),
       ),
       body: Form(
         key: _formKey,
@@ -406,15 +436,22 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.place, color: Color(0xFF2CAFBC), size: 20),
+                      Icon(
+                        _isHotel ? Icons.hotel :
+                        _isRestaurant ? Icons.restaurant : Icons.place,
+                        color: const Color(0xFF2CAFBC), size: 20,
+                      ),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text('Destination', style: TextStyle(fontSize: 11, color: Colors.grey)),
                             Text(
-                              _destName ?? 'Selected Destination',
+                              _isHotel ? 'Hotel' : _isRestaurant ? 'Restaurant' : 'Destination',
+                              style: const TextStyle(fontSize: 11, color: Colors.grey),
+                            ),
+                            Text(
+                              _destName ?? widget.presetItemName ?? 'Selected',
                               style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
                             ),
                           ],
@@ -505,13 +542,19 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
                 ),
                 child: Column(
                   children: [
-                    _summaryRow('Rate per day', '\$$_pricePerDay'),
-                    _summaryRow('Duration', '$_duration day${_duration > 1 ? 's' : ''}'),
+                    _summaryRow(
+                      _isHotel ? 'Rate per night' : _isRestaurant ? 'Rate per person' : 'Rate per day',
+                      'PKR ${_pricePerDay.toStringAsFixed(0)}',
+                    ),
+                    _summaryRow(
+                      _isHotel ? 'Nights' : _isRestaurant ? 'Sessions' : 'Duration',
+                      '$_duration day${_duration > 1 ? 's' : ''}',
+                    ),
                     _summaryRow('Travelers', '$_travelers'),
                     const Divider(),
                     _summaryRow(
                       'Estimated Total',
-                      '\$${_total.toStringAsFixed(2)}',
+                      'PKR ${_total.toStringAsFixed(0)}',
                       bold: true,
                     ),
                   ],
@@ -811,7 +854,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                 title: 'Payment',
                 children: [
                   _InfoRow('Total Amount',
-                      '\$${amount.toStringAsFixed(2)}'),
+                      'PKR ${amount.toStringAsFixed(0)}'),
                   _InfoRow('Payment Status', payStatus),
                   if (b['payment_intent_id'] != null)
                     _InfoRow('Transaction',
@@ -845,7 +888,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                     if (paid == true) _load();
                   },
                   icon: const Icon(Icons.payment),
-                  label: Text('Pay Now — \$${amount.toStringAsFixed(2)}'),
+                  label: Text('Pay Now — PKR ${amount.toStringAsFixed(0)}'),
                   style: ElevatedButton.styleFrom(
                     minimumSize: const Size.fromHeight(52),
                     shape: RoundedRectangleBorder(

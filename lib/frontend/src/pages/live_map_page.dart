@@ -15,6 +15,90 @@ import '../utils/app_config.dart';
 import '../utils/route_session.dart';
 import '../utils/vehicle_type.dart';
 
+/// Auto-detects GPS and opens [LiveMapPage] toward [name].
+/// If [lat]/[lng] are provided, uses them directly; otherwise geocodes [name], Pakistan.
+Future<void> autoNavigateTo(
+  BuildContext context, {
+  required String name,
+  double? lat,
+  double? lng,
+}) async {
+  if (!await Geolocator.isLocationServiceEnabled()) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Location services are disabled. Enable them in Settings.')),
+      );
+    }
+    return;
+  }
+  var perm = await Geolocator.checkPermission();
+  if (perm == LocationPermission.denied) {
+    perm = await Geolocator.requestPermission();
+  }
+  if (perm == LocationPermission.denied || perm == LocationPermission.deniedForever) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Location permission denied. Enable it in app settings.')),
+      );
+    }
+    return;
+  }
+
+  if (context.mounted) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Finding route to $name…'),
+        duration: const Duration(seconds: 15),
+      ),
+    );
+  }
+
+  try {
+    final pos = await Geolocator.getCurrentPosition(
+      desiredAccuracy: LocationAccuracy.high,
+      timeLimit: const Duration(seconds: 20),
+    );
+    final origin = LatLng(pos.latitude, pos.longitude);
+
+    LatLng destination;
+    if (lat != null && lng != null) {
+      destination = LatLng(lat, lng);
+    } else {
+      final locs = await locationFromAddress('$name, Pakistan');
+      destination = LatLng(locs.first.latitude, locs.first.longitude);
+    }
+
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => LiveMapPage(
+          routeOrigin: origin,
+          routeDestination: destination,
+          destinationName: name,
+        ),
+      ),
+    );
+  } catch (_) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            lat == null
+                ? 'Could not find location — check your connection and try again'
+                : 'Could not get your GPS position — try again',
+          ),
+          backgroundColor: Colors.red.shade600,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+}
+
 /// Decodes a Google Maps encoded polyline (precision = 5 decimal places).
 /// Must be top-level so it can be passed to [compute].
 List<LatLng> _decodePolyline5(String encoded) {

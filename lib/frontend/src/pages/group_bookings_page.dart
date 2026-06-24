@@ -324,8 +324,11 @@ class _CreateGroupBookingScreenState extends State<CreateGroupBookingScreen> {
         ));
         Navigator.pop(context);
       } else {
+        final errMsg = r['error'] as String?
+            ?? r['message'] as String?
+            ?? 'Failed to create group trip';
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(r['error'] as String? ?? 'Error')),
+          SnackBar(content: Text(errMsg)),
         );
       }
     } catch (e) {

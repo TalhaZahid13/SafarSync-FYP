@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../utils/api_service.dart';
-import 'smart_route_page.dart';
 import 'bookings_page.dart';
+import 'live_map_page.dart';
 import 'virtual_tour_player_page.dart';
 
 class ExplorePage extends StatefulWidget {
@@ -91,6 +91,21 @@ class _ExplorePageState extends State<ExplorePage> {
     if (value is int) return value.toDouble();
     if (value is String) return double.tryParse(value) ?? 0.0;
     return 0.0;
+  }
+
+  double? _parseCoord(dynamic v) {
+    if (v == null) return null;
+    if (v is double) return v;
+    if (v is int) return v.toDouble();
+    if (v is String) return double.tryParse(v);
+    return null;
+  }
+
+  Future<void> _autoNavigateTo(Map<String, dynamic> dest) async {
+    final name = dest['name']?.toString() ?? 'Destination';
+    final lat = _parseCoord(dest['latitude']);
+    final lng = _parseCoord(dest['longitude']);
+    await autoNavigateTo(context, name: name, lat: lat, lng: lng);
   }
 
   void _showDestinationDetails(
@@ -274,19 +289,15 @@ class _ExplorePageState extends State<ExplorePage> {
                           const SizedBox(width: 8),
                           Expanded(
                             child: ElevatedButton.icon(
-                              onPressed: () {
+                              onPressed: () async {
                                 Navigator.pop(sheetCtx);
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => const SmartRoutePage(),
-                                  ),
-                                );
+                                if (!context.mounted) return;
+                                await _autoNavigateTo(dest);
                               },
-                              icon: const Icon(Icons.map_outlined,
+                              icon: const Icon(Icons.navigation,
                                   color: Colors.white),
                               label: const Text(
-                                'Route',
+                                'Navigate',
                                 style: TextStyle(color: Colors.white),
                               ),
                               style: ElevatedButton.styleFrom(

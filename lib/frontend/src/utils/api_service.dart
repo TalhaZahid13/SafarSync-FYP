@@ -660,7 +660,7 @@ class ApiService {
       final response = await http.get(
         Uri.parse('$baseUrl/location/latest?user_identifier=$userIdentifier'),
         headers: await getHeaders(),
-      );
+      ).timeout(_kTimeout);
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -827,6 +827,16 @@ class ApiService {
 
   static const Duration _kTimeout = Duration(seconds: 15);
 
+  static Map<String, dynamic> _errorBody(http.Response response) {
+    try {
+      final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+      final msg = decoded['error'] ?? decoded['message'] ?? 'Request failed: ${response.statusCode}';
+      return {'success': false, 'message': msg.toString(), ...decoded};
+    } catch (_) {
+      return {'success': false, 'message': 'Request failed: ${response.statusCode}'};
+    }
+  }
+
   /// Generic GET request
   static Future<Map<String, dynamic>> getRequest(String endpoint) async {
     try {
@@ -838,11 +848,14 @@ class ApiService {
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
       } else {
-        return {'success': false, 'message': 'Request failed: ${response.statusCode}'};
+        return _errorBody(response);
       }
     } on TimeoutException {
-      return {'success': false, 'message': 'Request timed out'};
+      return {'success': false, 'message': 'Cannot reach server. Check your server URL in Settings.'};
     } catch (e) {
+      if (e.toString().contains('SocketException') || e.toString().contains('Connection refused')) {
+        return {'success': false, 'message': 'Cannot connect to server ($serverHost). Check your server URL in Settings.'};
+      }
       return {'success': false, 'message': 'Error: $e'};
     }
   }
@@ -863,11 +876,14 @@ class ApiService {
       if (response.statusCode == 200 || response.statusCode == 201) {
         return jsonDecode(response.body);
       } else {
-        return {'success': false, 'message': 'Request failed: ${response.statusCode}'};
+        return _errorBody(response);
       }
     } on TimeoutException {
-      return {'success': false, 'message': 'Request timed out'};
+      return {'success': false, 'message': 'Cannot reach server. Check your server URL in Settings.'};
     } catch (e) {
+      if (e.toString().contains('SocketException') || e.toString().contains('Connection refused')) {
+        return {'success': false, 'message': 'Cannot connect to server ($serverHost). Check your server URL in Settings.'};
+      }
       return {'success': false, 'message': 'Error: $e'};
     }
   }
@@ -884,11 +900,14 @@ class ApiService {
       if (response.statusCode == 200 || response.statusCode == 201) {
         return jsonDecode(response.body);
       } else {
-        return {'success': false, 'message': 'Request failed: ${response.statusCode}'};
+        return _errorBody(response);
       }
     } on TimeoutException {
-      return {'success': false, 'message': 'Request timed out'};
+      return {'success': false, 'message': 'Cannot reach server. Check your server URL in Settings.'};
     } catch (e) {
+      if (e.toString().contains('SocketException') || e.toString().contains('Connection refused')) {
+        return {'success': false, 'message': 'Cannot connect to server ($serverHost). Check your server URL in Settings.'};
+      }
       return {'success': false, 'message': 'Error: $e'};
     }
   }
@@ -905,11 +924,14 @@ class ApiService {
         if (response.body.isEmpty) return {'success': true};
         return jsonDecode(response.body);
       } else {
-        return {'success': false, 'message': 'Request failed: ${response.statusCode}'};
+        return _errorBody(response);
       }
     } on TimeoutException {
-      return {'success': false, 'message': 'Request timed out'};
+      return {'success': false, 'message': 'Cannot reach server. Check your server URL in Settings.'};
     } catch (e) {
+      if (e.toString().contains('SocketException') || e.toString().contains('Connection refused')) {
+        return {'success': false, 'message': 'Cannot connect to server ($serverHost). Check your server URL in Settings.'};
+      }
       return {'success': false, 'message': 'Error: $e'};
     }
   }

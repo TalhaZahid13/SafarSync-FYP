@@ -204,10 +204,10 @@ class _PaymentPageState extends State<PaymentPage> {
                     _row('Travelers',
                         '${widget.numTravelers} person${widget.numTravelers > 1 ? 's' : ''}'),
                     _row('Rate per day',
-                        '\$${widget.pricePerDay.toStringAsFixed(0)}'),
+                        'PKR ${widget.pricePerDay.toStringAsFixed(0)}'),
                     const Divider(height: 24),
-                    _row('Subtotal', '\$${_subtotal.toStringAsFixed(2)}'),
-                    _row('Tax (10%)', '\$${_tax.toStringAsFixed(2)}',
+                    _row('Subtotal', 'PKR ${_subtotal.toStringAsFixed(0)}'),
+                    _row('Tax (10%)', 'PKR ${_tax.toStringAsFixed(0)}',
                         muted: true),
                     const Divider(height: 24),
                     Row(
@@ -217,7 +217,7 @@ class _PaymentPageState extends State<PaymentPage> {
                             style: theme.textTheme.titleMedium
                                 ?.copyWith(fontWeight: FontWeight.bold)),
                         Text(
-                          '\$${_total.toStringAsFixed(2)}',
+                          'PKR ${_total.toStringAsFixed(0)}',
                           style: theme.textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.bold,
                             color: theme.colorScheme.primary,
@@ -254,7 +254,7 @@ class _PaymentPageState extends State<PaymentPage> {
                       height: 20,
                       width: 20,
                       child: CircularProgressIndicator(strokeWidth: 2))
-                  : Text('Pay \$${_total.toStringAsFixed(2)}',
+                  : Text('Pay PKR ${_total.toStringAsFixed(0)}',
                       style: const TextStyle(fontSize: 16)),
             ),
           ],

@@ -2522,15 +2522,15 @@ class _AnalyticsTab extends StatelessWidget {
 
           // ── Monthly Revenue Chart ──────────────────────────────────────────
           if (monthlyRevenue.isNotEmpty) ...[
-            _sectionTitle('Monthly Revenue USD (last 12 months)'),
+            _sectionTitle('Monthly Revenue PKR (last 12 months)'),
             const SizedBox(height: 12),
             _BarChart(
               data: monthlyRevenue,
               valueKey: 'c',
               labelKey: 'm',
               color: Colors.teal,
-              unit: '\$',
-              formatValue: (v) => v >= 1000 ? '${(v / 1000).toStringAsFixed(1)}k' : v.toStringAsFixed(0),
+              unit: 'PKR ',
+              formatValue: (v) => v >= 1000 ? '${(v / 1000).toStringAsFixed(1)}K' : v.toStringAsFixed(0),
             ),
             const SizedBox(height: 24),
           ],
@@ -2582,7 +2582,7 @@ class _TotalsGrid extends StatelessWidget {
       _StatDef('Bookings',       totalsNum('total_bookings').toInt(),       Icons.bookmark,        Colors.blue),
       _StatDef('Group Bookings', totalsNum('total_group_bookings').toInt(), Icons.groups,          Colors.purple),
       _StatDef('SOS Alerts',     totalsNum('total_sos').toInt(),            Icons.emergency,       Colors.red),
-      _StatDef('Revenue (USD)',  '\$${(totalsNum('total_revenue')).toStringAsFixed(0)}', Icons.attach_money, Colors.green),
+      _StatDef('Revenue (PKR)',  'PKR ${(totalsNum('total_revenue')).toStringAsFixed(0)}', Icons.attach_money, Colors.green),
     ];
 
     return GridView.builder(
@@ -2929,7 +2929,7 @@ class _AdminPaymentsTabState extends State<_AdminPaymentsTab> {
               Expanded(
                 child: _MiniStat(
                   label: 'Total Revenue',
-                  value: '\$${_totalRevenue.toStringAsFixed(2)}',
+                  value: 'PKR ${_totalRevenue.toStringAsFixed(0)}',
                   icon: Icons.attach_money,
                   color: Colors.greenAccent,
                 ),
@@ -3093,7 +3093,7 @@ class _AdminPaymentsTabState extends State<_AdminPaymentsTab> {
                                     ),
                                   const Spacer(),
                                   Text(
-                                    '\$${amount.toStringAsFixed(2)}',
+                                    'PKR ${amount.toStringAsFixed(0)}',
                                     style: TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.bold,
@@ -3347,8 +3347,8 @@ class _ExportReportsCardState extends State<_ExportReportsCard> {
                     _pdfCell('Value', isHeader: true),
                   ],
                 ),
-                pw.TableRow(children: [_pdfCell('Total Revenue'), _pdfCell('\$${summary['total_revenue'] ?? 0}')]),
-                pw.TableRow(children: [_pdfCell('Total Refunded'), _pdfCell('\$${summary['total_refunded'] ?? 0}')]),
+                pw.TableRow(children: [_pdfCell('Total Revenue'), _pdfCell('PKR ${summary['total_revenue'] ?? 0}')]),
+                pw.TableRow(children: [_pdfCell('Total Refunded'), _pdfCell('PKR ${summary['total_refunded'] ?? 0}')]),
                 pw.TableRow(children: [_pdfCell('Successful Payments'), _pdfCell('${summary['successful_payments'] ?? 0}')]),
                 pw.TableRow(children: [_pdfCell('Failed Payments'), _pdfCell('${summary['failed_payments'] ?? 0}')]),
               ],
@@ -3366,7 +3366,7 @@ class _ExportReportsCardState extends State<_ExportReportsCard> {
                   ),
                   ...(data['monthly'] as List).map((r) => pw.TableRow(children: [
                     _pdfCell(r['month']?.toString() ?? ''),
-                    _pdfCell('\$${r['revenue'] ?? 0}'),
+                    _pdfCell('PKR ${r['revenue'] ?? 0}'),
                     _pdfCell('${r['transactions'] ?? 0}'),
                   ])),
                 ],

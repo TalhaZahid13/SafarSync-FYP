@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../ui/app_theme.dart';
+import 'bookings_page.dart';
+import 'live_map_page.dart';
 
 class FoodSpotsPage extends StatefulWidget {
   const FoodSpotsPage({super.key});
@@ -30,8 +32,11 @@ class _FoodSpotsPageState extends State<FoodSpotsPage> {
       'image':
           'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=400&q=80',
       'rating': 4.9,
-      'price': 'Rs 3,000',
+      'price': 'PKR 3,000',
+      'priceNum': 3000.0,
       'tags': ['Rooftop', 'Family', 'Scenic View'],
+      'lat': 33.7551,
+      'lng': 73.0898,
     },
     {
       'name': 'Bundu Khan',
@@ -41,8 +46,11 @@ class _FoodSpotsPageState extends State<FoodSpotsPage> {
       'image':
           'https://images.unsplash.com/photo-1544025162-d76694265947?w=400&q=80',
       'rating': 4.7,
-      'price': 'Rs 2,000',
+      'price': 'PKR 2,000',
+      'priceNum': 2000.0,
       'tags': ['BBQ', 'Dine-in', 'Takeaway'],
+      'lat': 31.5201,
+      'lng': 74.3587,
     },
     {
       'name': 'The Golden Fork',
@@ -52,8 +60,11 @@ class _FoodSpotsPageState extends State<FoodSpotsPage> {
       'image':
           'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=400&q=80',
       'rating': 4.5,
-      'price': 'Rs 2,500',
+      'price': 'PKR 2,500',
+      'priceNum': 2500.0,
       'tags': ['Fine Dining', 'Business'],
+      'lat': 33.7280,
+      'lng': 73.0883,
     },
     {
       'name': 'Kolachi Restaurant',
@@ -63,8 +74,11 @@ class _FoodSpotsPageState extends State<FoodSpotsPage> {
       'image':
           'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=400&q=80',
       'rating': 4.6,
-      'price': 'Rs 2,800',
+      'price': 'PKR 2,800',
+      'priceNum': 2800.0,
       'tags': ['Seafood', 'Sea View', 'Family'],
+      'lat': 24.8138,
+      'lng': 67.0291,
     },
     {
       'name': "McDonald's",
@@ -74,8 +88,11 @@ class _FoodSpotsPageState extends State<FoodSpotsPage> {
       'image':
           'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=400&q=80',
       'rating': 4.0,
-      'price': 'Rs 800',
+      'price': 'PKR 800',
+      'priceNum': 800.0,
       'tags': ['Quick Bite', 'Takeaway', 'Delivery'],
+      'lat': null,
+      'lng': null,
     },
     {
       'name': 'Salt\'n Pepper Village',
@@ -85,8 +102,11 @@ class _FoodSpotsPageState extends State<FoodSpotsPage> {
       'image':
           'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400&q=80',
       'rating': 4.8,
-      'price': 'Rs 3,500',
+      'price': 'PKR 3,500',
+      'priceNum': 3500.0,
       'tags': ['Village Theme', 'Desi', 'Family'],
+      'lat': 31.4792,
+      'lng': 74.2917,
     },
   ];
 
@@ -356,13 +376,13 @@ class _RestaurantCard extends StatelessWidget {
                       )
                       .toList(),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 8),
                 Row(
                   children: [
                     Text(
                       restaurant['price'] as String,
                       style: const TextStyle(
-                        fontSize: 16,
+                        fontSize: 15,
                         fontWeight: FontWeight.bold,
                         color: Color(0xFFFF8F00),
                       ),
@@ -372,22 +392,62 @@ class _RestaurantCard extends StatelessWidget {
                       style: TextStyle(
                           fontSize: 12, color: AppTheme.mediumGray),
                     ),
-                    const Spacer(),
-                    ElevatedButton(
-                      onPressed: () {},
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFFF8F00),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 20, vertical: 10),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () => autoNavigateTo(
+                          context,
+                          name: restaurant['name'] as String,
+                          lat: restaurant['lat'] as double?,
+                          lng: restaurant['lng'] as double?,
                         ),
-                        elevation: 0,
+                        icon: const Icon(Icons.navigation, size: 14),
+                        label: const Text('Navigate',
+                            style: TextStyle(fontSize: 12)),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFFFF8F00),
+                          side: const BorderSide(color: Color(0xFFFF8F00)),
+                          padding:
+                              const EdgeInsets.symmetric(vertical: 10),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                        ),
                       ),
-                      child: const Text('View Menu',
-                          style: TextStyle(
-                              fontSize: 13, fontWeight: FontWeight.w600)),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => CreateBookingScreen(
+                              presetType: 'restaurant',
+                              presetItemName:
+                                  restaurant['name'] as String,
+                              presetPricePerUnit:
+                                  restaurant['priceNum'] as double,
+                            ),
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFFF8F00),
+                          foregroundColor: Colors.white,
+                          padding:
+                              const EdgeInsets.symmetric(vertical: 10),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: const Text('Reserve Table',
+                            style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600)),
+                      ),
                     ),
                   ],
                 ),

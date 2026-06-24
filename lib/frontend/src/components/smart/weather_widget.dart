@@ -150,13 +150,15 @@ class _WeatherWidgetState extends State<WeatherWidget> {
         timeLimit: const Duration(seconds: 15),
       );
 
+      if (!mounted) return;
+
       String city = 'Unknown city';
       String country = '';
       try {
         final placemarks = await placemarkFromCoordinates(
           position.latitude,
           position.longitude,
-        );
+        ).timeout(const Duration(seconds: 5));
         if (placemarks.isNotEmpty) {
           final place = placemarks.first;
           city = (place.locality?.isNotEmpty ?? false)
@@ -204,7 +206,7 @@ class _WeatherWidgetState extends State<WeatherWidget> {
         '&forecast_days=5',
       );
 
-      final response = await http.get(uri);
+      final response = await http.get(uri).timeout(const Duration(seconds: 10));
       if (!mounted) return;
 
       if (response.statusCode != 200) {

@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../pages/emergency_sos_screen.dart';
@@ -75,77 +74,12 @@ class _FloatingEmergencyButtonState extends State<FloatingEmergencyButton>
     _expandCtrl.reverse();
   }
 
-  Future<String> _getLocationLabel() async {
-    try {
-      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) return 'an unknown location';
-
-      var perm = await Geolocator.checkPermission();
-      if (perm == LocationPermission.denied) {
-        perm = await Geolocator.requestPermission();
-      }
-      if (perm == LocationPermission.denied || perm == LocationPermission.deniedForever) {
-        return 'an unknown location';
-      }
-
-      final pos = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-      );
-
-      try {
-        final placemarks = await placemarkFromCoordinates(pos.latitude, pos.longitude);
-        if (placemarks.isNotEmpty) {
-          final p = placemarks.first;
-          final city = p.locality?.isNotEmpty == true
-              ? p.locality!
-              : p.subAdministrativeArea ?? '';
-          final country = p.country ?? '';
-          if (city.isNotEmpty && country.isNotEmpty) return '$city, $country';
-          if (city.isNotEmpty) return city;
-        }
-      } catch (_) {}
-
-      return '${pos.latitude.toStringAsFixed(5)}, ${pos.longitude.toStringAsFixed(5)}';
-    } catch (_) {
-      return 'an unknown location';
-    }
-  }
-
   Future<void> _dial(String number, String eventType) async {
     _closeMenu();
-    await Future.delayed(const Duration(milliseconds: 200));
+    await Future.delayed(const Duration(milliseconds: 150));
     HapticFeedback.heavyImpact();
 
-    Position? pos;
-    try {
-      final perm = await Geolocator.checkPermission();
-      if (perm != LocationPermission.denied && perm != LocationPermission.deniedForever) {
-        pos = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.medium)
-            .timeout(const Duration(seconds: 8));
-      }
-    } catch (_) {}
-
-    final label = pos != null
-        ? '${pos.latitude.toStringAsFixed(5)}, ${pos.longitude.toStringAsFixed(5)}'
-        : await _getLocationLabel();
-
-    // Log the event to backend (fire-and-forget — don't block the dialer)
-    ApiService.postRequest('/emergency/event', {
-      'type': eventType,
-      'latitude': pos?.latitude ?? 0,
-      'longitude': pos?.longitude ?? 0,
-    }).ignore();
-
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Calling $number — location: $label'),
-          backgroundColor: Colors.red.shade800,
-          duration: const Duration(seconds: 4),
-        ),
-      );
-    }
-
+    // Dial IMMEDIATELY — do not wait for GPS before opening the phone app
     final uri = Uri(scheme: 'tel', path: number);
     try {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
@@ -155,7 +89,37 @@ class _FloatingEmergencyButtonState extends State<FloatingEmergencyButton>
           SnackBar(content: Text('Unable to open dialer. Please call $number manually.')),
         );
       }
+      return;
     }
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Calling $number — logging your location in background'),
+          backgroundColor: Colors.red.shade800,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
+
+    // Log location to backend in background — never blocks the dialer
+    _logEmergencyEvent(eventType).ignore();
+  }
+
+  Future<void> _logEmergencyEvent(String eventType) async {
+    try {
+      Position? pos;
+      final perm = await Geolocator.checkPermission();
+      if (perm != LocationPermission.denied && perm != LocationPermission.deniedForever) {
+        pos = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.medium)
+            .timeout(const Duration(seconds: 8));
+      }
+      ApiService.postRequest('/emergency/event', {
+        'type': eventType,
+        'latitude': pos?.latitude ?? 0,
+        'longitude': pos?.longitude ?? 0,
+      }).ignore();
+    } catch (_) {}
   }
 
   void _openICEContacts() {

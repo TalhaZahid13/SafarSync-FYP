@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../ui/app_theme.dart';
+import 'bookings_page.dart';
+import 'live_map_page.dart';
 
 class HotelFinderPage extends StatefulWidget {
   const HotelFinderPage({super.key});
@@ -22,9 +24,12 @@ class _HotelFinderPageState extends State<HotelFinderPage> {
       'image':
           'https://images.unsplash.com/photo-1578683010236-d716f9a3f461?w=400&q=80',
       'rating': 4.8,
-      'price': 'Rs 25,000',
+      'price': 'PKR 25,000',
+      'priceNum': 25000.0,
       'category': 'Luxury',
       'amenities': ['WiFi', 'Pool', 'Spa', 'Restaurant'],
+      'lat': 33.7174,
+      'lng': 73.0629,
     },
     {
       'name': 'Pearl Continental Lahore',
@@ -32,9 +37,12 @@ class _HotelFinderPageState extends State<HotelFinderPage> {
       'image':
           'https://images.unsplash.com/photo-1571003123894-1f0594d2b5d9?w=400&q=80',
       'rating': 4.6,
-      'price': 'Rs 18,000',
+      'price': 'PKR 18,000',
+      'priceNum': 18000.0,
       'category': 'Luxury',
       'amenities': ['WiFi', 'Pool', 'Gym', 'Restaurant'],
+      'lat': 31.5498,
+      'lng': 74.3444,
     },
     {
       'name': 'Avari Towers Karachi',
@@ -42,9 +50,12 @@ class _HotelFinderPageState extends State<HotelFinderPage> {
       'image':
           'https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?w=400&q=80',
       'rating': 4.5,
-      'price': 'Rs 22,000',
+      'price': 'PKR 22,000',
+      'priceNum': 22000.0,
       'category': 'Luxury',
       'amenities': ['WiFi', 'Pool', 'Business Center'],
+      'lat': 24.8607,
+      'lng': 67.0101,
     },
     {
       'name': 'Monal Guest House Murree',
@@ -52,9 +63,12 @@ class _HotelFinderPageState extends State<HotelFinderPage> {
       'image':
           'https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=400&q=80',
       'rating': 4.3,
-      'price': 'Rs 8,000',
+      'price': 'PKR 8,000',
+      'priceNum': 8000.0,
       'category': 'Boutique',
       'amenities': ['WiFi', 'Mountain View', 'Breakfast'],
+      'lat': 33.9078,
+      'lng': 73.3944,
     },
     {
       'name': 'PTDC Motel Hunza',
@@ -62,9 +76,12 @@ class _HotelFinderPageState extends State<HotelFinderPage> {
       'image':
           'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&q=80',
       'rating': 4.1,
-      'price': 'Rs 5,500',
+      'price': 'PKR 5,500',
+      'priceNum': 5500.0,
       'category': 'Budget',
       'amenities': ['WiFi', 'Valley View', 'Parking'],
+      'lat': 36.3136,
+      'lng': 74.6402,
     },
     {
       'name': 'Lockwood Hotel Lahore',
@@ -72,9 +89,12 @@ class _HotelFinderPageState extends State<HotelFinderPage> {
       'image':
           'https://images.unsplash.com/photo-1564501049412-61c2a3083791?w=400&q=80',
       'rating': 4.4,
-      'price': 'Rs 12,000',
+      'price': 'PKR 12,000',
+      'priceNum': 12000.0,
       'category': 'Boutique',
       'amenities': ['WiFi', 'Restaurant', 'Bar'],
+      'lat': 31.5117,
+      'lng': 74.3510,
     },
   ];
 
@@ -343,13 +363,13 @@ class _HotelCard extends StatelessWidget {
                       )
                       .toList(),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 8),
                 Row(
                   children: [
                     Text(
                       hotel['price'] as String,
                       style: const TextStyle(
-                        fontSize: 16,
+                        fontSize: 15,
                         fontWeight: FontWeight.bold,
                         color: AppTheme.turquoise,
                       ),
@@ -359,22 +379,61 @@ class _HotelCard extends StatelessWidget {
                       style: TextStyle(
                           fontSize: 12, color: AppTheme.mediumGray),
                     ),
-                    const Spacer(),
-                    ElevatedButton(
-                      onPressed: () {},
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.turquoise,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 20, vertical: 10),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () => autoNavigateTo(
+                          context,
+                          name: hotel['name'] as String,
+                          lat: hotel['lat'] as double?,
+                          lng: hotel['lng'] as double?,
                         ),
-                        elevation: 0,
+                        icon: const Icon(Icons.navigation, size: 14),
+                        label: const Text('Navigate',
+                            style: TextStyle(fontSize: 12)),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppTheme.turquoise,
+                          side: const BorderSide(color: AppTheme.turquoise),
+                          padding:
+                              const EdgeInsets.symmetric(vertical: 10),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                        ),
                       ),
-                      child: const Text('Book Now',
-                          style: TextStyle(
-                              fontSize: 13, fontWeight: FontWeight.w600)),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => CreateBookingScreen(
+                              presetType: 'hotel',
+                              presetItemName: hotel['name'] as String,
+                              presetPricePerUnit:
+                                  hotel['priceNum'] as double,
+                            ),
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.turquoise,
+                          foregroundColor: Colors.white,
+                          padding:
+                              const EdgeInsets.symmetric(vertical: 10),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: const Text('Book Now',
+                            style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600)),
+                      ),
                     ),
                   ],
                 ),

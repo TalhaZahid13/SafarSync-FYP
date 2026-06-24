@@ -123,7 +123,7 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage> {
                             crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
                               Text(
-                                '\$${amount.toStringAsFixed(2)}',
+                                'PKR ${amount.toStringAsFixed(0)}',
                                 style: const TextStyle(
                                     fontWeight: FontWeight.bold,
                                     fontSize: 16),

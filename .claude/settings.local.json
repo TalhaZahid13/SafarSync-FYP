@@ -78,7 +78,16 @@
       "Bash(Get-Process -Name \"node\" -ErrorAction SilentlyContinue)",
       "Bash(Stop-Process -Force -ErrorAction SilentlyContinue)",
       "Bash(Start-Sleep -Seconds 1)",
-      "Bash(Write-Host \"Killed node\")"
+      "Bash(Write-Host \"Killed node\")",
+      "PowerShell(curl *)",
+      "PowerShell($r = Invoke-WebRequest -Uri \"http://localhost:5000/health\" -UseBasicParsing -ErrorAction SilentlyContinue; if \\($r\\) { $r.StatusCode; $r.Content } else { \"Backend not responding\" })",
+      "PowerShell($body = '{\"trip_name\":\"Test Trip\",\"description\":\"Test\",\"max_members\":5}'; $r = Invoke-WebRequest -Uri \"http://localhost:5000/api/group-bookings/create\" -Method POST -Body $body -ContentType \"application/json\" -UseBasicParsing -ErrorAction SilentlyContinue; \"$\\($r.StatusCode\\): $\\($r.Content\\)\")",
+      "PowerShell($token = \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjEsImVtYWlsIjoidGVzdEB0ZXN0LmNvbSIsImlzQWRtaW4iOmZhbHNlLCJpYXQiOjE3ODIyNzkxNTMsImV4cCI6MTc4MjI4Mjc1M30.0INMwstLQ3CZz8vFQCRqzQgWWN4TkBX5PtgYR-Rph9Y\"; $headers = @{Authorization = \"Bearer $token\"; \"Content-Type\" = \"application/json\"}; $body = '{\"trip_name\":\"Test Trip\",\"description\":\"A test\",\"max_members\":5}'; try { $r = Invoke-WebRequest -Uri \"http://localhost:5000/api/group-bookings/create\" -Method POST -Body $body -Headers $headers -UseBasicParsing; \"$\\($r.StatusCode\\): $\\($r.Content\\)\" } catch { $_.Exception.Response.StatusCode; $_.ErrorDetails.Message })",
+      "PowerShell($token = \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjEsImVtYWlsIjoidGVzdEB0ZXN0LmNvbSIsImlzQWRtaW4iOmZhbHNlLCJpYXQiOjE3ODIyNzkxNTMsImV4cCI6MTc4MjI4Mjc1M30.0INMwstLQ3CZz8vFQCRqzQgWWN4TkBX5PtgYR-Rph9Y\"; $headers = @{Authorization = \"Bearer $token\"; \"Content-Type\" = \"application/json\"}; $body = '{\"latitude\":31.5204,\"longitude\":74.3587,\"message\":\"Test SOS\"}'; try { $r = Invoke-WebRequest -Uri \"http://localhost:5000/api/emergency/trigger\" -Method POST -Body $body -Headers $headers -UseBasicParsing; \"$\\($r.StatusCode\\): $\\($r.Content\\)\" } catch { $_.Exception.Response.StatusCode.value__; $_.ErrorDetails.Message })",
+      "PowerShell(Stop-Process *)",
+      "PowerShell(cd \"D:\\\\University\\\\8th Semester\\\\Final Year Project - 2\\\\safarsync_mobileapp\\\\lib\\\\backend\"; Start-Process -FilePath \"node\" -ArgumentList \"server.js\" -WorkingDirectory \"D:\\\\University\\\\8th Semester\\\\Final Year Project - 2\\\\safarsync_mobileapp\\\\lib\\\\backend\" -WindowStyle Hidden; Start-Sleep -Seconds 3; $r = Invoke-WebRequest -Uri \"http://localhost:5000/health\" -UseBasicParsing -ErrorAction SilentlyContinue; if \\($r\\) { \"Backend UP: $\\($r.Content\\)\" } else { \"Backend not responding\" })",
+      "PowerShell($r = Invoke-WebRequest -Uri \"http://localhost:5000/health\" -UseBasicParsing -ErrorAction SilentlyContinue; if \\($r\\) { \"$\\($r.StatusCode\\): $\\($r.Content\\)\" } else { \"DOWN\" })",
+      "PowerShell(adb *)"
     ]
   }
 }

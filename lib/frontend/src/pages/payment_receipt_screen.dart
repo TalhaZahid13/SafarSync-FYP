@@ -172,7 +172,7 @@ class _PaymentReceiptScreenState extends State<PaymentReceiptScreen> {
                     ],
                   )),
               pw.Expanded(
-                  child: pw.Text('\$${_amount.toStringAsFixed(2)}',
+                  child: pw.Text('PKR ${_amount.toStringAsFixed(0)}',
                       textAlign: pw.TextAlign.right,
                       style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
             ],
@@ -190,7 +190,7 @@ class _PaymentReceiptScreenState extends State<PaymentReceiptScreen> {
                           color: PdfColors.grey500,
                           fontWeight: pw.FontWeight.bold)),
                   pw.SizedBox(height: 4),
-                  pw.Text('\$${_amount.toStringAsFixed(2)}',
+                  pw.Text('PKR ${_amount.toStringAsFixed(0)}',
                       style: pw.TextStyle(
                           fontSize: 20,
                           fontWeight: pw.FontWeight.bold,
@@ -298,7 +298,7 @@ class _PaymentReceiptScreenState extends State<PaymentReceiptScreen> {
                                       fontWeight: FontWeight.bold,
                                       fontSize: 16)),
                               Text(
-                                '\$${_amount.toStringAsFixed(2)}',
+                                'PKR ${_amount.toStringAsFixed(0)}',
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 18,
