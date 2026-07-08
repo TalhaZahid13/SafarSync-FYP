@@ -6,6 +6,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:socket_io_client/socket_io_client.dart' as io;
 import 'package:firebase_auth/firebase_auth.dart';
 import '../utils/api_service.dart';
+import '../utils/safe_parse.dart';
 
 // ─── Colour palette — one per member ────────────────────────────────────────
 const _kMarkerColors = [
@@ -150,8 +151,8 @@ class _GroupLiveTrackingPageState extends State<GroupLiveTrackingPage> {
 
           if (raw['latitude'] != null && raw['longitude'] != null) {
             pos = LatLng(
-              (raw['latitude'] as num).toDouble(),
-              (raw['longitude'] as num).toDouble(),
+              asDouble(raw['latitude'])!,
+              asDouble(raw['longitude'])!,
             );
           }
           if (raw['captured_at'] != null) {
@@ -210,8 +211,8 @@ class _GroupLiveTrackingPageState extends State<GroupLiveTrackingPage> {
       _socket!.on('location:group-updated', (data) {
         if (!mounted) return;
         final uid = data['user_id'].toString();
-        final lat = (data['latitude'] as num?)?.toDouble();
-        final lng = (data['longitude'] as num?)?.toDouble();
+        final lat = asDouble(data['latitude']);
+        final lng = asDouble(data['longitude']);
         if (lat == null || lng == null) return;
 
         setState(() {

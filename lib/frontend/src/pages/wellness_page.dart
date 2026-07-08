@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../utils/api_service.dart';
-import '../utils/gemini_service.dart';
 
 class WellnessPage extends StatefulWidget {
   @override
@@ -141,13 +140,10 @@ class _WellnessPageState extends State<WellnessPage> {
         'history': history,
       });
 
-      String reply;
-      if (resp['success'] == true || resp['ai_response'] != null) {
-        reply = resp['ai_response'] as String? ?? resp['message'] as String? ?? '';
-      } else {
-        // Fallback to direct Groq via GeminiService (wellness system prompt)
-        reply = await GeminiService.wellnessChat(message, history: messages);
+      if (resp['ai_response'] == null) {
+        throw Exception(resp['message'] ?? resp['error'] ?? 'AI request failed');
       }
+      final reply = resp['ai_response'] as String;
 
       if (mounted) {
         setState(() {

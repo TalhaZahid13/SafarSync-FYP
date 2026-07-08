@@ -4,6 +4,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:intl/intl.dart';
 import '../utils/payment_service.dart';
+import '../utils/safe_parse.dart';
 
 class PaymentReceiptScreen extends StatefulWidget {
   final int? paymentId;
@@ -56,7 +57,7 @@ class _PaymentReceiptScreenState extends State<PaymentReceiptScreen> {
       _receipt?['transaction_date'] as String? ??
       DateFormat('yyyy-MM-dd').format(DateTime.now());
   double get _amount =>
-      (_receipt?['amount'] as num?)?.toDouble() ?? widget.amountPaid;
+      asDouble(_receipt?['amount']) ?? widget.amountPaid;
 
   Future<void> _downloadPdf() async {
     final pdf = pw.Document();

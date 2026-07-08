@@ -74,7 +74,7 @@ class _VirtualTourPlayerPageState extends State<VirtualTourPlayerPage> {
         setState(() => _error = 'Tour not found');
       }
     } catch (e) {
-      setState(() => _error = 'Could not load tour: $e');
+      setState(() => _error = _sanitizeErrorText('Could not load tour: $e'));
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -130,7 +130,7 @@ class _VirtualTourPlayerPageState extends State<VirtualTourPlayerPage> {
           break;
 
         case 'error':
-          if (mounted) setState(() => _error = data['message']?.toString());
+          if (mounted) setState(() => _error = _sanitizeErrorText(data['message']?.toString()));
           break;
       }
     } catch (_) {}
@@ -169,6 +169,15 @@ class _VirtualTourPlayerPageState extends State<VirtualTourPlayerPage> {
 
     final escaped = tourJson.replaceAll("'", "\\'");
     await _webCtrl.runJavaScript("loadTour('$escaped')");
+  }
+
+  // Strips any HTML markup from error text before it reaches a Text widget —
+  // Pannellum and some HTTP client exceptions embed raw <a href="..."> tags
+  // meant for HTML rendering, which must never be shown as literal text.
+  static String _sanitizeErrorText(String? raw) {
+    if (raw == null || raw.isEmpty) return 'This tour could not be loaded.';
+    final stripped = raw.replaceAll(RegExp(r'<[^>]*>'), '').replaceAll(RegExp(r'\s+'), ' ').trim();
+    return stripped.isEmpty ? 'This tour could not be loaded.' : stripped;
   }
 
   // ── AI narration ─────────────────────────────────────────────────────────────

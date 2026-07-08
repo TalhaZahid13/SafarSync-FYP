@@ -9,6 +9,7 @@ import 'package:printing/printing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:socket_io_client/socket_io_client.dart' as io;
 import '../utils/api_service.dart';
+import '../utils/safe_parse.dart';
 
 // ─── Colour constants ─────────────────────────────────────────────────────────
 const _kPrimary = Color(0xFF1A237E); // deep indigo
@@ -1360,8 +1361,8 @@ class _AlertTile extends StatelessWidget {
     final email = alert['email'] as String? ?? '';
     final message = alert['message'] as String?;
     final tripName = alert['trip_name'] as String?;
-    final lat = (alert['latitude'] as num?)?.toStringAsFixed(4) ?? '—';
-    final lng = (alert['longitude'] as num?)?.toStringAsFixed(4) ?? '—';
+    final lat = asNum(alert['latitude'])?.toStringAsFixed(4) ?? '—';
+    final lng = asNum(alert['longitude'])?.toStringAsFixed(4) ?? '—';
     final created = _timeAgo(alert['created_at']);
     final id = alert['id'] as int? ?? 0;
 
@@ -1626,10 +1627,10 @@ class _EmergencyMapTabState extends State<_EmergencyMapTab>
         final rawMembers = a['group_members'] as List? ?? [];
         final members = rawMembers.asMap().entries.map((me) {
           final m = Map<String, dynamic>.from(me.value as Map);
-          final mLat = (m['latitude'] as num?)?.toDouble();
-          final mLng = (m['longitude'] as num?)?.toDouble();
+          final mLat = asDouble(m['latitude']);
+          final mLng = asDouble(m['longitude']);
           return _MapMember(
-            userId: (m['user_id'] as num?)?.toInt() ?? 0,
+            userId: asInt(m['user_id']) ?? 0,
             name: m['user_name'] as String? ?? 'Member',
             position: (mLat != null && mLng != null && mLat != 0 && mLng != 0)
                 ? LatLng(mLat, mLng)
@@ -1639,17 +1640,17 @@ class _EmergencyMapTabState extends State<_EmergencyMapTab>
           );
         }).toList();
 
-        final lat = (a['latitude'] as num?)?.toDouble() ?? 30.3753;
-        final lng = (a['longitude'] as num?)?.toDouble() ?? 69.3451;
+        final lat = asDouble(a['latitude']) ?? 30.3753;
+        final lng = asDouble(a['longitude']) ?? 69.3451;
 
         return _SosAlert(
-          alertId: (a['id'] as num?)?.toInt() ?? 0,
-          userId: (a['user_id'] as num?)?.toInt() ?? 0,
+          alertId: asInt(a['id']) ?? 0,
+          userId: asInt(a['user_id']) ?? 0,
           userName: a['user_name'] as String? ?? 'Unknown',
           userPhone: a['user_phone'] as String?,
           position: LatLng(lat, lng),
           tripName: a['trip_name'] as String?,
-          tripId: (a['trip_id'] as num?)?.toInt(),
+          tripId: asInt(a['trip_id']),
           tripType: a['trip_type'] as String?,
           groupMembers: members,
         );
@@ -1687,8 +1688,8 @@ class _EmergencyMapTabState extends State<_EmergencyMapTab>
       final d = Map<String, dynamic>.from(data as Map);
       final rawUserId = d['user_id'];
       final rawGroupId = d['group_booking_id'];
-      final lat = (d['latitude'] as num?)?.toDouble();
-      final lng = (d['longitude'] as num?)?.toDouble();
+      final lat = asDouble(d['latitude']);
+      final lng = asDouble(d['longitude']);
       if (lat == null || lng == null) return;
       final newPos = LatLng(lat, lng);
 
@@ -2234,7 +2235,7 @@ class _PackageAdminCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final price = (pkg['total_price'] as num?)?.toDouble() ?? 0;
+    final price = asDouble(pkg['total_price']) ?? 0;
     final days = pkg['duration_days'] as int? ?? 0;
     final category = pkg['category'] as String? ?? 'General';
     final active = pkg['is_active'] == true || pkg['is_active'] == 1;
@@ -2573,7 +2574,7 @@ class _TotalsGrid extends StatelessWidget {
   final Map<String, dynamic> totals;
   const _TotalsGrid({required this.totals});
 
-  num totalsNum(String k) => (totals[k] as num?) ?? 0;
+  num totalsNum(String k) => asNum(totals[k]) ?? 0;
 
   @override
   Widget build(BuildContext context) {
@@ -2618,7 +2619,7 @@ class _BookingStatusBars extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final total = data.fold<int>(0, (acc, e) => acc + ((e['c'] as num?)?.toInt() ?? 0));
+    final total = data.fold<int>(0, (acc, e) => acc + (asInt(e['c']) ?? 0));
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
@@ -2627,7 +2628,7 @@ class _BookingStatusBars extends StatelessWidget {
         child: Column(
           children: data.map((e) {
             final status = e['status'] as String? ?? '?';
-            final count = (e['c'] as num?)?.toInt() ?? 0;
+            final count = asInt(e['c']) ?? 0;
             final fraction = total == 0 ? 0.0 : count / total;
             return Padding(
               padding: const EdgeInsets.only(bottom: 10),
@@ -2662,7 +2663,7 @@ class _BarChart extends StatelessWidget {
   Widget build(BuildContext context) {
     if (data.isEmpty) return const SizedBox.shrink();
 
-    final values = data.map((e) => (e[valueKey] as num?)?.toDouble() ?? 0.0).toList();
+    final values = data.map((e) => asDouble(e[valueKey]) ?? 0.0).toList();
     final maxVal = values.reduce((a, b) => a > b ? a : b);
 
     return Card(
@@ -2733,7 +2734,7 @@ class _PopularDestsTable extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final maxCount = data.fold<int>(0, (a, e) {
-      final c = (e['c'] as num?)?.toInt() ?? 0;
+      final c = asInt(e['c']) ?? 0;
       return c > a ? c : a;
     });
 
@@ -2746,7 +2747,7 @@ class _PopularDestsTable extends StatelessWidget {
           children: List.generate(data.length, (i) {
             final name = data[i]['name'] as String? ?? '?';
             final city = data[i]['city'] as String? ?? '';
-            final count = (data[i]['c'] as num?)?.toInt() ?? 0;
+            final count = asInt(data[i]['c']) ?? 0;
             final frac = maxCount == 0 ? 0.0 : (count / maxCount).clamp(0.0, 1.0);
 
             return Padding(
@@ -2847,7 +2848,7 @@ class _AdminPaymentsTabState extends State<_AdminPaymentsTab> {
 
   double get _totalRevenue => widget.payments
       .where((p) => p['status'] == 'succeeded')
-      .fold(0.0, (sum, p) => sum + ((p['amount'] as num?)?.toDouble() ?? 0));
+      .fold(0.0, (sum, p) => sum + (asDouble(p['amount']) ?? 0));
 
   int get _pendingRefundCount => widget.payments
       .where((p) =>
@@ -3040,7 +3041,7 @@ class _AdminPaymentsTabState extends State<_AdminPaymentsTab> {
                     itemBuilder: (_, i) {
                       final p = filtered[i];
                       final status = p['status'] as String? ?? 'pending';
-                      final amount = (p['amount'] as num?)?.toDouble() ?? 0;
+                      final amount = asDouble(p['amount']) ?? 0;
                       final hasRefundRequest = p['refund_requested_at'] != null;
                       final refundApproved = p['refund_approved_at'] != null;
                       final refundRejected = p['refund_rejected_at'] != null;

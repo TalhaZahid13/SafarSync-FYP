@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../utils/api_service.dart';
+import '../utils/safe_parse.dart';
 import '../ui/app_theme.dart';
 
 // ─── Sasta Tour Packages Page ─────────────────────────────────────────────────
@@ -280,8 +281,8 @@ class _PackageCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final dests = (package['destinations'] as List?)?.cast<String>() ?? [];
     final includes = (package['includes'] as List?)?.cast<String>() ?? [];
-    final price = (package['total_price'] as num?)?.toDouble() ?? 0;
-    final days = package['duration_days'] as int? ?? 0;
+    final price = asDouble(package['total_price']) ?? 0;
+    final days = asInt(package['duration_days']) ?? 0;
     final category = package['category'] as String? ?? 'General';
 
     final catColor = _categoryColor(category);
@@ -455,8 +456,8 @@ class TourPackageDetailPage extends StatelessWidget {
     final itinerary = (package['itinerary'] as List?)?.cast<Map<String, dynamic>>() ?? [];
     final includes = (package['includes'] as List?)?.cast<String>() ?? [];
     final dests = (package['destinations'] as List?)?.cast<String>() ?? [];
-    final price = (package['total_price'] as num?)?.toDouble() ?? 0;
-    final days = package['duration_days'] as int? ?? 0;
+    final price = asDouble(package['total_price']) ?? 0;
+    final days = asInt(package['duration_days']) ?? 0;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F6FA),
@@ -609,7 +610,7 @@ class _DayCard extends StatelessWidget {
     final desc = day['desc'] as String? ?? day['description'] as String? ?? '';
     final transport = day['transport'] as String?;
     final accommodation = day['accommodation'] as String?;
-    final cost = day['estimated_cost'] as num?;
+    final cost = asNum(day['estimated_cost']);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -1152,7 +1153,7 @@ class _DestinationCostCard extends StatelessWidget {
     final name = dest['name'] as String? ?? 'Unknown';
     final city = dest['city'] as String? ?? '';
     final category = dest['category'] as String? ?? '';
-    final avgCost = (dest['average_cost'] as num?)?.toDouble();
+    final avgCost = asDouble(dest['average_cost']);
     final description = dest['description'] as String? ?? '';
 
     return Container(

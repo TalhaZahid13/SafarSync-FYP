@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
@@ -6,6 +7,7 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'local_database_service.dart';
 import 'auth_storage.dart';
+import 'safe_parse.dart';
 
 class ApiService {
   // Optional override: flutter run --dart-define=API_BASE_URL=http://192.168.1.10:5000/api
@@ -40,19 +42,127 @@ class ApiService {
 
   static final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  /// Called once in main() — loads user-saved URL from SharedPreferences.
+  /// Called once in main() — loads user-saved URL from SharedPreferences,
+  /// validates it's actually reachable, and otherwise auto-discovers the
+  /// backend on the local network. Never requires manual configuration for
+  /// the common cases (emulator, real device on the same WiFi).
   static Future<void> initBaseUrl() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final saved = prefs.getString(_kServerUrlPrefKey);
+
       if (saved != null && saved.isNotEmpty) {
-        baseUrl = _normalizeBaseUrl(saved);
-        _hasCustomUrl = true;
+        final candidate = _normalizeBaseUrl(saved);
+        if (await _probeHealth(_extractHost(candidate), timeout: const Duration(seconds: 3))) {
+          baseUrl = candidate;
+          _hasCustomUrl = true;
+          return;
+        }
+        debugPrint('[ApiService] Saved server URL unreachable ($candidate) — re-discovering');
+      }
+
+      if (kIsWeb) {
+        _hasCustomUrl = false;
         return;
       }
-    } catch (_) {}
-    // Fall back to compile-time / platform default (already set by _resolveBaseUrlSync)
+
+      // Android emulator special-case: 10.0.2.2 only resolves inside the
+      // emulator's virtual NAT, so probe it before assuming it's wrong.
+      if (defaultTargetPlatform == TargetPlatform.android && _androidHostOverride.isEmpty) {
+        if (await _probeHealth('10.0.2.2', timeout: const Duration(milliseconds: 800))) {
+          baseUrl = 'http://10.0.2.2:5000/api';
+          _hasCustomUrl = false;
+          return;
+        }
+      } else if (defaultTargetPlatform != TargetPlatform.android) {
+        if (await _probeHealth('localhost', timeout: const Duration(milliseconds: 800))) {
+          baseUrl = 'http://localhost:5000/api';
+          _hasCustomUrl = false;
+          return;
+        }
+      }
+
+      // Not an emulator (or backend not on the host loopback) — scan the
+      // device's own WiFi subnet for a machine answering on :5000/health.
+      final lanHost = await _discoverLanHost();
+      if (lanHost != null) {
+        baseUrl = 'http://$lanHost:5000/api';
+        _hasCustomUrl = true;
+        await prefs.setString(_kServerUrlPrefKey, baseUrl);
+        debugPrint('[ApiService] Auto-discovered backend at $lanHost');
+        return;
+      }
+
+      debugPrint('[ApiService] No backend found automatically; keeping default $baseUrl');
+    } catch (e) {
+      debugPrint('[ApiService] initBaseUrl error (non-fatal): $e');
+    }
     _hasCustomUrl = false;
+  }
+
+  /// Quick reachability check against a host's /health endpoint. Validates
+  /// the actual JSON body (matches app.js's `{status:'OK'}` handler), not
+  /// just a 200 status — a bare status check can be fooled by an unrelated
+  /// server, a mobile-carrier captive portal, or a zero-balance SIM landing
+  /// page that also happens to answer with HTTP 200 on port 5000.
+  static Future<bool> _probeHealth(String host, {Duration timeout = const Duration(milliseconds: 600)}) async {
+    try {
+      final response = await http.get(Uri.parse('http://$host:5000/health')).timeout(timeout);
+      if (response.statusCode != 200) return false;
+      final data = jsonDecode(response.body);
+      return data is Map && data['status'] == 'OK';
+    } catch (_) {
+      return false;
+    }
+  }
+
+  static String _extractHost(String url) => Uri.tryParse(url)?.host ?? url;
+
+  /// Probes every host on the device's local WiFi /24 subnet(s) for a
+  /// running SafarSync backend, returning the first IP that answers.
+  static Future<String?> _discoverLanHost() async {
+    try {
+      final interfaces = await NetworkInterface.list(
+        type: InternetAddressType.IPv4,
+        includeLoopback: false,
+        includeLinkLocal: false,
+      );
+
+      final subnets = <String>{};
+      for (final iface in interfaces) {
+        for (final addr in iface.addresses) {
+          final parts = addr.address.split('.');
+          if (parts.length == 4) {
+            subnets.add('${parts[0]}.${parts[1]}.${parts[2]}');
+          }
+        }
+      }
+      if (subnets.isEmpty) return null;
+
+      final completer = Completer<String?>();
+      var pending = 0;
+      for (final subnet in subnets) {
+        for (var i = 1; i < 255; i++) {
+          final host = '$subnet.$i';
+          pending++;
+          _probeHealth(host, timeout: const Duration(milliseconds: 900)).then((ok) {
+            pending--;
+            if (ok) {
+              if (!completer.isCompleted) completer.complete(host);
+            } else if (pending == 0 && !completer.isCompleted) {
+              completer.complete(null);
+            }
+          });
+        }
+      }
+
+      return await completer.future.timeout(
+        const Duration(seconds: 4),
+        onTimeout: () => null,
+      );
+    } catch (_) {
+      return null;
+    }
   }
 
   /// Persist a new server base URL and update the runtime value immediately.
@@ -422,7 +532,10 @@ class ApiService {
   }) async {
     List<dynamic> normalize(List<dynamic> raw) => raw.map((d) {
       final m = Map<String, dynamic>.from(d as Map);
-      final resolved = (m['destination_id'] ?? m['id']) as int?;
+      // destination_id/id can arrive as a String (legacy `destination` table
+      // uses a char(36) id column) or a num (modern `destinations` table) —
+      // never cast blindly, that throws on the String case.
+      final resolved = asInt(m['destination_id'] ?? m['id']);
       m['destination_id'] = resolved;
       m['id'] = resolved;
       return m;
@@ -837,6 +950,21 @@ class ApiService {
     }
   }
 
+  /// True once a background re-discovery has been kicked off, so repeated
+  /// failed requests don't all trigger their own concurrent LAN scans.
+  static bool _redetecting = false;
+
+  /// If we're still stuck on the unvalidated compile-time default (discovery
+  /// never succeeded, or the network has since changed), kick off another
+  /// auto-discovery pass in the background. Fire-and-forget: the current
+  /// (already-failed) request isn't retried, but the next one will pick up
+  /// whatever initBaseUrl() lands on.
+  static void _triggerRedetectIfStale() {
+    if (_hasCustomUrl || _redetecting) return;
+    _redetecting = true;
+    initBaseUrl().catchError((_) {}).whenComplete(() => _redetecting = false);
+  }
+
   /// Generic GET request
   static Future<Map<String, dynamic>> getRequest(String endpoint) async {
     try {
@@ -851,9 +979,11 @@ class ApiService {
         return _errorBody(response);
       }
     } on TimeoutException {
+      _triggerRedetectIfStale();
       return {'success': false, 'message': 'Cannot reach server. Check your server URL in Settings.'};
     } catch (e) {
       if (e.toString().contains('SocketException') || e.toString().contains('Connection refused')) {
+        _triggerRedetectIfStale();
         return {'success': false, 'message': 'Cannot connect to server ($serverHost). Check your server URL in Settings.'};
       }
       return {'success': false, 'message': 'Error: $e'};
@@ -879,9 +1009,11 @@ class ApiService {
         return _errorBody(response);
       }
     } on TimeoutException {
+      _triggerRedetectIfStale();
       return {'success': false, 'message': 'Cannot reach server. Check your server URL in Settings.'};
     } catch (e) {
       if (e.toString().contains('SocketException') || e.toString().contains('Connection refused')) {
+        _triggerRedetectIfStale();
         return {'success': false, 'message': 'Cannot connect to server ($serverHost). Check your server URL in Settings.'};
       }
       return {'success': false, 'message': 'Error: $e'};
@@ -903,9 +1035,11 @@ class ApiService {
         return _errorBody(response);
       }
     } on TimeoutException {
+      _triggerRedetectIfStale();
       return {'success': false, 'message': 'Cannot reach server. Check your server URL in Settings.'};
     } catch (e) {
       if (e.toString().contains('SocketException') || e.toString().contains('Connection refused')) {
+        _triggerRedetectIfStale();
         return {'success': false, 'message': 'Cannot connect to server ($serverHost). Check your server URL in Settings.'};
       }
       return {'success': false, 'message': 'Error: $e'};
@@ -927,9 +1061,11 @@ class ApiService {
         return _errorBody(response);
       }
     } on TimeoutException {
+      _triggerRedetectIfStale();
       return {'success': false, 'message': 'Cannot reach server. Check your server URL in Settings.'};
     } catch (e) {
       if (e.toString().contains('SocketException') || e.toString().contains('Connection refused')) {
+        _triggerRedetectIfStale();
         return {'success': false, 'message': 'Cannot connect to server ($serverHost). Check your server URL in Settings.'};
       }
       return {'success': false, 'message': 'Error: $e'};

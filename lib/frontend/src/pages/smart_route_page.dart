@@ -6,6 +6,7 @@ import 'package:latlong2/latlong.dart';
 import '../components/smart/smart_route_planner.dart';
 import '../ui/app_theme.dart';
 import '../utils/route_session.dart';
+import '../utils/safe_parse.dart';
 import '../utils/vehicle_type.dart';
 import 'live_map_page.dart';
 import 'map_location_picker.dart';
@@ -400,10 +401,10 @@ class _SmartRoutePageState extends State<SmartRoutePage> {
                 route: _activeRoute!,
                 onResume: () async {
                   final r = _activeRoute!;
-                  final endLat = (r['end_lat'] as num?)?.toDouble();
-                  final endLng = (r['end_lng'] as num?)?.toDouble();
-                  final startLat = (r['start_lat'] as num?)?.toDouble();
-                  final startLng = (r['start_lng'] as num?)?.toDouble();
+                  final endLat = asDouble(r['end_lat']);
+                  final endLng = asDouble(r['end_lng']);
+                  final startLat = asDouble(r['start_lat']);
+                  final startLng = asDouble(r['start_lng']);
                   if (endLat == null || endLng == null) return;
                   final vehicle = VehicleTypeX.fromName(
                       r['vehicle_type'] as String?);

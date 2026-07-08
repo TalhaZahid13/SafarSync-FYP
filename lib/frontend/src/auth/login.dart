@@ -32,20 +32,6 @@ class _LoginPageState extends State<LoginPage> {
   void initState() {
     super.initState();
     _restoreSavedLogin();
-    _checkServerConfig();
-  }
-
-  void _checkServerConfig() {
-    if (!ApiService.isServerConfigured) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (_) => const ServerConfigDialog(isFirstLaunch: true),
-        );
-      });
-    }
   }
 
   Future<void> _restoreSavedLogin() async {
@@ -87,8 +73,18 @@ class _LoginPageState extends State<LoginPage> {
         }
       } else {
         if (mounted) {
+          final message = result['message'] as String? ?? 'Login failed';
+          final isConnectionError = message.toLowerCase().contains('connect');
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(result['message'] ?? 'Login failed')),
+            SnackBar(
+              content: Text(message),
+              action: isConnectionError
+                  ? SnackBarAction(
+                      label: 'Settings',
+                      onPressed: () => _openServerConfig(context),
+                    )
+                  : null,
+            ),
           );
         }
       }
@@ -116,7 +112,7 @@ class _LoginPageState extends State<LoginPage> {
   void _openServerConfig(BuildContext ctx) {
     showDialog(
       context: ctx,
-      builder: (_) => const ServerConfigDialog(isFirstLaunch: false),
+      builder: (_) => const ServerConfigDialog(),
     );
   }
 

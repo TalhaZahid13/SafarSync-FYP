@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../utils/api_service.dart';
+import '../utils/safe_parse.dart';
 import 'group_live_tracking_page.dart';
 import 'group_invitations_page.dart';
 import 'group_chat_page.dart';
@@ -179,8 +180,8 @@ class _GroupCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final status = group['status'] as String? ?? 'Planning';
     final color = _groupStatusColor(status);
-    final members = group['member_count'] as int? ?? 0;
-    final maxMembers = group['max_members'] as int? ?? 20;
+    final members = asInt(group['member_count']) ?? 0;
+    final maxMembers = asInt(group['max_members']) ?? 20;
     final myRole = group['my_role'] as String?;
 
     return Card(
@@ -377,9 +378,9 @@ class _CreateGroupBookingScreenState extends State<CreateGroupBookingScreen> {
                   value: _destinationId,
                   decoration: _dec('Destination (optional)', Icons.place),
                   items: _destinations
-                      .where((d) => (d['destination_id'] ?? d['id']) != null)
+                      .where((d) => asInt(d['destination_id'] ?? d['id']) != null)
                       .map((d) => DropdownMenuItem<int>(
-                            value: ((d['destination_id'] ?? d['id']) as num).toInt(),
+                            value: asInt(d['destination_id'] ?? d['id'])!,
                             child: Text(d['name'] as String? ?? ''),
                           ))
                       .toList(),
@@ -657,7 +658,7 @@ class _GroupBookingDetailsScreenState
     final gb = _gb!;
     final status = gb['status'] as String? ?? 'Planning';
     final members = gb['members'] as List? ?? [];
-    final maxMembers = gb['max_members'] as int? ?? 20;
+    final maxMembers = asInt(gb['max_members']) ?? 20;
     final color = _groupStatusColor(status);
     final canClose = _isOrganizer &&
         !['Completed', 'Cancelled'].contains(status);

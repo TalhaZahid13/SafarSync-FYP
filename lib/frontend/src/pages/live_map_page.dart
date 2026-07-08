@@ -12,6 +12,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../ui/app_theme.dart';
 import '../utils/api_service.dart';
 import '../utils/app_config.dart';
+import '../utils/safe_parse.dart';
 import '../utils/route_session.dart';
 import '../utils/vehicle_type.dart';
 
@@ -233,10 +234,10 @@ class _LiveMapPageState extends State<LiveMapPage> {
     if (widget.routeDestination == null) {
       final session = await RouteSession.getActive();
       if (session != null && mounted) {
-        final endLat = (session['end_lat'] as num?)?.toDouble();
-        final endLng = (session['end_lng'] as num?)?.toDouble();
-        final startLat = (session['start_lat'] as num?)?.toDouble();
-        final startLng = (session['start_lng'] as num?)?.toDouble();
+        final endLat = asDouble(session['end_lat']);
+        final endLng = asDouble(session['end_lng']);
+        final startLat = asDouble(session['start_lat']);
+        final startLng = asDouble(session['start_lng']);
         if (endLat != null && endLng != null) {
           setState(() {
             _sessionDest = LatLng(endLat, endLng);

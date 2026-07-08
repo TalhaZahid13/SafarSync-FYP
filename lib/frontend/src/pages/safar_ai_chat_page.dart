@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../ui/app_theme.dart';
-import '../utils/gemini_service.dart';
+import '../utils/api_service.dart';
 
 class SafarAiChatPage extends StatefulWidget {
   const SafarAiChatPage({super.key});
@@ -27,8 +27,9 @@ class _SafarAiChatPageState extends State<SafarAiChatPage> {
     ),
   ];
 
-  // Parallel history list in Gemini format for multi-turn context
-  final List<Map<String, String>> _geminiHistory = [];
+  // Parallel history of {user_message, ai_response} pairs, matching the
+  // shape the backend's /api/ai/chat endpoint expects for multi-turn context.
+  final List<Map<String, String>> _chatHistory = [];
 
   bool _isSending = false;
 
@@ -51,11 +52,17 @@ class _SafarAiChatPageState extends State<SafarAiChatPage> {
     _scrollToBottom();
 
     try {
-      final reply = await GeminiService.chat(_geminiHistory, input);
+      final resp = await ApiService.postRequest('/ai/chat', {
+        'message': input,
+        'history': _chatHistory,
+      });
 
-      // Add both turns to history for multi-turn context (Groq/OpenAI format)
-      _geminiHistory.add({'role': 'user', 'content': input});
-      _geminiHistory.add({'role': 'assistant', 'content': reply});
+      if (resp['ai_response'] == null) {
+        throw Exception(resp['message'] ?? resp['error'] ?? 'AI request failed');
+      }
+      final reply = resp['ai_response'] as String;
+
+      _chatHistory.add({'user_message': input, 'ai_response': reply});
 
       if (!mounted) return;
       setState(() {
@@ -147,7 +154,7 @@ class _SafarAiChatPageState extends State<SafarAiChatPage> {
           ),
 
           // Quick suggestion chips (shown only when no history yet)
-          if (_geminiHistory.isEmpty && !_isSending)
+          if (_chatHistory.isEmpty && !_isSending)
             SizedBox(
               height: 44,
               child: ListView.separated(

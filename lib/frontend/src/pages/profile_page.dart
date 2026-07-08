@@ -14,6 +14,7 @@ import '../utils/notification_service.dart';
 import '../auth/login.dart';
 import '../utils/responsive.dart';
 import '../utils/api_service.dart';
+import '../utils/safe_parse.dart';
 import '../utils/session_manager.dart';
 
 // ── Profile page palette ──────────────────────────────────────────────────────
@@ -44,6 +45,7 @@ class _ProfilePageState extends State<ProfilePage> {
   int? _mysqlUserId;
   String? _profileName;
   String? _city;
+  String? _photoUrl;
 
   @override
   void initState() {
@@ -59,10 +61,12 @@ class _ProfilePageState extends State<ProfilePage> {
     if (mounted) {
       String? name;
       String? city;
+      String? photoUrl;
       if (profileResp['success'] == true) {
         final u = profileResp['user'] as Map<String, dynamic>? ?? {};
         name = u['full_name'] as String?;
         city = u['city'] as String?;
+        photoUrl = u['profile_picture_url'] as String?;
       }
       setState(() {
         _isAdmin = isAdmin;
@@ -71,8 +75,20 @@ class _ProfilePageState extends State<ProfilePage> {
         _statsLoaded = true;
         _profileName = name;
         _city = city;
+        _photoUrl = photoUrl;
       });
     }
+  }
+
+  // Awaits the Settings screen and always re-fetches on return — the photo
+  // upload persists immediately server-side (independent of Save), so this
+  // is the only way the Profile page picks it up without an app restart.
+  Future<void> _openSettingsAndRefresh(BuildContext context) async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const ProfileSettingsPage()),
+    );
+    if (mounted) await _loadData();
   }
 
   @override
@@ -84,6 +100,8 @@ class _ProfilePageState extends State<ProfilePage> {
       mysqlUserId: _mysqlUserId,
       profileName: _profileName,
       city: _city,
+      photoUrl: _photoUrl,
+      onEditProfile: () => _openSettingsAndRefresh(context),
     );
   }
 }
@@ -95,14 +113,18 @@ class _ProfilePageView extends StatelessWidget {
   final int? mysqlUserId;
   final String? profileName;
   final String? city;
+  final String? photoUrl;
+  final VoidCallback onEditProfile;
 
   const _ProfilePageView({
     required this.isAdmin,
     required this.stats,
     required this.statsLoaded,
+    required this.onEditProfile,
     this.mysqlUserId,
     this.profileName,
     this.city,
+    this.photoUrl,
   });
 
   void handleExportPDF() {
@@ -110,9 +132,9 @@ class _ProfilePageView extends StatelessWidget {
     final userName = user?.displayName ?? 'Traveller';
 
     // Use real stats from the backend; fall back to zeros if not yet loaded.
-    final placesVisited = (stats['total_bookings'] as num?)?.toInt() ?? 0;
-    final tripsPlanned = (stats['total_bookings'] as num?)?.toInt() ?? 0;
-    final groupTrips = (stats['group_bookings'] as num?)?.toInt() ?? 0;
+    final placesVisited = asInt(stats['total_bookings']) ?? 0;
+    final tripsPlanned = asInt(stats['total_bookings']) ?? 0;
+    final groupTrips = asInt(stats['group_bookings']) ?? 0;
 
     final tripData = TripData(
       userName: userName,
@@ -429,12 +451,7 @@ class _ProfilePageView extends StatelessWidget {
                     context,
                     LucideIcons.settings,
                     'Account Settings',
-                    () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const ProfileSettingsPage(),
-                      ),
-                    ),
+                    onEditProfile,
                   ),
                   _NotificationsBadgeButton(context: context),
                   settingsButton(
@@ -548,8 +565,13 @@ class _ProfilePageView extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: const LinearGradient(colors: [_gold, _orange]),
         borderRadius: BorderRadius.circular(999),
+        image: (photoUrl != null && photoUrl!.isNotEmpty)
+            ? DecorationImage(image: NetworkImage(photoUrl!), fit: BoxFit.cover)
+            : null,
       ),
-      child: const Icon(LucideIcons.userRound, color: Colors.white, size: 30),
+      child: (photoUrl != null && photoUrl!.isNotEmpty)
+          ? null
+          : const Icon(LucideIcons.userRound, color: Colors.white, size: 30),
     );
   }
 
@@ -593,12 +615,7 @@ class _ProfilePageView extends StatelessWidget {
 
   Widget _editButton(BuildContext context) {
     return ElevatedButton(
-      onPressed: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const ProfileSettingsPage()),
-        );
-      },
+      onPressed: onEditProfile,
       style: ElevatedButton.styleFrom(
         minimumSize: const Size(0, 30),
         padding: const EdgeInsets.symmetric(horizontal: 14),

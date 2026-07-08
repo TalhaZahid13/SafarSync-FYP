@@ -30,9 +30,11 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   debugPrint('[SafarSync] ▶ App starting');
 
-  // Load user-saved server URL before anything else touches ApiService.baseUrl
+  // Load/validate the server URL before anything else touches ApiService.baseUrl.
+  // Longer timeout than other init steps because this may auto-discover the
+  // backend across the LAN on first launch or after a network change.
   try {
-    await ApiService.initBaseUrl().timeout(const Duration(seconds: 3));
+    await ApiService.initBaseUrl().timeout(const Duration(seconds: 10));
     debugPrint('[SafarSync] ✓ Server URL: ${ApiService.baseUrl}');
   } catch (e) {
     debugPrint('[SafarSync] ✗ Server URL init failed (using default): $e');

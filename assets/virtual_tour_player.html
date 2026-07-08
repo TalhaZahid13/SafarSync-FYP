@@ -306,7 +306,12 @@
       });
 
       viewer.on('error', function (err) {
-        postToFlutter('error', { message: String(err) });
+        // Pannellum's built-in error strings are HTML-formatted (e.g. contains
+        // a raw <a href="..."> tag meant for its own overlay). Strip all tags
+        // before handing off — Flutter renders this as plain text, not HTML.
+        var raw = String(err);
+        var clean = raw.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
+        postToFlutter('error', { message: clean || 'This panorama could not be loaded.' });
       });
 
     } catch (e) {

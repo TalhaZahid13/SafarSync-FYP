@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../utils/payment_service.dart';
+import '../utils/safe_parse.dart';
 import 'payment_receipt_screen.dart';
 
 class TransactionHistoryPage extends StatefulWidget {
@@ -65,7 +66,7 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage> {
                       final p = _payments[i] as Map<String, dynamic>;
                       final status = p['status'] as String? ?? 'pending';
                       final amount =
-                          (p['amount'] as num?)?.toDouble() ?? 0.0;
+                          asDouble(p['amount']) ?? 0.0;
                       final dest = p['destination_name'] as String?;
                       final createdAt = p['created_at'] as String? ?? '';
                       final color = _statusColor(status);

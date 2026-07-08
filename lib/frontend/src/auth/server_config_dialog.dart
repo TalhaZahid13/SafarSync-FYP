@@ -3,8 +3,7 @@ import 'package:flutter/material.dart';
 import '../utils/api_service.dart';
 
 class ServerConfigDialog extends StatefulWidget {
-  final bool isFirstLaunch;
-  const ServerConfigDialog({super.key, this.isFirstLaunch = false});
+  const ServerConfigDialog({super.key});
 
   @override
   State<ServerConfigDialog> createState() => _ServerConfigDialogState();
@@ -67,11 +66,11 @@ class _ServerConfigDialogState extends State<ServerConfigDialog> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return AlertDialog(
-      title: Row(
+      title: const Row(
         children: [
-          const Icon(Icons.settings_ethernet, size: 20),
-          const SizedBox(width: 8),
-          Text(widget.isFirstLaunch ? 'Set Server URL' : 'Server Configuration'),
+          Icon(Icons.settings_ethernet, size: 20),
+          SizedBox(width: 8),
+          Text('Server Configuration'),
         ],
       ),
       content: SizedBox(
@@ -80,29 +79,6 @@ class _ServerConfigDialogState extends State<ServerConfigDialog> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (widget.isFirstLaunch)
-              Container(
-                padding: const EdgeInsets.all(10),
-                margin: const EdgeInsets.only(bottom: 12),
-                decoration: BoxDecoration(
-                  color: Colors.orange.shade50,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.orange.shade200),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.info_outline, size: 16, color: Colors.orange.shade700),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'No server URL configured. Set one to use the app on this device.',
-                        style: TextStyle(fontSize: 12, color: Colors.orange.shade800),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
             // Quick presets
             Text('Quick Presets', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: theme.textTheme.bodySmall?.color)),
             const SizedBox(height: 6),
@@ -140,11 +116,10 @@ class _ServerConfigDialogState extends State<ServerConfigDialog> {
         ),
       ),
       actions: [
-        if (!widget.isFirstLaunch)
-          TextButton(
-            onPressed: _saving ? null : () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
+        TextButton(
+          onPressed: _saving ? null : () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
         FilledButton(
           onPressed: _saving ? null : _save,
           child: _saving

@@ -15,7 +15,8 @@ class AppConfig {
 
   // Stripe — get from https://dashboard.stripe.com/apikeys
   // Use pk_test_... for development, pk_live_... for production
-  static const String stripePublishableKey = 'pk_test_YOUR_STRIPE_PUBLISHABLE_KEY_HERE';
+  static const String stripePublishableKey =
+      'pk_test_51TkPj29sYqO35RjxFYPqslL4gXqkdm6tzOdMBfsLBNlg6l5e3FVPvYuSQTrMXjmjiGHvLU9S1dqmB2uF2x9tpjI100UsVOCCBB';
 
   // Socket.io server URL — always derived from ApiService so there is one source of truth.
   static String get baseUrl => ApiService.socketUrl;

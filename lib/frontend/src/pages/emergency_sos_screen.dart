@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
 import '../utils/api_service.dart';
+import '../utils/safe_parse.dart';
 import '../utils/notification_service.dart';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -980,8 +981,8 @@ class _AlertHistoryTile extends StatelessWidget {
           ],
         ),
         trailing: Text(
-          '${(alert['latitude'] as num?)?.toStringAsFixed(3) ?? '?'}, '
-          '${(alert['longitude'] as num?)?.toStringAsFixed(3) ?? '?'}',
+          '${asNum(alert['latitude'])?.toStringAsFixed(3) ?? '?'}, '
+          '${asNum(alert['longitude'])?.toStringAsFixed(3) ?? '?'}',
           style: TextStyle(fontSize: 10, color: Colors.grey.shade400),
           textAlign: TextAlign.right,
         ),

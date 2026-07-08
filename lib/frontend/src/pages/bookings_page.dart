@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../utils/api_service.dart';
 import '../utils/payment_service.dart';
+import '../utils/safe_parse.dart';
 import 'payment_page.dart';
 Color _statusColor(String? s) {
   switch (s) {
@@ -171,8 +172,8 @@ class _BookingCard extends StatelessWidget {
     final status = booking['status'] as String? ?? 'Pending';
     final color = _statusColor(status);
     final travelDate = booking['travel_date'] as String?;
-    final travelers = booking['num_travelers'] as int? ?? 1;
-    final amount = (booking['total_amount'] as num?)?.toDouble() ?? 0.0;
+    final travelers = asInt(booking['num_travelers']) ?? 1;
+    final amount = asDouble(booking['total_amount']) ?? 0.0;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -332,10 +333,10 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
     if (id == null) return;
     setState(() => _destId = id);
     final dest = _destinations.firstWhere(
-      (d) => ((d['destination_id'] ?? d['id']) as num?)?.toInt() == id,
+      (d) => asInt(d['destination_id'] ?? d['id']) == id,
       orElse: () => <String, dynamic>{},
     );
-    final cost = (dest['average_cost'] as num?)?.toDouble();
+    final cost = asDouble(dest['average_cost']);
     if (cost != null && cost > 0) setState(() => _pricePerDay = cost);
   }
 
@@ -466,9 +467,9 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
                   value: _destId,
                   decoration: _dec('Destination', Icons.place),
                   items: _destinations
-                      .where((d) => (d['destination_id'] ?? d['id']) != null)
+                      .where((d) => asInt(d['destination_id'] ?? d['id']) != null)
                       .map((d) => DropdownMenuItem<int>(
-                            value: ((d['destination_id'] ?? d['id']) as num).toInt(),
+                            value: asInt(d['destination_id'] ?? d['id'])!,
                             child: Text(d['name'] as String? ?? ''),
                           ))
                       .toList(),
@@ -770,7 +771,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
     final b = _booking!;
     final status = b['status'] as String? ?? 'Pending';
     final payStatus = b['payment_status'] as String? ?? 'Unpaid';
-    final amount = (b['total_amount'] as num?)?.toDouble() ?? 0.0;
+    final amount = asDouble(b['total_amount']) ?? 0.0;
     final canPay = payStatus == 'Unpaid' &&
         (status == 'Pending' || status == 'Awaiting Payment');
     final canCancel = !['Completed', 'Cancelled', 'Refunded'].contains(status);
@@ -873,14 +874,11 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                           destinationName:
                               b['destination_name'] as String? ?? 'Booking',
                           durationDays:
-                              (b['estimated_duration_days'] as num?)
-                                      ?.toInt() ??
-                                  1,
+                              asInt(b['estimated_duration_days']) ?? 1,
                           numTravelers:
-                              (b['num_travelers'] as num?)?.toInt() ?? 1,
+                              asInt(b['num_travelers']) ?? 1,
                           pricePerDay:
-                              (b['average_cost'] as num?)?.toDouble() ??
-                                  50.0,
+                              asDouble(b['average_cost']) ?? 50.0,
                           totalAmount: amount,
                         ),
                       ),

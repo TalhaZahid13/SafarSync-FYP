@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:latlong2/latlong.dart';
 import '../utils/responsive.dart';
 import '../utils/api_service.dart';
+import '../utils/safe_parse.dart';
 import '../utils/route_session.dart';
 import '../utils/vehicle_type.dart';
 import '../ui/app_theme.dart';
@@ -71,10 +72,10 @@ class _RoutesPageState extends State<RoutesPage> {
     final routeName = (route['name'] ?? route['route_name'] ?? 'Route') as String;
 
     // Use stored coordinates if available (backend routes have them).
-    final startLat = (route['start_lat'] as num?)?.toDouble();
-    final startLng = (route['start_lng'] as num?)?.toDouble();
-    final endLat = (route['end_lat'] as num?)?.toDouble();
-    final endLng = (route['end_lng'] as num?)?.toDouble();
+    final startLat = asDouble(route['start_lat']);
+    final startLng = asDouble(route['start_lng']);
+    final endLat = asDouble(route['end_lat']);
+    final endLng = asDouble(route['end_lng']);
 
     if (endLat != null && endLng != null) {
       if (!context.mounted) return;
@@ -165,10 +166,10 @@ class _RoutesPageState extends State<RoutesPage> {
   Future<void> _resumeActiveRoute(BuildContext context) async {
     final route = _activeRoute;
     if (route == null) return;
-    final endLat = (route['end_lat'] as num?)?.toDouble();
-    final endLng = (route['end_lng'] as num?)?.toDouble();
-    final startLat = (route['start_lat'] as num?)?.toDouble();
-    final startLng = (route['start_lng'] as num?)?.toDouble();
+    final endLat = asDouble(route['end_lat']);
+    final endLng = asDouble(route['end_lng']);
+    final startLat = asDouble(route['start_lat']);
+    final startLng = asDouble(route['start_lng']);
     if (endLat == null || endLng == null) return;
     final vehicle = VehicleTypeX.fromName(route['vehicle_type'] as String?);
     await Navigator.push(

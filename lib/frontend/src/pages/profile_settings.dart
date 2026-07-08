@@ -26,6 +26,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
 
   String _selectedBloodGroup = 'O+';
   String? _currentPhotoUrl;
+  bool _photoChanged = false;
 
   bool _loading = true;
   bool _saving  = false;
@@ -93,10 +94,18 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
       final file = File(picked.path);
       final bytes = await file.readAsBytes();
 
-      // Upload via backend multipart endpoint
+      // Upload via backend multipart endpoint — this already persists
+      // profile_picture_url to the DB immediately, independent of Save.
       final r = await ApiService.uploadProfilePhoto(bytes, picked.name);
       if (r['success'] == true && r['url'] != null) {
-        setState(() => _currentPhotoUrl = r['url'] as String);
+        setState(() {
+          _currentPhotoUrl = r['url'] as String;
+          _photoChanged = true;
+        });
+        try {
+          await FirebaseAuth.instance.currentUser?.updatePhotoURL(_currentPhotoUrl);
+          await FirebaseAuth.instance.currentUser?.reload();
+        } catch (_) {}
         _snack('Photo updated', success: true);
       } else {
         _snack(r['message'] as String? ?? 'Upload failed');
@@ -127,15 +136,27 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
       if (!mounted) return;
 
       if (r['success'] == true) {
-        // Also update Firebase display name for consistency
+        // Sync Firebase's client-side cached user immediately — the backend
+        // already pushed these to Firebase Admin, but that doesn't refresh
+        // this device's already-signed-in FirebaseAuth.currentUser, so
+        // every screen reading user.displayName/photoURL directly would
+        // otherwise keep showing stale values until the next full sign-in.
         try {
           final fu = FirebaseAuth.instance.currentUser;
-          if (fu != null && _nameCtrl.text.trim().isNotEmpty) {
-            await fu.updateDisplayName(_nameCtrl.text.trim());
+          if (fu != null) {
+            if (_nameCtrl.text.trim().isNotEmpty) {
+              await fu.updateDisplayName(_nameCtrl.text.trim());
+            }
+            if (_currentPhotoUrl != null) {
+              await fu.updatePhotoURL(_currentPhotoUrl);
+            }
+            await fu.reload();
           }
         } catch (_) {}
         _snack('Profile saved', success: true);
-        if (mounted) Navigator.pop(context);
+        // Pop with `true` so the caller knows to refresh its own copy of
+        // the profile (name/city/photo) instead of showing stale data.
+        if (mounted) Navigator.pop(context, true);
       } else {
         _snack(r['error'] as String? ?? r['message'] as String? ?? 'Save failed');
       }
@@ -172,7 +193,10 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
         elevation: 0,
         leading: IconButton(
           icon: Icon(Icons.arrow_back, color: theme.iconTheme.color),
-          onPressed: () => Navigator.pop(context),
+          // The photo upload persists immediately (independent of Save), so
+          // even leaving via back without saving other fields should still
+          // tell the caller to refresh if the picture changed.
+          onPressed: () => Navigator.pop(context, _photoChanged),
         ),
         title: const Text('Edit Profile'),
       ),
