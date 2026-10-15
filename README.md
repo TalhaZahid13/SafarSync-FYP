@@ -88,7 +88,7 @@ The app has a **Flutter** mobile frontend and a **Node.js / Express** REST API b
 | **Wishlist** | Save destinations to a personal wishlist |
 | **Notifications** | Push + in-app notifications for booking updates, group events |
 | **Dynamic Themes** | App gradient changes automatically based on active booking destination |
-| **Profile & Settings** | Photo upload, blood group, city, dark/light mode, server config |
+| **Profile & Settings** | Photo upload, blood group, city, dark/light mode |
 | **Admin Panel** | Full admin dashboard — bookings, users, analytics, payments, refunds |
 | **Offline-first Auth** | Local SQLite caching, session management, 7-day activity timeout |
 | **Transaction History** | Full payment history with receipt generation |
@@ -136,7 +136,7 @@ safarsync_mobileapp/
 │   │   ├── main.dart                # App entry point, AuthGate, routing
 │   │   ├── firebase_options.dart    # Firebase project config
 │   │   └── src/
-│   │       ├── auth/                # Login, Signup, Server Config Dialog
+│   │       ├── auth/                # Login (Google / Apple / email), Signup
 │   │       ├── pages/               # All 35+ app screens
 │   │       │   ├── home_page.dart
 │   │       │   ├── explore_page.dart
@@ -298,15 +298,26 @@ Update `lib/frontend/src/utils/app_config.dart`:
 static const String stripePublishableKey = 'pk_test_YOUR_KEY';
 ```
 
-### 6. Run the app
+### 6. Point the app at the hosted backend
 
-```bash
-flutter run
+The app has **no server/IP setup screen**. The backend URL is compiled in from
+`env/production.json` (copy `env/production.example.json`):
+
+```json
+{ "API_BASE_URL": "https://safarsync-api.onrender.com/api" }
 ```
 
-> **Real device?** Open the app → Login screen automatically shows **Server Configuration** dialog → enter `http://YOUR_PC_IP:5000` (find your IP with `ipconfig` on Windows or `ifconfig` on Mac/Linux).
+Release builds require `https://`. (Debug builds also accept `http://` for a
+local dev server, e.g. `http://10.0.2.2:5000/api` on the Android emulator.)
 
-> **Android emulator?** Tap the "Emulator" preset chip in the Server Configuration dialog.
+### 7. Run / build the app
+
+```bash
+flutter run --dart-define-from-file=env/production.json
+flutter build apk --release --dart-define-from-file=env/production.json
+```
+
+Users then just tap **Continue with Google** — no PC server, no shared Wi-Fi.
 
 ---
 
@@ -457,7 +468,8 @@ Migrations are numbered and applied incrementally:
 
 ## Known Setup Notes
 
-- **Real device**: The login screen auto-prompts for the server URL on first launch. Enter `http://[YOUR_PC_LAN_IP]:5000`.
+- **Hosting the backend**: `render.yaml` deploys `lib/backend` to Render as an HTTPS service. Set `NODE_ENV=production` and `FIREBASE_SERVICE_ACCOUNT_KEY`; without the key, production sign-in is refused (tokens are never accepted unverified). See `lib/backend/.env.example`.
+- **Google sign-in on Android**: register your debug *and* release SHA-1 fingerprints in Firebase Console → Project settings → Android app, then re-download `android/app/google-services.json`.
 - **Offline maps**: Require a map tile download before going offline. Tap the download icon on the Offline Maps screen.
 - **Stripe webhooks**: For local testing, use [Stripe CLI](https://stripe.com/docs/stripe-cli): `stripe listen --forward-to localhost:5000/api/payments/webhook`
 - **Firebase Admin**: Download the service account JSON from Firebase Console → Project Settings → Service Accounts → Generate new private key.

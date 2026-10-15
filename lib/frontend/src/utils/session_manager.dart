@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'auth_storage.dart';
+import 'google_auth_service.dart';
 
 class SessionManager {
   static const Duration inactivityLimit = Duration(days: 7);
@@ -27,6 +28,7 @@ class SessionManager {
 
   static Future<void> clearAuthState({bool clearRememberMe = false}) async {
     await FirebaseAuth.instance.signOut();
+    await GoogleAuthService.signOut();
     await AuthStorage.clearToken();
     await AuthStorage.clearAdminToken();
     await AuthStorage.clearLastActiveAt();

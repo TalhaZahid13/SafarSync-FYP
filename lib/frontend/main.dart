@@ -23,6 +23,7 @@ import 'src/utils/notification_service.dart';
 import 'src/pages/emergency_sos_screen.dart';
 import 'src/utils/session_manager.dart';
 import 'src/utils/api_service.dart';
+import 'src/utils/env_config.dart';
 import 'src/utils/auth_storage.dart';
 import 'src/ui/destination_theme.dart';
 
@@ -30,14 +31,13 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   debugPrint('[SafarSync] ▶ App starting');
 
-  // Load/validate the server URL before anything else touches ApiService.baseUrl.
-  // Longer timeout than other init steps because this may auto-discover the
-  // backend across the LAN on first launch or after a network change.
-  try {
-    await ApiService.initBaseUrl().timeout(const Duration(seconds: 10));
-    debugPrint('[SafarSync] ✓ Server URL: ${ApiService.baseUrl}');
-  } catch (e) {
-    debugPrint('[SafarSync] ✗ Server URL init failed (using default): $e');
+  // Backend URL is fixed at build time (API_BASE_URL dart-define) — no
+  // manual server setup or LAN discovery.
+  final envError = EnvConfig.configurationError;
+  if (envError == null) {
+    debugPrint('[SafarSync] ✓ API: ${ApiService.baseUrl}');
+  } else {
+    debugPrint('[SafarSync] ✗ $envError');
   }
 
   try {

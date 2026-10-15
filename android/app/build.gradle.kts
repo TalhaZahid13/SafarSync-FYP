@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("com.google.gms.google-services")
@@ -9,8 +11,21 @@ plugins {
 dependencies {
     implementation(platform("com.google.firebase:firebase-bom:34.8.0"))
     implementation("com.google.firebase:firebase-analytics")
+    // MaterialComponents themes (styles.xml) — required by flutter_stripe's PaymentSheet
+    implementation("com.google.android.material:material:1.12.0")
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 }
+
+// Release signing: create android/key.properties (never commit it) with
+//   storeFile=<path to .jks, relative to android/app>
+//   storePassword=...
+//   keyAlias=...
+//   keyPassword=...
+val keystoreProperties = Properties().apply {
+    val file = rootProject.file("key.properties")
+    if (file.exists()) file.inputStream().use { load(it) }
+}
+val hasReleaseKeystore = keystoreProperties.getProperty("storeFile") != null
 
 android {
     namespace = "com.example.safarsync_mobileapp"
@@ -36,11 +51,33 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        // Release talks to the hosted HTTPS backend only.
+        manifestPlaceholders["usesCleartextTraffic"] = "false"
+    }
+
+    signingConfigs {
+        if (hasReleaseKeystore) {
+            create("release") {
+                storeFile = file(keystoreProperties.getProperty("storeFile"))
+                storePassword = keystoreProperties.getProperty("storePassword")
+                keyAlias = keystoreProperties.getProperty("keyAlias")
+                keyPassword = keystoreProperties.getProperty("keyPassword")
+            }
+        }
     }
 
     buildTypes {
+        debug {
+            // Allows http:// to a local dev server in debug builds only.
+            manifestPlaceholders["usesCleartextTraffic"] = "true"
+        }
         release {
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = if (hasReleaseKeystore) {
+                signingConfigs.getByName("release")
+            } else {
+                logger.warn("WARNING: android/key.properties not found — release APK is signed with the DEBUG key.")
+                signingConfigs.getByName("debug")
+            }
             // R8 code shrinking — removes unused classes and obfuscates
             isMinifyEnabled = true
             isShrinkResources = true

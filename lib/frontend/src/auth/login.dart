@@ -2,16 +2,15 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../utils/api_service.dart';
+import '../utils/google_auth_service.dart';
 import '../utils/local_database_service.dart';
 import '../utils/session_manager.dart';
 import '../pages/admin_login_page.dart';
 import 'signup.dart';
 import 'forgot_password.dart';
-import 'server_config_dialog.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -25,6 +24,7 @@ class _LoginPageState extends State<LoginPage> {
   final _passwordController = TextEditingController();
   final _auth = FirebaseAuth.instance;
   bool _isLoading = false;
+  bool _googleLoading = false;
   bool _obscurePassword = true;
   bool _rememberMe = false;
 
@@ -74,17 +74,8 @@ class _LoginPageState extends State<LoginPage> {
       } else {
         if (mounted) {
           final message = result['message'] as String? ?? 'Login failed';
-          final isConnectionError = message.toLowerCase().contains('connect');
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(message),
-              action: isConnectionError
-                  ? SnackBarAction(
-                      label: 'Settings',
-                      onPressed: () => _openServerConfig(context),
-                    )
-                  : null,
-            ),
+            SnackBar(content: Text(message)),
           );
         }
       }
@@ -109,76 +100,46 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-  void _openServerConfig(BuildContext ctx) {
-    showDialog(
-      context: ctx,
-      builder: (_) => const ServerConfigDialog(),
-    );
-  }
-
   Future<void> _loginWithGoogle() async {
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+      _googleLoading = true;
+    });
 
     try {
-      final googleSignIn = GoogleSignIn();
-      final googleUser = await googleSignIn.signIn();
+      final result = await GoogleAuthService.signIn();
+      if (!mounted) return;
 
-      if (googleUser == null) {
-        return;
-      }
-
-      final googleAuth = await googleUser.authentication;
-      final credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
-      );
-
-      final userCredential = await _auth.signInWithCredential(credential);
-      final user = userCredential.user;
-
-      if (user != null) {
-        await _persistLocalUser(user);
-        final exchangeResult = await ApiService.exchangeFirebaseToken(user);
-        if (exchangeResult['success'] != true) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(exchangeResult['message'] as String? ?? 'Could not connect to server.'),
-                action: SnackBarAction(
-                  label: 'Configure',
-                  onPressed: () => _openServerConfig(context),
-                ),
-              ),
-            );
-          }
-          return;
-        }
-        await SessionManager.setRememberMeEmail(user.email ?? '', true);
-        await SessionManager.recordActivity();
-        if (mounted) {
+      switch (result.status) {
+        case GoogleSignInStatus.success:
           Navigator.pushReplacementNamed(context, '/home');
-        }
-      }
-    } on FirebaseAuthException catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Google sign-in failed: ${e.message ?? e.code}'),
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Google sign-in failed: $e')));
+        case GoogleSignInStatus.cancelled:
+          break;
+        case GoogleSignInStatus.failure:
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(result.message ?? 'Google sign-in failed.'),
+              action: SnackBarAction(
+                label: 'Retry',
+                onPressed: _loginWithGoogle,
+              ),
+            ),
+          );
       }
     } finally {
       if (mounted) {
-        setState(() => _isLoading = false);
+        setState(() {
+          _isLoading = false;
+          _googleLoading = false;
+        });
       }
     }
   }
+
+  bool get _appleSignInAvailable =>
+      !kIsWeb &&
+      (defaultTargetPlatform == TargetPlatform.iOS ||
+          defaultTargetPlatform == TargetPlatform.macOS);
 
   Future<void> _loginWithApple() async {
     if (kIsWeb ||
@@ -234,14 +195,11 @@ class _LoginPageState extends State<LoginPage> {
         await _persistLocalUser(user);
         final exchangeResult = await ApiService.exchangeFirebaseToken(user);
         if (exchangeResult['success'] != true) {
+          await _auth.signOut();
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(exchangeResult['message'] as String? ?? 'Could not connect to server.'),
-                action: SnackBarAction(
-                  label: 'Configure',
-                  onPressed: () => _openServerConfig(context),
-                ),
               ),
             );
           }
@@ -288,18 +246,7 @@ class _LoginPageState extends State<LoginPage> {
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       body: SafeArea(
-        child: Stack(
-          children: [
-            Positioned(
-              top: 8,
-              right: 8,
-              child: IconButton(
-                tooltip: 'Server Config',
-                icon: Icon(Icons.settings_ethernet, color: theme.iconTheme.color?.withValues(alpha: 0.5), size: 20),
-                onPressed: () => _openServerConfig(context),
-              ),
-            ),
-          Center(
+        child: Center(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(24),
             child: Column(
@@ -340,6 +287,49 @@ class _LoginPageState extends State<LoginPage> {
                 ),
 
                 const SizedBox(height: 32),
+
+                SizedBox(
+                  width: double.infinity,
+                  child: _socialButton(
+                    label: 'Continue with Google',
+                    icon: const FaIcon(FontAwesomeIcons.google, size: 20),
+                    backgroundColor: theme.cardColor,
+                    foregroundColor:
+                        theme.textTheme.bodyMedium?.color ?? Colors.white,
+                    loading: _googleLoading,
+                    onPressed: _isLoading ? null : _loginWithGoogle,
+                  ),
+                ),
+                if (_appleSignInAvailable) ...[
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: _socialButton(
+                      label: 'Continue with Apple',
+                      icon: const FaIcon(FontAwesomeIcons.apple, size: 20),
+                      backgroundColor: theme.cardColor,
+                      foregroundColor:
+                          theme.textTheme.bodyMedium?.color ?? Colors.white,
+                      onPressed: _isLoading ? null : _loginWithApple,
+                    ),
+                  ),
+                ],
+
+                const SizedBox(height: 24),
+                Row(
+                  children: [
+                    Expanded(child: Divider(color: theme.dividerColor)),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 8),
+                      child: Text(
+                        'OR',
+                        style: TextStyle(color: Colors.white54),
+                      ),
+                    ),
+                    Expanded(child: Divider(color: theme.dividerColor)),
+                  ],
+                ),
+                const SizedBox(height: 24),
 
                 _inputField(
                   label: 'Email',
@@ -392,7 +382,7 @@ class _LoginPageState extends State<LoginPage> {
                         borderRadius: BorderRadius.circular(14),
                       ),
                     ),
-                    child: _isLoading
+                    child: _isLoading && !_googleLoading
                         ? SizedBox(
                             height: 20,
                             width: 20,
@@ -429,50 +419,7 @@ class _LoginPageState extends State<LoginPage> {
                     style: TextStyle(color: colorScheme.primary),
                   ),
                 ),
-                const SizedBox(height: 24),
-                Row(
-                  children: [
-                    Expanded(child: Divider(color: theme.dividerColor)),
-                    const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 8),
-                      child: Text(
-                        'OR',
-                        style: TextStyle(color: Colors.white54),
-                      ),
-                    ),
-                    Expanded(child: Divider(color: theme.dividerColor)),
-                  ],
-                ),
-
-                const SizedBox(height: 24),
-
-                Row(
-                  children: [
-                    Expanded(
-                      child: _socialButton(
-                        label: 'Google',
-                        icon: FontAwesomeIcons.google,
-                        backgroundColor: theme.cardColor,
-                        foregroundColor:
-                            theme.textTheme.bodyMedium?.color ?? Colors.white,
-                        onPressed: _isLoading ? null : _loginWithGoogle,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _socialButton(
-                        label: 'Apple',
-                        icon: FontAwesomeIcons.apple,
-                        backgroundColor: theme.cardColor,
-                        foregroundColor:
-                            theme.textTheme.bodyMedium?.color ?? Colors.white,
-                        onPressed: _isLoading ? null : _loginWithApple,
-                      ),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 24),
+                const SizedBox(height: 8),
 
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -515,11 +462,10 @@ class _LoginPageState extends State<LoginPage> {
             ),
           ),
         ),
-          ],
-        ),
       ),
     );
   }
+
   Widget _inputField({
     required String label,
     required String hint,
@@ -576,10 +522,11 @@ class _LoginPageState extends State<LoginPage> {
 
   Widget _socialButton({
     required String label,
-    required IconData icon,
+    required Widget icon,
     required Color backgroundColor,
     required Color foregroundColor,
     required VoidCallback? onPressed,
+    bool loading = false,
   }) {
     return SizedBox(
       height: 52,
@@ -593,7 +540,16 @@ class _LoginPageState extends State<LoginPage> {
             borderRadius: BorderRadius.circular(14),
           ),
         ),
-        icon: Icon(icon, size: 20),
+        icon: loading
+            ? SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(foregroundColor),
+                ),
+              )
+            : icon,
         label: Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
       ),
     );

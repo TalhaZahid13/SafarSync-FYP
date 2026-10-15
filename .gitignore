@@ -47,3 +47,7 @@ app.*.map.json
 # Secrets — never commit
 .env
 lib/backend/.env
+
+# Build-time app config (backend URL) — keep out of git, see env/production.example.json
+env/*.json
+!env/*.example.json
