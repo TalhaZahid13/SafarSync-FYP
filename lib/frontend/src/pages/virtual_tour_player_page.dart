@@ -61,9 +61,14 @@ class _VirtualTourPlayerPageState extends State<VirtualTourPlayerPage> {
   }
 
   Future<void> _loadTourData() async {
-    setState(() { _loading = true; _error = null; });
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
     try {
-      final resp = await ApiService.getRequest('/virtual-tours/${widget.tourId}');
+      final resp = await ApiService.getRequest(
+        '/virtual-tours/${widget.tourId}',
+      );
       if (resp['success'] == true) {
         _tour = resp['tour'] as Map<String, dynamic>;
         _currentSceneName = (_tour!['scenes'] as List?)?.isNotEmpty == true
@@ -81,10 +86,12 @@ class _VirtualTourPlayerPageState extends State<VirtualTourPlayerPage> {
   }
 
   Future<void> _loadHtmlAndInjectTour() async {
-    String html = await rootBundle.loadString('assets/virtual_tour_player.html');
+    String html = await rootBundle.loadString(
+      'assets/virtual_tour_player.html',
+    );
     // Inline Pannellum assets so the viewer works without internet
     final pannellumCss = await rootBundle.loadString('assets/pannellum.css');
-    final pannellumJs  = await rootBundle.loadString('assets/pannellum.js');
+    final pannellumJs = await rootBundle.loadString('assets/pannellum.js');
     html = html
         .replaceFirst(
           '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.css">',
@@ -116,7 +123,7 @@ class _VirtualTourPlayerPageState extends State<VirtualTourPlayerPage> {
           if (mounted) {
             setState(() {
               _currentSceneName = data['sceneName'] ?? _currentSceneName;
-              _currentSceneId   = data['sceneId'] as int?;
+              _currentSceneId = data['sceneId'] as int?;
               _aiNarration = null;
             });
           }
@@ -125,12 +132,19 @@ class _VirtualTourPlayerPageState extends State<VirtualTourPlayerPage> {
         case 'hotspot_info':
           // Info hotspots show native Flutter dialog for better UX
           if (mounted && (data['title'] ?? '').isNotEmpty) {
-            _showInfoDialog(data['title'] as String, data['text'] as String? ?? '');
+            _showInfoDialog(
+              data['title'] as String,
+              data['text'] as String? ?? '',
+            );
           }
           break;
 
         case 'error':
-          if (mounted) setState(() => _error = _sanitizeErrorText(data['message']?.toString()));
+          if (mounted) {
+            setState(
+              () => _error = _sanitizeErrorText(data['message']?.toString()),
+            );
+          }
           break;
       }
     } catch (_) {}
@@ -141,30 +155,34 @@ class _VirtualTourPlayerPageState extends State<VirtualTourPlayerPage> {
 
     // Build the tour JSON for Pannellum
     final scenes = (_tour!['scenes'] as List? ?? []).map((s) {
-      final hotspots = (s['hotspots'] as List? ?? []).map((h) => {
-        'id':             h['id'],
-        'type':           h['type'],
-        'pitch':          h['pitch'],
-        'yaw':            h['yaw'],
-        'title':          h['title'] ?? '',
-        'text':           h['text'] ?? '',
-        'targetSceneKey': h['targetSceneKey'],
-      }).toList();
+      final hotspots = (s['hotspots'] as List? ?? [])
+          .map(
+            (h) => {
+              'id': h['id'],
+              'type': h['type'],
+              'pitch': h['pitch'],
+              'yaw': h['yaw'],
+              'title': h['title'] ?? '',
+              'text': h['text'] ?? '',
+              'targetSceneKey': h['targetSceneKey'],
+            },
+          )
+          .toList();
 
       return {
-        'id':          s['id'],
-        'sceneKey':    s['sceneKey'],
-        'name':        s['scene_name'],
+        'id': s['id'],
+        'sceneKey': s['sceneKey'],
+        'name': s['scene_name'],
         'panoramaUrl': s['panorama_url'],
         'description': s['description'] ?? '',
-        'hotspots':    hotspots,
+        'hotspots': hotspots,
       };
     }).toList();
 
     final tourJson = json.encode({
-      'title':           _tour!['title'],
+      'title': _tour!['title'],
       'defaultSceneKey': scenes.isNotEmpty ? scenes[0]['sceneKey'] : null,
-      'scenes':          scenes,
+      'scenes': scenes,
     });
 
     final escaped = tourJson.replaceAll("'", "\\'");
@@ -176,7 +194,10 @@ class _VirtualTourPlayerPageState extends State<VirtualTourPlayerPage> {
   // meant for HTML rendering, which must never be shown as literal text.
   static String _sanitizeErrorText(String? raw) {
     if (raw == null || raw.isEmpty) return 'This tour could not be loaded.';
-    final stripped = raw.replaceAll(RegExp(r'<[^>]*>'), '').replaceAll(RegExp(r'\s+'), ' ').trim();
+    final stripped = raw
+        .replaceAll(RegExp(r'<[^>]*>'), '')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
     return stripped.isEmpty ? 'This tour could not be loaded.' : stripped;
   }
 
@@ -193,13 +214,14 @@ class _VirtualTourPlayerPageState extends State<VirtualTourPlayerPage> {
 
     try {
       final resp = await ApiService.postRequest('/virtual-tours/narration', {
-        'scene_id':         _currentSceneId,
-        'scene_name':       _currentSceneName,
-        'tour_title':       _tour?['title'] ?? widget.tourTitle,
+        'scene_id': _currentSceneId,
+        'scene_name': _currentSceneName,
+        'tour_title': _tour?['title'] ?? widget.tourTitle,
         'destination_name': _tour?['destination_name'],
       });
 
-      final narration = resp['narration'] as String? ??
+      final narration =
+          resp['narration'] as String? ??
           'Welcome to ${_currentSceneName.isEmpty ? "this location" : _currentSceneName}. Explore in every direction!';
 
       if (mounted) {
@@ -240,7 +262,9 @@ class _VirtualTourPlayerPageState extends State<VirtualTourPlayerPage> {
         backgroundColor: const Color(0xFF0D1B2A),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
-          side: BorderSide(color: const Color(0xFF2CAFBC).withValues(alpha: 0.4)),
+          side: BorderSide(
+            color: const Color(0xFF2CAFBC).withValues(alpha: 0.4),
+          ),
         ),
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -250,23 +274,42 @@ class _VirtualTourPlayerPageState extends State<VirtualTourPlayerPage> {
             children: [
               Row(
                 children: [
-                  const Icon(Icons.info_outline_rounded, color: Color(0xFF2CAFBC), size: 20),
+                  const Icon(
+                    Icons.info_outline_rounded,
+                    color: Color(0xFF2CAFBC),
+                    size: 20,
+                  ),
                   const SizedBox(width: 8),
                   Expanded(
-                    child: Text(title,
-                      style: const TextStyle(color: Color(0xFF2CAFBC), fontWeight: FontWeight.w700, fontSize: 15)),
+                    child: Text(
+                      title,
+                      style: const TextStyle(
+                        color: Color(0xFF2CAFBC),
+                        fontWeight: FontWeight.w700,
+                        fontSize: 15,
+                      ),
+                    ),
                   ),
                 ],
               ),
               const SizedBox(height: 12),
-              Text(text,
-                style: const TextStyle(color: Color(0xFFD8EEF2), fontSize: 14, height: 1.7)),
+              Text(
+                text,
+                style: const TextStyle(
+                  color: Color(0xFFD8EEF2),
+                  fontSize: 14,
+                  height: 1.7,
+                ),
+              ),
               const SizedBox(height: 20),
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton(
                   onPressed: () => Navigator.pop(context),
-                  child: const Text('Close', style: TextStyle(color: Color(0xFF2CAFBC))),
+                  child: const Text(
+                    'Close',
+                    style: TextStyle(color: Color(0xFF2CAFBC)),
+                  ),
                 ),
               ),
             ],
@@ -291,11 +334,22 @@ class _VirtualTourPlayerPageState extends State<VirtualTourPlayerPage> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const SizedBox(width: 44, height: 44,
-            child: CircularProgressIndicator(color: Color(0xFF2CAFBC), strokeWidth: 3)),
+          const SizedBox(
+            width: 44,
+            height: 44,
+            child: CircularProgressIndicator(
+              color: Color(0xFF2CAFBC),
+              strokeWidth: 3,
+            ),
+          ),
           const SizedBox(height: 16),
-          Text('Preparing virtual tour…',
-            style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 14)),
+          Text(
+            'Preparing virtual tour…',
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.7),
+              fontSize: 14,
+            ),
+          ),
         ],
       ),
     ),
@@ -303,9 +357,14 @@ class _VirtualTourPlayerPageState extends State<VirtualTourPlayerPage> {
 
   Widget _buildError(String msg) => Scaffold(
     backgroundColor: const Color(0xFF0D1B2A),
-    appBar: AppBar(backgroundColor: const Color(0xFF0D1B2A), elevation: 0,
-      leading: IconButton(icon: const Icon(Icons.arrow_back, color: Colors.white),
-        onPressed: () => Navigator.pop(context))),
+    appBar: AppBar(
+      backgroundColor: const Color(0xFF0D1B2A),
+      elevation: 0,
+      leading: IconButton(
+        icon: const Icon(Icons.arrow_back, color: Colors.white),
+        onPressed: () => Navigator.pop(context),
+      ),
+    ),
     body: Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -314,14 +373,29 @@ class _VirtualTourPlayerPageState extends State<VirtualTourPlayerPage> {
           children: [
             const Text('🌐', style: TextStyle(fontSize: 56)),
             const SizedBox(height: 16),
-            const Text('Tour Unavailable',
-              style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w700)),
+            const Text(
+              'Tour Unavailable',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
             const SizedBox(height: 10),
-            Text(msg, textAlign: TextAlign.center,
-              style: const TextStyle(color: Color(0xFF9A9E9D), fontSize: 14, height: 1.6)),
+            Text(
+              msg,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Color(0xFF9A9E9D),
+                fontSize: 14,
+                height: 1.6,
+              ),
+            ),
             const SizedBox(height: 24),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF2CAFBC)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF2CAFBC),
+              ),
               onPressed: _loadTourData,
               child: const Text('Try Again'),
             ),
@@ -355,7 +429,8 @@ class _VirtualTourPlayerPageState extends State<VirtualTourPlayerPage> {
                   if (scenes.length > 1)
                     _glassButton(
                       icon: Icons.menu_rounded,
-                      onTap: () => setState(() => _sceneListOpen = !_sceneListOpen),
+                      onTap: () =>
+                          setState(() => _sceneListOpen = !_sceneListOpen),
                       label: 'Scenes',
                     ),
                   const SizedBox(width: 8),
@@ -375,7 +450,9 @@ class _VirtualTourPlayerPageState extends State<VirtualTourPlayerPage> {
           // Scene list panel (slides in from right)
           if (_sceneListOpen && scenes.length > 1)
             Positioned(
-              top: 0, right: 0, bottom: 0,
+              top: 0,
+              right: 0,
+              bottom: 0,
               width: MediaQuery.of(context).size.width * 0.70,
               child: _SceneListPanel(
                 scenes: scenes,
@@ -398,7 +475,10 @@ class _VirtualTourPlayerPageState extends State<VirtualTourPlayerPage> {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: EdgeInsets.symmetric(horizontal: label != null ? 12 : 10, vertical: 8),
+        padding: EdgeInsets.symmetric(
+          horizontal: label != null ? 12 : 10,
+          vertical: 8,
+        ),
         decoration: BoxDecoration(
           color: const Color(0xFF0D1B2A).withValues(alpha: 0.80),
           borderRadius: BorderRadius.circular(24),
@@ -414,8 +494,14 @@ class _VirtualTourPlayerPageState extends State<VirtualTourPlayerPage> {
             Icon(icon, color: accent ?? Colors.white, size: 18),
             if (label != null) ...[
               const SizedBox(width: 6),
-              Text(label,
-                style: TextStyle(color: accent ?? Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
+              Text(
+                label,
+                style: TextStyle(
+                  color: accent ?? Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ],
           ],
         ),
@@ -453,12 +539,22 @@ class _SceneListPanel extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(16, 12, 12, 0),
               child: Row(
                 children: [
-                  const Text('Scenes',
-                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 16)),
+                  const Text(
+                    'Scenes',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 16,
+                    ),
+                  ),
                   const Spacer(),
                   GestureDetector(
                     onTap: onClose,
-                    child: const Icon(Icons.close_rounded, color: Colors.white70, size: 20),
+                    child: const Icon(
+                      Icons.close_rounded,
+                      color: Colors.white70,
+                      size: 20,
+                    ),
                   ),
                 ],
               ),
@@ -476,7 +572,10 @@ class _SceneListPanel extends StatelessWidget {
                   onTap: () => onSceneTap(s),
                   child: Container(
                     margin: const EdgeInsets.only(bottom: 8),
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 10,
+                    ),
                     decoration: BoxDecoration(
                       color: isActive
                           ? const Color(0xFF2CAFBC).withValues(alpha: 0.15)
@@ -491,30 +590,52 @@ class _SceneListPanel extends StatelessWidget {
                     child: Row(
                       children: [
                         Container(
-                          width: 28, height: 28,
+                          width: 28,
+                          height: 28,
                           decoration: BoxDecoration(
                             color: isActive
                                 ? const Color(0xFF2CAFBC).withValues(alpha: 0.2)
-                                : const Color(0xFF1B5A6E).withValues(alpha: 0.5),
+                                : const Color(
+                                    0xFF1B5A6E,
+                                  ).withValues(alpha: 0.5),
                             shape: BoxShape.circle,
                           ),
                           child: Center(
-                            child: Text('${i + 1}',
+                            child: Text(
+                              '${i + 1}',
                               style: TextStyle(
-                                color: isActive ? const Color(0xFF2CAFBC) : Colors.white60,
-                                fontSize: 11, fontWeight: FontWeight.w700)),
+                                color: isActive
+                                    ? const Color(0xFF2CAFBC)
+                                    : Colors.white60,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
                           ),
                         ),
                         const SizedBox(width: 10),
                         Expanded(
-                          child: Text(s['scene_name'] ?? 'Scene ${i + 1}',
+                          child: Text(
+                            s['scene_name'] ?? 'Scene ${i + 1}',
                             style: TextStyle(
-                              color: isActive ? const Color(0xFF2CAFBC) : Colors.white,
-                              fontSize: 13, fontWeight: isActive ? FontWeight.w600 : FontWeight.normal),
-                            maxLines: 2, overflow: TextOverflow.ellipsis),
+                              color: isActive
+                                  ? const Color(0xFF2CAFBC)
+                                  : Colors.white,
+                              fontSize: 13,
+                              fontWeight: isActive
+                                  ? FontWeight.w600
+                                  : FontWeight.normal,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
                         if (isActive)
-                          const Icon(Icons.visibility_rounded, color: Color(0xFF2CAFBC), size: 16),
+                          const Icon(
+                            Icons.visibility_rounded,
+                            color: Color(0xFF2CAFBC),
+                            size: 16,
+                          ),
                       ],
                     ),
                   ),

@@ -4,13 +4,33 @@ import '../utils/notification_service.dart';
 
 // ─── Type config: icon + colour per notification type ────────────────────────
 const _kTypeConfig = <String, _TypeDef>{
-  'emergency_sos_sent':  _TypeDef(Icons.sos,              Color(0xFFB71C1C), 'SOS Sent'),
-  'emergency_sos_admin': _TypeDef(Icons.emergency,         Color(0xFFB71C1C), 'Emergency'),
-  'emergency_resolved':  _TypeDef(Icons.check_circle,      Color(0xFF2E7D32), 'Resolved'),
-  'group_invitation':    _TypeDef(Icons.group_add,          Color(0xFF6A1B9A), 'Invitation'),
-  'invitation_accepted': _TypeDef(Icons.how_to_reg,         Color(0xFF1565C0), 'Accepted'),
-  'invitation_declined': _TypeDef(Icons.person_off,         Color(0xFF616161), 'Declined'),
-  'member_joined':       _TypeDef(Icons.person_add_alt,     Color(0xFF0277BD), 'Joined'),
+  'emergency_sos_sent': _TypeDef(Icons.sos, Color(0xFFB71C1C), 'SOS Sent'),
+  'emergency_sos_admin': _TypeDef(
+    Icons.emergency,
+    Color(0xFFB71C1C),
+    'Emergency',
+  ),
+  'emergency_resolved': _TypeDef(
+    Icons.check_circle,
+    Color(0xFF2E7D32),
+    'Resolved',
+  ),
+  'group_invitation': _TypeDef(
+    Icons.group_add,
+    Color(0xFF6A1B9A),
+    'Invitation',
+  ),
+  'invitation_accepted': _TypeDef(
+    Icons.how_to_reg,
+    Color(0xFF1565C0),
+    'Accepted',
+  ),
+  'invitation_declined': _TypeDef(
+    Icons.person_off,
+    Color(0xFF616161),
+    'Declined',
+  ),
+  'member_joined': _TypeDef(Icons.person_add_alt, Color(0xFF0277BD), 'Joined'),
 };
 
 class _TypeDef {
@@ -68,10 +88,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
       await ApiService.putRequest('/notifications/$notificationId/read', {});
       if (!mounted) return;
       setState(() {
-        _notifications[index] = {
-          ..._notifications[index],
-          'is_read': true,
-        };
+        _notifications[index] = {..._notifications[index], 'is_read': true};
       });
     } catch (_) {}
   }
@@ -104,7 +121,9 @@ class _NotificationsPageState extends State<NotificationsPage> {
   // ── Build ─────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
-    final unread = _notifications.where((n) => n['is_read'] == false || n['is_read'] == 0).length;
+    final unread = _notifications
+        .where((n) => n['is_read'] == false || n['is_read'] == 0)
+        .length;
 
     return Scaffold(
       appBar: AppBar(
@@ -128,37 +147,34 @@ class _NotificationsPageState extends State<NotificationsPage> {
                     onPressed: _markAllRead,
                     child: const Text('Mark all read'),
                   ),
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _load,
-          ),
+          IconButton(icon: const Icon(Icons.refresh), onPressed: _load),
         ],
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _notifications.isEmpty
-              ? _EmptyState()
-              : RefreshIndicator(
-                  onRefresh: _load,
-                  child: ListView.builder(
-                    itemCount: _notifications.length,
-                    itemBuilder: (_, i) {
-                      final n = _notifications[i];
-                      return _NotificationTile(
-                        notification: n,
-                        onTap: () {
-                          final id = n['notification_id'] as int?;
-                          final isRead = n['is_read'] == true || n['is_read'] == 1;
-                          if (id != null && !isRead) _markRead(id, i);
-                        },
-                        onDismiss: () {
-                          final id = n['notification_id'] as int?;
-                          if (id != null) _delete(id, i);
-                        },
-                      );
+          ? _EmptyState()
+          : RefreshIndicator(
+              onRefresh: _load,
+              child: ListView.builder(
+                itemCount: _notifications.length,
+                itemBuilder: (_, i) {
+                  final n = _notifications[i];
+                  return _NotificationTile(
+                    notification: n,
+                    onTap: () {
+                      final id = n['notification_id'] as int?;
+                      final isRead = n['is_read'] == true || n['is_read'] == 1;
+                      if (id != null && !isRead) _markRead(id, i);
                     },
-                  ),
-                ),
+                    onDismiss: () {
+                      final id = n['notification_id'] as int?;
+                      if (id != null) _delete(id, i);
+                    },
+                  );
+                },
+              ),
+            ),
     );
   }
 }
@@ -180,7 +196,8 @@ class _NotificationTile extends StatelessWidget {
     final type = notification['type'] as String?;
     final def = _defFor(type);
     final isEmergency = type?.startsWith('emergency') ?? false;
-    final isRead = notification['is_read'] == true || notification['is_read'] == 1;
+    final isRead =
+        notification['is_read'] == true || notification['is_read'] == 1;
     final title = notification['title'] as String? ?? 'Notification';
     final message = notification['message'] as String? ?? '';
     final createdAt = _timeAgo(notification['created_at']);
@@ -202,11 +219,9 @@ class _NotificationTile extends StatelessWidget {
             color: isRead
                 ? Colors.transparent
                 : isEmergency
-                    ? Colors.red.shade50
-                    : Colors.blue.shade50,
-            border: const Border(
-              bottom: BorderSide(color: Color(0xFFEEEEEE)),
-            ),
+                ? Colors.red.shade50
+                : Colors.blue.shade50,
+            border: const Border(bottom: BorderSide(color: Color(0xFFEEEEEE))),
           ),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           child: Row(
@@ -222,9 +237,7 @@ class _NotificationTile extends StatelessWidget {
                 ),
                 child: Stack(
                   children: [
-                    Center(
-                      child: Icon(def.icon, color: def.color, size: 22),
-                    ),
+                    Center(child: Icon(def.icon, color: def.color, size: 22)),
                     if (!isRead)
                       Positioned(
                         right: 4,
@@ -253,7 +266,9 @@ class _NotificationTile extends StatelessWidget {
                         // Type chip
                         Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 6, vertical: 2),
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
                             color: def.color.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(4),
@@ -272,7 +287,9 @@ class _NotificationTile extends StatelessWidget {
                         Text(
                           createdAt,
                           style: const TextStyle(
-                              fontSize: 10, color: Colors.grey),
+                            fontSize: 10,
+                            color: Colors.grey,
+                          ),
                         ),
                       ],
                     ),
@@ -281,8 +298,9 @@ class _NotificationTile extends StatelessWidget {
                       title,
                       style: TextStyle(
                         fontSize: 14,
-                        fontWeight:
-                            isRead ? FontWeight.normal : FontWeight.bold,
+                        fontWeight: isRead
+                            ? FontWeight.normal
+                            : FontWeight.bold,
                         color: isEmergency && !isRead
                             ? Colors.red.shade800
                             : null,
@@ -332,15 +350,15 @@ class _EmptyState extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.notifications_none,
-              size: 72, color: Colors.grey.shade300),
+          Icon(Icons.notifications_none, size: 72, color: Colors.grey.shade300),
           const SizedBox(height: 16),
           Text(
             'No notifications yet',
             style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey.shade500,
-                fontWeight: FontWeight.w500),
+              fontSize: 16,
+              color: Colors.grey.shade500,
+              fontWeight: FontWeight.w500,
+            ),
           ),
           const SizedBox(height: 8),
           Text(

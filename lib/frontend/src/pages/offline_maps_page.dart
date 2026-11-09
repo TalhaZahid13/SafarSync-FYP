@@ -98,7 +98,10 @@ class _OfflineMapsPageState extends State<OfflineMapsPage>
         title: const Text('Delete Offline Map'),
         content: Text('Remove the downloaded map for ${region.name}?'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
             child: const Text('Delete', style: TextStyle(color: Colors.red)),
@@ -134,10 +137,7 @@ class _OfflineMapsPageState extends State<OfflineMapsPage>
       ),
       body: TabBarView(
         controller: _tabs,
-        children: [
-          _buildDownloadTab(theme),
-          _buildMapTab(theme),
-        ],
+        children: [_buildDownloadTab(theme), _buildMapTab(theme)],
       ),
     );
   }
@@ -175,20 +175,22 @@ class _OfflineMapsPageState extends State<OfflineMapsPage>
               ],
             ),
           ),
-          ...kAvailableRegions.map((r) => _RegionCard(
-            region: r,
-            isDownloaded: _downloaded.contains(r.name),
-            isDownloading: _downloading[r.name] == true,
-            progress: _progress[r.name] ?? 0,
-            statusMsg: _statusMsg[r.name],
-            onDownload: () => _startDownload(r),
-            onCancel: () => setState(() => _cancelled[r.name] = true),
-            onDelete: () => _deleteRegion(r),
-            onView: () {
-              setState(() => _viewedRegion = r);
-              _tabs.animateTo(1);
-            },
-          )),
+          ...kAvailableRegions.map(
+            (r) => _RegionCard(
+              region: r,
+              isDownloaded: _downloaded.contains(r.name),
+              isDownloading: _downloading[r.name] == true,
+              progress: _progress[r.name] ?? 0,
+              statusMsg: _statusMsg[r.name],
+              onDownload: () => _startDownload(r),
+              onCancel: () => setState(() => _cancelled[r.name] = true),
+              onDelete: () => _deleteRegion(r),
+              onView: () {
+                setState(() => _viewedRegion = r);
+                _tabs.animateTo(1);
+              },
+            ),
+          ),
         ],
       ),
     );
@@ -236,14 +238,20 @@ class _OfflineMapsPageState extends State<OfflineMapsPage>
                     ? Icons.download_done_rounded
                     : Icons.cloud_outlined,
                 size: 14,
-                color: _downloaded.contains(region.name) ? Colors.green : Colors.orange,
+                color: _downloaded.contains(region.name)
+                    ? Colors.green
+                    : Colors.orange,
               ),
               const SizedBox(width: 6),
-              Text(isOnline,
+              Text(
+                isOnline,
                 style: TextStyle(
                   fontSize: 12,
-                  color: _downloaded.contains(region.name) ? Colors.green : Colors.orange,
-                )),
+                  color: _downloaded.contains(region.name)
+                      ? Colors.green
+                      : Colors.orange,
+                ),
+              ),
             ],
           ),
         ),
@@ -324,7 +332,8 @@ class _RegionCard extends StatelessWidget {
           Row(
             children: [
               Container(
-                width: 40, height: 40,
+                width: 40,
+                height: 40,
                 decoration: BoxDecoration(
                   color: isDownloaded
                       ? Colors.green.withValues(alpha: 0.15)
@@ -332,7 +341,9 @@ class _RegionCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
-                  isDownloaded ? Icons.download_done_rounded : Icons.map_outlined,
+                  isDownloaded
+                      ? Icons.download_done_rounded
+                      : Icons.map_outlined,
                   color: isDownloaded ? Colors.green : _base,
                   size: 22,
                 ),
@@ -342,8 +353,12 @@ class _RegionCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(region.name,
-                      style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+                    Text(
+                      region.name,
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                     Text(
                       '~${region.estimatedMb} MB  •  '
                       'Zoom ${region.minZoom}–${region.maxZoom}  •  '
@@ -377,7 +392,10 @@ class _RegionCard extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               statusMsg ?? '${(progress * 100).toStringAsFixed(0)}%',
-              style: TextStyle(fontSize: 11, color: theme.textTheme.bodySmall?.color),
+              style: TextStyle(
+                fontSize: 11,
+                color: theme.textTheme.bodySmall?.color,
+              ),
             ),
           ],
           const SizedBox(height: 12),
@@ -393,7 +411,9 @@ class _RegionCard extends StatelessWidget {
                       backgroundColor: _base,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 10),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
                     ),
                   ),
                 ),
@@ -407,7 +427,9 @@ class _RegionCard extends StatelessWidget {
                       foregroundColor: Colors.red,
                       side: const BorderSide(color: Colors.red),
                       padding: const EdgeInsets.symmetric(vertical: 10),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
                     ),
                   ),
                 ),
@@ -421,7 +443,9 @@ class _RegionCard extends StatelessWidget {
                       foregroundColor: _base,
                       side: const BorderSide(color: _base),
                       padding: const EdgeInsets.symmetric(vertical: 10),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
                     ),
                   ),
                 ),
@@ -431,8 +455,13 @@ class _RegionCard extends StatelessWidget {
                   style: OutlinedButton.styleFrom(
                     foregroundColor: Colors.red,
                     side: const BorderSide(color: Colors.red),
-                    padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 10,
+                      horizontal: 12,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                   ),
                   child: const Icon(Icons.delete_outline, size: 18),
                 ),

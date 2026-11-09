@@ -15,7 +15,9 @@ class PaymentService {
     );
 
     if (intentResponse['success'] != true) {
-      throw Exception(intentResponse['error'] ?? 'Failed to create payment intent');
+      throw Exception(
+        intentResponse['error'] ?? 'Failed to create payment intent',
+      );
     }
 
     final clientSecret = intentResponse['clientSecret'] as String;
@@ -38,7 +40,8 @@ class PaymentService {
 
     if (confirmResponse['success'] != true) {
       throw Exception(
-          confirmResponse['error'] ?? 'Payment succeeded but confirmation failed');
+        confirmResponse['error'] ?? 'Payment succeeded but confirmation failed',
+      );
     }
 
     return confirmResponse['payment_id'] as int?;
@@ -56,10 +59,9 @@ class PaymentService {
   }
 
   static Future<bool> requestRefund(int bookingId) async {
-    final r = await ApiService.postRequest(
-      '/payments/refund',
-      {'booking_id': bookingId},
-    );
+    final r = await ApiService.postRequest('/payments/refund', {
+      'booking_id': bookingId,
+    });
     return r['success'] == true;
   }
 }

@@ -70,9 +70,9 @@ class _GroupInvitationsPageState extends State<GroupInvitationsPage>
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     }
   }
@@ -104,7 +104,9 @@ class _GroupInvitationsPageState extends State<GroupInvitationsPage>
                             .length
                             .toString(),
                         style: const TextStyle(
-                            color: Colors.white, fontSize: 10),
+                          color: Colors.white,
+                          fontSize: 10,
+                        ),
                       ),
                     ),
                   ],
@@ -123,10 +125,7 @@ class _GroupInvitationsPageState extends State<GroupInvitationsPage>
           : TabBarView(
               controller: _tabController,
               children: [
-                _ReceivedTab(
-                  invitations: received,
-                  onRespond: _respond,
-                ),
+                _ReceivedTab(invitations: received, onRespond: _respond),
                 _SentTab(invitations: sent),
               ],
             ),
@@ -195,7 +194,9 @@ class _ReceivedTab extends StatelessWidget {
                           Text(
                             'From: ${inv['sender_name'] ?? 'Unknown'}',
                             style: const TextStyle(
-                                fontSize: 13, color: Colors.grey),
+                              fontSize: 13,
+                              color: Colors.grey,
+                            ),
                           ),
                         ],
                       ),
@@ -224,10 +225,8 @@ class _ReceivedTab extends StatelessWidget {
                     children: [
                       Expanded(
                         child: OutlinedButton(
-                          onPressed: () => onRespond(
-                            inv['id'] as int,
-                            'Declined',
-                          ),
+                          onPressed: () =>
+                              onRespond(inv['id'] as int, 'Declined'),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: Colors.red,
                             side: const BorderSide(color: Colors.red),
@@ -238,10 +237,8 @@ class _ReceivedTab extends StatelessWidget {
                       const SizedBox(width: 12),
                       Expanded(
                         child: ElevatedButton(
-                          onPressed: () => onRespond(
-                            inv['id'] as int,
-                            'Accepted',
-                          ),
+                          onPressed: () =>
+                              onRespond(inv['id'] as int, 'Accepted'),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.green,
                             foregroundColor: Colors.white,
@@ -307,8 +304,12 @@ class _SentTab extends StatelessWidget {
               ),
             ),
             title: Text(inv['trip_name'] as String? ?? 'Unknown Trip'),
-            subtitle: Text('To: ${inv['receiver_name'] ?? inv['receiver_email'] ?? 'Unknown'}'),
-            trailing: _StatusChip(status: inv['status'] as String? ?? 'Pending'),
+            subtitle: Text(
+              'To: ${inv['receiver_name'] ?? inv['receiver_email'] ?? 'Unknown'}',
+            ),
+            trailing: _StatusChip(
+              status: inv['status'] as String? ?? 'Pending',
+            ),
           ),
         );
       },

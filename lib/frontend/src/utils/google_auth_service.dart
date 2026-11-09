@@ -1,7 +1,8 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
 import 'api_service.dart';
 import 'auth_storage.dart';
 import 'env_config.dart';
@@ -18,44 +19,94 @@ class GoogleSignInResult {
   const GoogleSignInResult._(this.status, {this.message, this.user});
 
   const GoogleSignInResult.success(User user)
-      : this._(GoogleSignInStatus.success, user: user);
-  const GoogleSignInResult.cancelled()
-      : this._(GoogleSignInStatus.cancelled);
+    : this._(GoogleSignInStatus.success, user: user);
+  const GoogleSignInResult.cancelled() : this._(GoogleSignInStatus.cancelled);
   const GoogleSignInResult.failure(String message)
-      : this._(GoogleSignInStatus.failure, message: message);
+    : this._(GoogleSignInStatus.failure, message: message);
 }
 
-/// Google → Firebase Auth → SafarSync backend sign-in.
+/// Native Google Sign-In → Supabase Auth.
 ///
-/// 1. Google account picker returns an ID token.
-/// 2. Firebase Auth signs in with that credential.
-/// 3. The Firebase ID token is exchanged at the hosted backend
-///    (POST /api/auth/firebase-exchange) for the app JWT, which is stored in
-///    secure storage by [ApiService.exchangeFirebaseToken].
+/// 1. The Google account picker returns an ID token (issued for the *web*
+///    OAuth client, [EnvConfig.googleWebClientId]).
+/// 2. `signInWithIdToken` exchanges it for a Supabase session.
+/// 3. The session is registered with the SafarSync API.
 ///
-/// If any step fails, every partial sign-in is rolled back so the app never
-/// ends up "half logged in" (Firebase user present but no backend session).
+/// Any failure rolls every step back so the app is never half signed in.
 class GoogleAuthService {
-  static final GoogleSignIn _googleSignIn = GoogleSignIn(scopes: ['email']);
+  static final GoogleSignIn _googleSignIn = GoogleSignIn(
+    scopes: const ['email', 'profile'],
+    serverClientId: kIsWeb ? null : EnvConfig.googleWebClientId,
+  );
 
   static Future<GoogleSignInResult> signIn() async {
-    final configError = EnvConfig.configurationError;
-    if (configError != null) {
-      debugPrint('[GoogleAuth] $configError');
-      return const GoogleSignInResult.failure(
-        'This build of SafarSync has no server configured. Please contact support.',
-      );
-    }
-
-    final User? user;
+    final client = Supabase.instance.client;
     try {
-      user = await _firebaseSignInWithGoogle();
-    } on _Cancelled {
-      return const GoogleSignInResult.cancelled();
-    } on FirebaseAuthException catch (e) {
-      debugPrint('[GoogleAuth] FirebaseAuthException ${e.code}: ${e.message}');
+      if (kIsWeb) {
+        await client.auth.signInWithOAuth(OAuthProvider.google);
+        return const GoogleSignInResult.cancelled(); // completes via redirect
+      }
+
+      final account = await _googleSignIn.signIn();
+      if (account == null) return const GoogleSignInResult.cancelled();
+
+      final googleAuth = await account.authentication;
+      final idToken = googleAuth.idToken;
+      if (idToken == null) {
+        await _rollback();
+        return const GoogleSignInResult.failure(
+          'Google did not return an ID token. Google sign-in is not fully configured for this build.',
+        );
+      }
+
+      final res = await client.auth.signInWithIdToken(
+        provider: OAuthProvider.google,
+        idToken: idToken,
+        accessToken: googleAuth.accessToken,
+      );
+      final user = res.user;
+      if (user == null) {
+        await _rollback();
+        return const GoogleSignInResult.failure(
+          'Google sign-in failed. Please try again.',
+        );
+      }
+
+      try {
+        await LocalDatabaseService.upsertUserProfile(
+          uid: user.id,
+          email: user.email ?? '',
+          fullName: ApiService.displayName(user),
+        );
+      } catch (e) {
+        debugPrint('[GoogleAuth] Local profile cache failed (non-fatal): $e');
+      }
+
+      final sync = await ApiService.syncSession();
+      if (sync['success'] != true) {
+        await _rollback();
+        return GoogleSignInResult.failure(
+          sync['message'] as String? ??
+              'Could not reach SafarSync. Please try again.',
+        );
+      }
+
+      // Google users stay signed in until they log out or the 7-day
+      // inactivity window in SessionManager expires.
+      await SessionManager.setRememberMeEmail(user.email ?? '', true);
+      await SessionManager.recordActivity();
+      return GoogleSignInResult.success(user);
+    } on AuthException catch (e) {
+      debugPrint('[GoogleAuth] AuthException ${e.statusCode}: ${e.message}');
       await _rollback();
-      return GoogleSignInResult.failure(_firebaseErrorMessage(e));
+      final m = e.message.toLowerCase();
+      if (m.contains('provider is not enabled') ||
+          m.contains('unsupported provider')) {
+        return const GoogleSignInResult.failure(
+          'Google sign-in is not enabled for this app yet.',
+        );
+      }
+      return GoogleSignInResult.failure('Google sign-in failed: ${e.message}');
     } on PlatformException catch (e) {
       debugPrint('[GoogleAuth] PlatformException ${e.code}: ${e.message}');
       if (e.code == GoogleSignIn.kSignInCanceledError) {
@@ -70,41 +121,9 @@ class GoogleAuthService {
         'Google sign-in failed. Please try again.',
       );
     }
-
-    if (user == null) {
-      await _rollback();
-      return const GoogleSignInResult.failure(
-        'Google sign-in failed. Please try again.',
-      );
-    }
-
-    try {
-      await LocalDatabaseService.upsertUserProfile(
-        uid: user.uid,
-        email: user.email ?? '',
-        fullName: user.displayName,
-      );
-    } catch (e) {
-      debugPrint('[GoogleAuth] Local profile cache failed (non-fatal): $e');
-    }
-
-    final exchange = await ApiService.exchangeFirebaseToken(user);
-    if (exchange['success'] != true) {
-      await _rollback();
-      return GoogleSignInResult.failure(
-        exchange['message'] as String? ?? 'Could not reach the SafarSync server.',
-      );
-    }
-
-    // Google users always stay signed in until they log out or the 7-day
-    // inactivity window in SessionManager expires.
-    await SessionManager.setRememberMeEmail(user.email ?? '', true);
-    await SessionManager.recordActivity();
-    return GoogleSignInResult.success(user);
   }
 
-  /// Signs out of the Google account so the account picker is shown again
-  /// on the next sign-in. Safe to call when no Google session exists.
+  /// Signs out of the Google account so the picker is shown next time.
   static Future<void> signOut() async {
     if (kIsWeb) return;
     try {
@@ -114,47 +133,9 @@ class GoogleAuthService {
     }
   }
 
-  static Future<User?> _firebaseSignInWithGoogle() async {
-    final auth = FirebaseAuth.instance;
-
-    if (kIsWeb) {
-      try {
-        final cred = await auth.signInWithPopup(
-          GoogleAuthProvider()..addScope('email'),
-        );
-        return cred.user;
-      } on FirebaseAuthException catch (e) {
-        if (e.code == 'popup-closed-by-user' ||
-            e.code == 'cancelled-popup-request') {
-          throw const _Cancelled();
-        }
-        rethrow;
-      }
-    }
-
-    final account = await _googleSignIn.signIn();
-    if (account == null) throw const _Cancelled();
-
-    final googleAuth = await account.authentication;
-    if (googleAuth.idToken == null) {
-      throw FirebaseAuthException(
-        code: 'missing-google-id-token',
-        message: 'Google returned no ID token.',
-      );
-    }
-
-    final cred = await auth.signInWithCredential(
-      GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
-      ),
-    );
-    return cred.user;
-  }
-
   static Future<void> _rollback() async {
     try {
-      await FirebaseAuth.instance.signOut();
+      await Supabase.instance.client.auth.signOut();
     } catch (_) {}
     await signOut();
     try {
@@ -162,39 +143,19 @@ class GoogleAuthService {
     } catch (_) {}
   }
 
-  static String _firebaseErrorMessage(FirebaseAuthException e) {
-    switch (e.code) {
-      case 'network-request-failed':
-        return 'No internet connection. Please check your network and try again.';
-      case 'account-exists-with-different-credential':
-        return 'An account already exists with this email using a different sign-in method. '
-            'Sign in with email and password instead.';
-      case 'user-disabled':
-        return 'This account has been disabled.';
-      case 'operation-not-allowed':
-        return 'Google sign-in is not enabled for this app yet.';
-      case 'invalid-credential':
-        return 'Google sign-in could not be verified. Please try again.';
-      default:
-        return 'Google sign-in failed: ${e.message ?? e.code}';
-    }
-  }
-
   static String _platformErrorMessage(PlatformException e) {
     if (e.code == GoogleSignIn.kNetworkError) {
       return 'No internet connection. Please check your network and try again.';
     }
-    // ApiException 10 = DEVELOPER_ERROR: the app's SHA-1 / package name is not
-    // registered for an Android OAuth client in the Firebase project.
+    // ApiException 10 = DEVELOPER_ERROR: this build's package name / SHA-1
+    // is not registered as an Android OAuth client in Google Cloud.
     final details = '${e.message ?? ''} ${e.details ?? ''}';
     if (e.code == GoogleSignIn.kSignInFailedError && details.contains('10')) {
-      debugPrint('[GoogleAuth] DEVELOPER_ERROR — add this build\'s SHA-1 to Firebase.');
+      debugPrint(
+        "[GoogleAuth] DEVELOPER_ERROR — register this build's SHA-1 in Google Cloud.",
+      );
       return 'Google sign-in is not configured for this build of the app.';
     }
     return 'Google sign-in failed. Please try again.';
   }
-}
-
-class _Cancelled implements Exception {
-  const _Cancelled();
 }

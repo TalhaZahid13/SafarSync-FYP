@@ -85,15 +85,23 @@ class FeatureSections extends StatelessWidget {
               decoration: BoxDecoration(
                 color: const Color(0xFF2CAFBC).withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFF2CAFBC).withValues(alpha: 0.4)),
+                border: Border.all(
+                  color: const Color(0xFF2CAFBC).withValues(alpha: 0.4),
+                ),
               ),
               child: const Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(Icons.map_rounded, color: Color(0xFF2CAFBC), size: 16),
                   SizedBox(width: 8),
-                  Text('Open Offline Maps Manager',
-                    style: TextStyle(color: Color(0xFF2CAFBC), fontSize: 12, fontWeight: FontWeight.w600)),
+                  Text(
+                    'Open Offline Maps Manager',
+                    style: TextStyle(
+                      color: Color(0xFF2CAFBC),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -270,9 +278,24 @@ class FeatureSections extends StatelessWidget {
 
   Widget _budgetTourPackagesCard(BuildContext context) {
     final packages = [
-      {'name': 'Weekend Escape', 'price': 'Rs 15,000', 'days': '3 Days', 'locations': '3 Cities'},
-      {'name': 'Adventure Week', 'price': 'Rs 35,000', 'days': '7 Days', 'locations': '4 Stops'},
-      {'name': 'Grand Explorer', 'price': 'Rs 55,000', 'days': '14 Days', 'locations': '5 Cities'},
+      {
+        'name': 'Weekend Escape',
+        'price': 'Rs 15,000',
+        'days': '3 Days',
+        'locations': '3 Cities',
+      },
+      {
+        'name': 'Adventure Week',
+        'price': 'Rs 35,000',
+        'days': '7 Days',
+        'locations': '4 Stops',
+      },
+      {
+        'name': 'Grand Explorer',
+        'price': 'Rs 55,000',
+        'days': '14 Days',
+        'locations': '5 Cities',
+      },
     ];
 
     return _glassCard(
@@ -289,7 +312,10 @@ class FeatureSections extends StatelessWidget {
                   MaterialPageRoute(builder: (_) => const SastaTourPage()),
                 ),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.green.withValues(alpha: 0.25),
                     borderRadius: BorderRadius.circular(999),
@@ -347,17 +373,25 @@ class FeatureSections extends StatelessWidget {
                         const SizedBox(height: 2),
                         Text(
                           '📅 ${pkg['days']}',
-                          style: const TextStyle(color: Colors.white70, fontSize: 11),
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 11,
+                          ),
                         ),
                         Text(
                           '📍 ${pkg['locations']}',
-                          style: const TextStyle(color: Colors.white70, fontSize: 11),
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 11,
+                          ),
                         ),
                         const SizedBox(height: 8),
                         GestureDetector(
                           onTap: () => Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (_) => const SastaTourPage()),
+                            MaterialPageRoute(
+                              builder: (_) => const SastaTourPage(),
+                            ),
                           ),
                           child: Container(
                             width: double.infinity,
@@ -437,4 +471,3 @@ class FeatureSections extends StatelessWidget {
     );
   }
 }
-

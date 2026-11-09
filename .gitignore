@@ -11,6 +11,8 @@
 .svn/
 .swiftpm/
 migrate_working_dir/
+all md files/
+documentation/
 
 # IntelliJ related
 *.iml
@@ -46,8 +48,17 @@ app.*.map.json
 
 # Secrets — never commit
 .env
-lib/backend/.env
 
 # Build-time app config (backend URL) — keep out of git, see env/production.example.json
 env/*.json
 !env/*.example.json
+
+# Secrets — never commit (rotate anything that was committed previously)
+*firebase-adminsdk*.json
+android/key.properties
+*.jks
+*.keystore
+supabase/.temp/
+
+# Edge Function secret values (pushed with `supabase secrets set --env-file`)
+supabase/.env.secrets

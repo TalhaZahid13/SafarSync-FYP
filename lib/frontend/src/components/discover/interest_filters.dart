@@ -33,8 +33,8 @@ class _InterestFiltersState extends State<InterestFilters> {
     },
     {
       'name': 'Food',
-      'gradient': LinearGradient(colors: [AppTheme.Rose, AppTheme.pink]),
-      'borderColor': AppTheme.Rose,
+      'gradient': LinearGradient(colors: [AppTheme.rose, AppTheme.pink]),
+      'borderColor': AppTheme.rose,
       'icon': Icons.restaurant,
     },
     {
@@ -89,7 +89,9 @@ class _InterestFiltersState extends State<InterestFilters> {
               boxShadow: isActive
                   ? [
                       BoxShadow(
-                        color: (filter['borderColor'] as Color).withValues(alpha: 0.35),
+                        color: (filter['borderColor'] as Color).withValues(
+                          alpha: 0.35,
+                        ),
                         blurRadius: 14,
                         offset: const Offset(0, 6),
                       ),

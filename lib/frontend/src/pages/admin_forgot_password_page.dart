@@ -6,7 +6,8 @@ class AdminForgotPasswordPage extends StatefulWidget {
   const AdminForgotPasswordPage({super.key});
 
   @override
-  State<AdminForgotPasswordPage> createState() => _AdminForgotPasswordPageState();
+  State<AdminForgotPasswordPage> createState() =>
+      _AdminForgotPasswordPageState();
 }
 
 class _AdminForgotPasswordPageState extends State<AdminForgotPasswordPage> {
@@ -38,15 +39,26 @@ class _AdminForgotPasswordPageState extends State<AdminForgotPasswordPage> {
 
   Future<void> _requestOtp() async {
     final email = _emailCtrl.text.trim();
-    if (email.isEmpty) { _snack('Enter your admin email'); return; }
+    if (email.isEmpty) {
+      _snack('Enter your admin email');
+      return;
+    }
 
     setState(() => _isLoading = true);
     try {
       await ApiService.adminForgotPassword(email);
       _snack('If that email is registered, a 6-digit code was sent.');
-      if (mounted) setState(() { _step = 2; _isLoading = false; });
+      if (mounted) {
+        setState(() {
+          _step = 2;
+          _isLoading = false;
+        });
+      }
     } catch (e) {
-      if (mounted) { setState(() => _isLoading = false); _snack('Error: $e'); }
+      if (mounted) {
+        setState(() => _isLoading = false);
+        _snack('Error: $e');
+      }
     }
   }
 
@@ -55,9 +67,18 @@ class _AdminForgotPasswordPageState extends State<AdminForgotPasswordPage> {
     final newPass = _newPassCtrl.text.trim();
     final confirmPass = _confirmPassCtrl.text.trim();
 
-    if (otp.isEmpty || newPass.isEmpty) { _snack('Fill all fields'); return; }
-    if (newPass.length < 8) { _snack('Password must be at least 8 characters'); return; }
-    if (newPass != confirmPass) { _snack('Passwords do not match'); return; }
+    if (otp.isEmpty || newPass.isEmpty) {
+      _snack('Fill all fields');
+      return;
+    }
+    if (newPass.length < 8) {
+      _snack('Password must be at least 8 characters');
+      return;
+    }
+    if (newPass != confirmPass) {
+      _snack('Passwords do not match');
+      return;
+    }
 
     setState(() => _isLoading = true);
     try {
@@ -74,7 +95,10 @@ class _AdminForgotPasswordPageState extends State<AdminForgotPasswordPage> {
         if (mounted) setState(() => _isLoading = false);
       }
     } catch (e) {
-      if (mounted) { setState(() => _isLoading = false); _snack('Error: $e'); }
+      if (mounted) {
+        setState(() => _isLoading = false);
+        _snack('Error: $e');
+      }
     }
   }
 
@@ -91,7 +115,11 @@ class _AdminForgotPasswordPageState extends State<AdminForgotPasswordPage> {
         leading: IconButton(
           icon: Icon(Icons.arrow_back, color: theme.iconTheme.color),
           onPressed: () {
-            if (_step == 2) { setState(() => _step = 1); } else { Navigator.pop(context); }
+            if (_step == 2) {
+              setState(() => _step = 1);
+            } else {
+              Navigator.pop(context);
+            }
           },
         ),
         title: Text(
@@ -118,7 +146,10 @@ class _AdminForgotPasswordPageState extends State<AdminForgotPasswordPage> {
         const SizedBox(height: 16),
         Text(
           'Enter your admin email and we\'ll send a 6-digit reset code.',
-          style: TextStyle(fontSize: 14, color: theme.textTheme.bodySmall?.color),
+          style: TextStyle(
+            fontSize: 14,
+            color: theme.textTheme.bodySmall?.color,
+          ),
         ),
         const SizedBox(height: 24),
         _field(
@@ -137,11 +168,23 @@ class _AdminForgotPasswordPageState extends State<AdminForgotPasswordPage> {
             style: ElevatedButton.styleFrom(
               backgroundColor: cs.primary,
               padding: const EdgeInsets.symmetric(vertical: 14),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
             ),
             child: _isLoading
-                ? SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation(cs.onPrimary)))
-                : const Text('Send Reset Code', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                ? SizedBox(
+                    height: 20,
+                    width: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation(cs.onPrimary),
+                    ),
+                  )
+                : const Text(
+                    'Send Reset Code',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  ),
           ),
         ),
       ],
@@ -156,14 +199,42 @@ class _AdminForgotPasswordPageState extends State<AdminForgotPasswordPage> {
         const SizedBox(height: 16),
         Text(
           'Enter the 6-digit code sent to your email and choose a new password.',
-          style: TextStyle(fontSize: 14, color: theme.textTheme.bodySmall?.color),
+          style: TextStyle(
+            fontSize: 14,
+            color: theme.textTheme.bodySmall?.color,
+          ),
         ),
         const SizedBox(height: 24),
-        _field(label: 'Reset Code (6 digits)', hint: '123456', icon: LucideIcons.hash, controller: _otpCtrl, keyboardType: TextInputType.number, theme: theme),
+        _field(
+          label: 'Reset Code (6 digits)',
+          hint: '123456',
+          icon: LucideIcons.hash,
+          controller: _otpCtrl,
+          keyboardType: TextInputType.number,
+          theme: theme,
+        ),
         const SizedBox(height: 16),
-        _field(label: 'New Password', hint: '••••••••', icon: LucideIcons.lock, controller: _newPassCtrl, isPassword: true, obscureText: _obscureNew, onToggle: () => setState(() => _obscureNew = !_obscureNew), theme: theme),
+        _field(
+          label: 'New Password',
+          hint: '••••••••',
+          icon: LucideIcons.lock,
+          controller: _newPassCtrl,
+          isPassword: true,
+          obscureText: _obscureNew,
+          onToggle: () => setState(() => _obscureNew = !_obscureNew),
+          theme: theme,
+        ),
         const SizedBox(height: 16),
-        _field(label: 'Confirm Password', hint: '••••••••', icon: LucideIcons.lock, controller: _confirmPassCtrl, isPassword: true, obscureText: _obscureConfirm, onToggle: () => setState(() => _obscureConfirm = !_obscureConfirm), theme: theme),
+        _field(
+          label: 'Confirm Password',
+          hint: '••••••••',
+          icon: LucideIcons.lock,
+          controller: _confirmPassCtrl,
+          isPassword: true,
+          obscureText: _obscureConfirm,
+          onToggle: () => setState(() => _obscureConfirm = !_obscureConfirm),
+          theme: theme,
+        ),
         const SizedBox(height: 24),
         SizedBox(
           width: double.infinity,
@@ -172,11 +243,23 @@ class _AdminForgotPasswordPageState extends State<AdminForgotPasswordPage> {
             style: ElevatedButton.styleFrom(
               backgroundColor: cs.primary,
               padding: const EdgeInsets.symmetric(vertical: 14),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
             ),
             child: _isLoading
-                ? SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation(cs.onPrimary)))
-                : const Text('Reset Password', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                ? SizedBox(
+                    height: 20,
+                    width: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation(cs.onPrimary),
+                    ),
+                  )
+                : const Text(
+                    'Reset Password',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  ),
           ),
         ),
       ],
@@ -197,7 +280,13 @@ class _AdminForgotPasswordPageState extends State<AdminForgotPasswordPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: TextStyle(color: theme.textTheme.bodySmall?.color, fontSize: 12)),
+        Text(
+          label,
+          style: TextStyle(
+            color: theme.textTheme.bodySmall?.color,
+            fontSize: 12,
+          ),
+        ),
         const SizedBox(height: 6),
         TextField(
           controller: controller,
@@ -210,8 +299,20 @@ class _AdminForgotPasswordPageState extends State<AdminForgotPasswordPage> {
             hintStyle: TextStyle(color: theme.textTheme.bodySmall?.color),
             filled: true,
             fillColor: theme.cardColor,
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-            suffixIcon: isPassword ? IconButton(onPressed: onToggle, icon: Icon(obscureText ? Icons.visibility : Icons.visibility_off, color: theme.iconTheme.color, size: 20)) : null,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none,
+            ),
+            suffixIcon: isPassword
+                ? IconButton(
+                    onPressed: onToggle,
+                    icon: Icon(
+                      obscureText ? Icons.visibility : Icons.visibility_off,
+                      color: theme.iconTheme.color,
+                      size: 20,
+                    ),
+                  )
+                : null,
           ),
         ),
       ],

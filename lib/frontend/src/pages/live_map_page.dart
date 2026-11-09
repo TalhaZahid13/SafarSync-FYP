@@ -7,7 +7,6 @@ import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
-import 'package:socket_io_client/socket_io_client.dart' as io;
 import 'package:url_launcher/url_launcher.dart';
 import '../ui/app_theme.dart';
 import '../utils/api_service.dart';
@@ -27,7 +26,11 @@ Future<void> autoNavigateTo(
   if (!await Geolocator.isLocationServiceEnabled()) {
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Location services are disabled. Enable them in Settings.')),
+        const SnackBar(
+          content: Text(
+            'Location services are disabled. Enable them in Settings.',
+          ),
+        ),
       );
     }
     return;
@@ -36,10 +39,15 @@ Future<void> autoNavigateTo(
   if (perm == LocationPermission.denied) {
     perm = await Geolocator.requestPermission();
   }
-  if (perm == LocationPermission.denied || perm == LocationPermission.deniedForever) {
+  if (perm == LocationPermission.denied ||
+      perm == LocationPermission.deniedForever) {
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Location permission denied. Enable it in app settings.')),
+        const SnackBar(
+          content: Text(
+            'Location permission denied. Enable it in app settings.',
+          ),
+        ),
       );
     }
     return;
@@ -113,7 +121,8 @@ List<LatLng> _decodePolyline5(String encoded) {
       shift += 5;
     } while (byte >= 0x20);
     lat += (result & 1) != 0 ? ~(result >> 1) : (result >> 1);
-    shift = 0; result = 0;
+    shift = 0;
+    result = 0;
     do {
       byte = encoded.codeUnitAt(index++) - 63;
       result |= (byte & 0x1f) << shift;
@@ -176,7 +185,6 @@ class LiveMapPage extends StatefulWidget {
 
 class _LiveMapPageState extends State<LiveMapPage> {
   final MapController _mapController = MapController();
-  io.Socket? _socket;
 
   LatLng? _position;
   double _accuracy = 0;
@@ -214,8 +222,9 @@ class _LiveMapPageState extends State<LiveMapPage> {
   LatLng? get _effectiveDest => widget.routeDestination ?? _sessionDest;
   LatLng? get _effectiveOrigin => widget.routeOrigin ?? _sessionOrigin;
   String? get _effectiveDestName => widget.destinationName ?? _sessionDestName;
-  VehicleType get _effectiveVehicle =>
-      widget.routeDestination != null ? widget.vehicleType : _sessionVehicleType;
+  VehicleType get _effectiveVehicle => widget.routeDestination != null
+      ? widget.vehicleType
+      : _sessionVehicleType;
   bool get _hasRoute => _effectiveDest != null;
 
   @override
@@ -246,14 +255,14 @@ class _LiveMapPageState extends State<LiveMapPage> {
               _sessionOrigin = LatLng(startLat, startLng);
             }
             _sessionVehicleType = VehicleTypeX.fromName(
-                session['vehicle_type'] as String?);
+              session['vehicle_type'] as String?,
+            );
           });
         }
       }
     }
 
     if (!await _ensurePermission()) return;
-    _connectSocket();
     _startGpsStream();
   }
 
@@ -283,75 +292,60 @@ class _LiveMapPageState extends State<LiveMapPage> {
     }
   }
 
-  void _connectSocket() {
-    _socket = io.io(
-      ApiService.socketUrl,
-      io.OptionBuilder()
-          .setTransports(['websocket'])
-          .disableAutoConnect()
-          .setTimeout(5000)
-          .build(),
-    );
-    _socket!.connect();
-    _socket!.onConnect((_) => debugPrint('LiveMap: socket connected'));
-    _socket!.onConnectError((e) => debugPrint('LiveMap: socket error $e'));
-    _socket!.on('location:updated', (data) => debugPrint('LiveMap: remote $data'));
-  }
-
   void _startGpsStream() {
     const settings = LocationSettings(
       accuracy: LocationAccuracy.bestForNavigation,
       distanceFilter: 3,
     );
 
-    _posStream = Geolocator.getPositionStream(locationSettings: settings).listen(
-      (Position pos) {
-        final latlng = LatLng(pos.latitude, pos.longitude);
-        if (mounted) {
-          setState(() {
-            _position = latlng;
-            _accuracy = pos.accuracy;
-            _speed = pos.speed;
-            _isLoading = false;
-            _error = null;
+    _posStream = Geolocator.getPositionStream(locationSettings: settings)
+        .listen((Position pos) {
+          final latlng = LatLng(pos.latitude, pos.longitude);
+          if (mounted) {
+            setState(() {
+              _position = latlng;
+              _accuracy = pos.accuracy;
+              _speed = pos.speed;
+              _isLoading = false;
+              _error = null;
+            });
+          }
+
+          // Fetch route once we have an initial GPS fix
+          if (_hasRoute && !_routeFetched && !_fetchingRoute) {
+            final origin = _effectiveOrigin ?? latlng;
+            _fetchRoute(origin, _effectiveDest!);
+          }
+
+          // Update remaining distance to destination
+          if (_effectiveDest != null) {
+            final dist = Geolocator.distanceBetween(
+              pos.latitude,
+              pos.longitude,
+              _effectiveDest!.latitude,
+              _effectiveDest!.longitude,
+            );
+            if (mounted) setState(() => _remainingDistM = dist);
+          }
+
+          if (_autoFollow && _mapReady) {
+            _mapController.move(latlng, _mapController.camera.zoom);
+          }
+
+          _geocodeDebounce?.cancel();
+          _geocodeDebounce = Timer(const Duration(seconds: 6), () {
+            _reverseGeocode(pos.latitude, pos.longitude);
           });
-        }
 
-        // Fetch route once we have an initial GPS fix
-        if (_hasRoute && !_routeFetched && !_fetchingRoute) {
-          final origin = _effectiveOrigin ?? latlng;
-          _fetchRoute(origin, _effectiveDest!);
-        }
-
-        // Update remaining distance to destination
-        if (_effectiveDest != null) {
-          final dist = Geolocator.distanceBetween(
-            pos.latitude, pos.longitude,
-            _effectiveDest!.latitude, _effectiveDest!.longitude,
-          );
-          if (mounted) setState(() => _remainingDistM = dist);
-        }
-
-        if (_autoFollow && _mapReady) {
-          _mapController.move(latlng, _mapController.camera.zoom);
-        }
-
-        _geocodeDebounce?.cancel();
-        _geocodeDebounce = Timer(const Duration(seconds: 6), () {
-          _reverseGeocode(pos.latitude, pos.longitude);
-        });
-
-        _backendDebounce?.cancel();
-        _backendDebounce = Timer(const Duration(seconds: 10), () {
-          ApiService.updateLocation(
-            latitude: pos.latitude,
-            longitude: pos.longitude,
-            accuracy: pos.accuracy,
-          );
-        });
-      },
-      onError: (e) => _setError('GPS error: $e'),
-    );
+          _backendDebounce?.cancel();
+          _backendDebounce = Timer(const Duration(seconds: 10), () {
+            ApiService.updateLocation(
+              latitude: pos.latitude,
+              longitude: pos.longitude,
+              accuracy: pos.accuracy,
+            );
+          });
+        }, onError: (e) => _setError('GPS error: $e'));
   }
 
   Future<void> _fetchRoute(LatLng from, LatLng to) async {
@@ -384,7 +378,11 @@ class _LiveMapPageState extends State<LiveMapPage> {
   /// Calculates flight straight-line overlay for routes longer than 180 km.
   void _maybeCalcFlight(LatLng from, LatLng to) {
     final meters = Geolocator.distanceBetween(
-        from.latitude, from.longitude, to.latitude, to.longitude);
+      from.latitude,
+      from.longitude,
+      to.latitude,
+      to.longitude,
+    );
     if (meters < 180000) return; // no commercial flights below ~180 km
     final minutes = (meters / 1000 / 800 * 60 + 25).round();
     if (!mounted) return;
@@ -401,7 +399,9 @@ class _LiveMapPageState extends State<LiveMapPage> {
   ///   2. Valhalla with use_highways:1.0  (if no API key or quota exceeded)
   ///   3. OSRM driving                   (final fallback)
   Future<(List<LatLng>, double, double)> _fetchValhallaCarRoute(
-      LatLng from, LatLng to) async {
+    LatLng from,
+    LatLng to,
+  ) async {
     // ── Tier 1: Google Maps Directions API ──────────────────────────────────
     final key = AppConfig.googleMapsApiKey;
     if (key.isNotEmpty && key != 'YOUR_GOOGLE_MAPS_API_KEY_HERE') {
@@ -423,10 +423,8 @@ class _LiveMapPageState extends State<LiveMapPage> {
             final routes = data['routes'] as List;
             final route = routes[0] as Map<String, dynamic>;
             final leg = (route['legs'] as List)[0] as Map<String, dynamic>;
-            final distM =
-                ((leg['distance'] as Map)['value'] as num).toDouble();
-            final durS =
-                ((leg['duration'] as Map)['value'] as num).toDouble();
+            final distM = ((leg['distance'] as Map)['value'] as num).toDouble();
+            final durS = ((leg['duration'] as Map)['value'] as num).toDouble();
             final encoded =
                 (route['overview_polyline'] as Map)['points'] as String;
             final coords = await compute(_decodePolyline5, encoded);
@@ -434,7 +432,8 @@ class _LiveMapPageState extends State<LiveMapPage> {
             return (coords, distM, durS);
           }
           debugPrint(
-              'Google Maps API status: ${data['status']} — trying Valhalla');
+            'Google Maps API status: ${data['status']} — trying Valhalla',
+          );
         }
       } catch (e) {
         debugPrint('Google Maps Directions failed ($e) — trying Valhalla');
@@ -451,10 +450,11 @@ class _LiveMapPageState extends State<LiveMapPage> {
         'costing': 'auto',
         'costing_options': {
           'auto': {
-            'use_highways': 8.0, // >1 encourages motorways; 8 = strong preference
-            'use_tolls': 1.0,    // allow toll motorways (M-1, M-2 are tolled)
+            'use_highways':
+                8.0, // >1 encourages motorways; 8 = strong preference
+            'use_tolls': 1.0, // allow toll motorways (M-1, M-2 are tolled)
             'top_speed': 130,
-          }
+          },
         },
         'directions_options': {'units': 'kilometers'},
       });
@@ -465,7 +465,9 @@ class _LiveMapPageState extends State<LiveMapPage> {
             body: body,
           )
           .timeout(const Duration(seconds: 25));
-      if (resp.statusCode != 200) throw Exception('Valhalla ${resp.statusCode}');
+      if (resp.statusCode != 200) {
+        throw Exception('Valhalla ${resp.statusCode}');
+      }
       final data = await compute(
         (String b) => jsonDecode(b) as Map<String, dynamic>,
         resp.body,
@@ -489,14 +491,18 @@ class _LiveMapPageState extends State<LiveMapPage> {
   /// OSRM cycling profile: naturally avoids motorways restricted to bikes,
   /// routing through national highways (N-5, N-55…) instead.
   Future<(List<LatLng>, double, double)> _fetchOsrmCyclingRoute(
-      LatLng from, LatLng to) async {
+    LatLng from,
+    LatLng to,
+  ) async {
     final resp = await http
-        .get(Uri.parse(
-          'https://router.project-osrm.org/route/v1/cycling/'
-          '${from.longitude},${from.latitude};'
-          '${to.longitude},${to.latitude}'
-          '?overview=full&geometries=geojson',
-        ))
+        .get(
+          Uri.parse(
+            'https://router.project-osrm.org/route/v1/cycling/'
+            '${from.longitude},${from.latitude};'
+            '${to.longitude},${to.latitude}'
+            '?overview=full&geometries=geojson',
+          ),
+        )
         .timeout(const Duration(seconds: 20));
 
     if (resp.statusCode != 200) throw Exception('OSRM ${resp.statusCode}');
@@ -505,22 +511,27 @@ class _LiveMapPageState extends State<LiveMapPage> {
 
   /// OSRM driving — used only as Valhalla fallback.
   Future<(List<LatLng>, double, double)> _fetchOsrmDrivingFallback(
-      LatLng from, LatLng to) async {
+    LatLng from,
+    LatLng to,
+  ) async {
     final resp = await http
-        .get(Uri.parse(
-          'https://router.project-osrm.org/route/v1/driving/'
-          '${from.longitude},${from.latitude};'
-          '${to.longitude},${to.latitude}'
-          '?overview=full&geometries=geojson',
-        ))
+        .get(
+          Uri.parse(
+            'https://router.project-osrm.org/route/v1/driving/'
+            '${from.longitude},${from.latitude};'
+            '${to.longitude},${to.latitude}'
+            '?overview=full&geometries=geojson',
+          ),
+        )
         .timeout(const Duration(seconds: 20));
 
-    if (resp.statusCode != 200) throw Exception('OSRM fallback ${resp.statusCode}');
+    if (resp.statusCode != 200) {
+      throw Exception('OSRM fallback ${resp.statusCode}');
+    }
     return _parseOsrmResponse(resp.body);
   }
 
-  Future<(List<LatLng>, double, double)> _parseOsrmResponse(
-      String body) async {
+  Future<(List<LatLng>, double, double)> _parseOsrmResponse(String body) async {
     final data = await compute(
       (String b) => jsonDecode(b) as Map<String, dynamic>,
       body,
@@ -576,8 +587,6 @@ class _LiveMapPageState extends State<LiveMapPage> {
     _posStream?.cancel();
     _geocodeDebounce?.cancel();
     _backendDebounce?.cancel();
-    _socket?.disconnect();
-    _socket?.dispose();
     super.dispose();
   }
 
@@ -591,7 +600,9 @@ class _LiveMapPageState extends State<LiveMapPage> {
         title: Text(
           _hasRoute ? 'Navigation' : 'Live Location',
           style: const TextStyle(
-              color: Colors.white, fontWeight: FontWeight.bold),
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         iconTheme: const IconThemeData(color: Colors.white),
         actions: [
@@ -610,7 +621,10 @@ class _LiveMapPageState extends State<LiveMapPage> {
           if (_hasRoute)
             IconButton(
               tooltip: 'Stop navigation',
-              icon: const Icon(Icons.stop_circle_outlined, color: Colors.redAccent),
+              icon: const Icon(
+                Icons.stop_circle_outlined,
+                color: Colors.redAccent,
+              ),
               onPressed: () async {
                 await RouteSession.clear();
                 if (!mounted) return;
@@ -641,243 +655,250 @@ class _LiveMapPageState extends State<LiveMapPage> {
       body: _error != null
           ? _ErrorView(error: _error!, onRetry: _start)
           : _isLoading
-              ? const Center(
-                  child: CircularProgressIndicator(
-                      color: AppTheme.turquoise),
-                )
-              : Stack(
+          ? const Center(
+              child: CircularProgressIndicator(color: AppTheme.turquoise),
+            )
+          : Stack(
+              children: [
+                FlutterMap(
+                  mapController: _mapController,
+                  options: MapOptions(
+                    initialCenter: _position ?? const LatLng(33.6844, 73.0479),
+                    initialZoom: 15,
+                    onMapReady: () {
+                      _mapReady = true;
+                      // Fit route if already fetched when map becomes ready
+                      if (_routePoints.length >= 2) {
+                        _fitRoute(_routePoints);
+                      }
+                    },
+                    onTap: (_, _) {
+                      if (_autoFollow) {
+                        setState(() => _autoFollow = false);
+                      }
+                    },
+                  ),
                   children: [
-                    FlutterMap(
-                      mapController: _mapController,
-                      options: MapOptions(
-                        initialCenter:
-                            _position ?? const LatLng(33.6844, 73.0479),
-                        initialZoom: 15,
-                        onMapReady: () {
-                          _mapReady = true;
-                          // Fit route if already fetched when map becomes ready
-                          if (_routePoints.length >= 2) {
-                            _fitRoute(_routePoints);
-                          }
-                        },
-                        onTap: (_, _) {
-                          if (_autoFollow) {
-                            setState(() => _autoFollow = false);
-                          }
-                        },
-                      ),
-                      children: [
-                        TileLayer(
-                          urlTemplate:
-                              'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                          userAgentPackageName: 'com.safarsync.app',
-                          maxZoom: 19,
-                        ),
+                    TileLayer(
+                      urlTemplate:
+                          'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                      userAgentPackageName: 'com.safarsync.app',
+                      maxZoom: 19,
+                    ),
 
-                        // Route polyline
-                        if (_routePoints.isNotEmpty)
-                          PolylineLayer(
-                            polylines: [
-                              Polyline(
-                                points: _routePoints,
-                                strokeWidth: 6,
-                                color: const Color(0xFF3B82F6),
-                                borderStrokeWidth: 2,
-                                borderColor: const Color(0xFF1D4ED8),
-                              ),
-                            ],
-                          ),
-
-                        if (_position != null) ...[
-                          // Accuracy radius ring
-                          CircleLayer(
-                            circles: [
-                              CircleMarker(
-                                point: _position!,
-                                radius: _accuracy,
-                                useRadiusInMeter: true,
-                                color: AppTheme.turquoise
-                                    .withValues(alpha: 0.12),
-                                borderColor: AppTheme.turquoise
-                                    .withValues(alpha: 0.5),
-                                borderStrokeWidth: 1.5,
-                              ),
-                            ],
-                          ),
-                          // Live position dot
-                          MarkerLayer(
-                            markers: [
-                              Marker(
-                                point: _position!,
-                                width: 44,
-                                height: 44,
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    color: AppTheme.turquoise,
-                                    shape: BoxShape.circle,
-                                    border: Border.all(
-                                        color: Colors.white, width: 3),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: AppTheme.turquoise
-                                            .withValues(alpha: 0.5),
-                                        blurRadius: 12,
-                                        spreadRadius: 2,
-                                      ),
-                                    ],
-                                  ),
-                                  child: const Icon(
-                                    Icons.navigation,
-                                    color: Colors.white,
-                                    size: 20,
-                                  ),
-                                ),
-                              ),
-                            ],
+                    // Route polyline
+                    if (_routePoints.isNotEmpty)
+                      PolylineLayer(
+                        polylines: [
+                          Polyline(
+                            points: _routePoints,
+                            strokeWidth: 6,
+                            color: const Color(0xFF3B82F6),
+                            borderStrokeWidth: 2,
+                            borderColor: const Color(0xFF1D4ED8),
                           ),
                         ],
+                      ),
 
-                        // Destination marker
-                        if (_effectiveDest != null)
-                          MarkerLayer(
-                            markers: [
-                              Marker(
-                                point: _effectiveDest!,
-                                width: 48,
-                                height: 60,
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.all(7),
-                                      decoration: const BoxDecoration(
-                                        color: Color(0xFFEF4444),
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: const Icon(
-                                        Icons.flag,
-                                        color: Colors.white,
-                                        size: 18,
-                                      ),
-                                    ),
-                                    Container(
-                                      width: 3,
-                                      height: 12,
-                                      color: const Color(0xFFEF4444),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
+                    if (_position != null) ...[
+                      // Accuracy radius ring
+                      CircleLayer(
+                        circles: [
+                          CircleMarker(
+                            point: _position!,
+                            radius: _accuracy,
+                            useRadiusInMeter: true,
+                            color: AppTheme.turquoise.withValues(alpha: 0.12),
+                            borderColor: AppTheme.turquoise.withValues(
+                              alpha: 0.5,
+                            ),
+                            borderStrokeWidth: 1.5,
                           ),
-
-                        // ── Flight overlay ──────────────────────────────────
-                        // Thin straight line from origin → destination
-                        if (_hasFlightOption && _flightPoints.length == 2)
-                          PolylineLayer(
-                            polylines: [
-                              Polyline(
-                                points: _flightPoints,
-                                strokeWidth: 2,
-                                color: const Color(0xFF3B82F6)
-                                    .withValues(alpha: 0.5),
-                              ),
-                            ],
-                          ),
-
-                        // Airplane label at midpoint of flight line
-                        if (_hasFlightOption && _flightPoints.length == 2)
-                          MarkerLayer(
-                            markers: [
-                              Marker(
-                                point: LatLng(
-                                  (_flightPoints[0].latitude +
-                                          _flightPoints[1].latitude) /
-                                      2,
-                                  (_flightPoints[0].longitude +
-                                          _flightPoints[1].longitude) /
-                                      2,
+                        ],
+                      ),
+                      // Live position dot
+                      MarkerLayer(
+                        markers: [
+                          Marker(
+                            point: _position!,
+                            width: 44,
+                            height: 44,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: AppTheme.turquoise,
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: Colors.white,
+                                  width: 3,
                                 ),
-                                width: 120,
-                                height: 34,
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 10, vertical: 5),
-                                  decoration: BoxDecoration(
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: AppTheme.turquoise.withValues(
+                                      alpha: 0.5,
+                                    ),
+                                    blurRadius: 12,
+                                    spreadRadius: 2,
+                                  ),
+                                ],
+                              ),
+                              child: const Icon(
+                                Icons.navigation,
+                                color: Colors.white,
+                                size: 20,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+
+                    // Destination marker
+                    if (_effectiveDest != null)
+                      MarkerLayer(
+                        markers: [
+                          Marker(
+                            point: _effectiveDest!,
+                            width: 48,
+                            height: 60,
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(7),
+                                  decoration: const BoxDecoration(
+                                    color: Color(0xFFEF4444),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(
+                                    Icons.flag,
                                     color: Colors.white,
-                                    borderRadius: BorderRadius.circular(17),
-                                    boxShadow: const [
-                                      BoxShadow(
-                                          color: Colors.black26,
-                                          blurRadius: 6),
-                                    ],
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      const Icon(Icons.flight,
-                                          size: 14,
-                                          color: Color(0xFF3B82F6)),
-                                      const SizedBox(width: 4),
-                                      Text(
-                                        '~$_flightMinutes min',
-                                        style: const TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.bold,
-                                          color: Color(0xFF1E293B),
-                                        ),
-                                      ),
-                                    ],
+                                    size: 18,
                                   ),
                                 ),
-                              ),
-                            ],
+                                Container(
+                                  width: 3,
+                                  height: 12,
+                                  color: const Color(0xFFEF4444),
+                                ),
+                              ],
+                            ),
                           ),
-                      ],
-                    ),
-
-                    // Navigation top bar (only when a route is active)
-                    if (_hasRoute && _routePoints.isNotEmpty)
-                      Positioned(
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        child: _NavigationBar(
-                          destName: _effectiveDestName ?? 'Destination',
-                          distanceM: _remainingDistM,
-                          durationS: _remainingDurS,
-                        ),
+                        ],
                       ),
 
-                    // Route alternatives card (car + flight comparison)
-                    if (_hasRoute && _hasFlightOption)
-                      Positioned(
-                        bottom: 148,
-                        left: 16,
-                        right: 16,
-                        child: _RouteAlternativesCard(
-                          carDistM: _totalDistM,
-                          carDurS: _totalDurS,
-                          flightDistM: _flightDistM,
-                          flightMinutes: _flightMinutes,
-                          destName: _effectiveDestName ?? '',
-                        ),
+                    // ── Flight overlay ──────────────────────────────────
+                    // Thin straight line from origin → destination
+                    if (_hasFlightOption && _flightPoints.length == 2)
+                      PolylineLayer(
+                        polylines: [
+                          Polyline(
+                            points: _flightPoints,
+                            strokeWidth: 2,
+                            color: const Color(
+                              0xFF3B82F6,
+                            ).withValues(alpha: 0.5),
+                          ),
+                        ],
                       ),
 
-                    // Bottom info panel
-                    Positioned(
-                      bottom: 16,
-                      left: 16,
-                      right: 16,
-                      child: _InfoPanel(
-                        address: _address,
-                        accuracy: _accuracy,
-                        speed: _speed,
-                        position: _position,
+                    // Airplane label at midpoint of flight line
+                    if (_hasFlightOption && _flightPoints.length == 2)
+                      MarkerLayer(
+                        markers: [
+                          Marker(
+                            point: LatLng(
+                              (_flightPoints[0].latitude +
+                                      _flightPoints[1].latitude) /
+                                  2,
+                              (_flightPoints[0].longitude +
+                                      _flightPoints[1].longitude) /
+                                  2,
+                            ),
+                            width: 120,
+                            height: 34,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 5,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(17),
+                                boxShadow: const [
+                                  BoxShadow(
+                                    color: Colors.black26,
+                                    blurRadius: 6,
+                                  ),
+                                ],
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(
+                                    Icons.flight,
+                                    size: 14,
+                                    color: Color(0xFF3B82F6),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    '~$_flightMinutes min',
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFF1E293B),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
                   ],
                 ),
+
+                // Navigation top bar (only when a route is active)
+                if (_hasRoute && _routePoints.isNotEmpty)
+                  Positioned(
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    child: _NavigationBar(
+                      destName: _effectiveDestName ?? 'Destination',
+                      distanceM: _remainingDistM,
+                      durationS: _remainingDurS,
+                    ),
+                  ),
+
+                // Route alternatives card (car + flight comparison)
+                if (_hasRoute && _hasFlightOption)
+                  Positioned(
+                    bottom: 148,
+                    left: 16,
+                    right: 16,
+                    child: _RouteAlternativesCard(
+                      carDistM: _totalDistM,
+                      carDurS: _totalDurS,
+                      flightDistM: _flightDistM,
+                      flightMinutes: _flightMinutes,
+                      destName: _effectiveDestName ?? '',
+                    ),
+                  ),
+
+                // Bottom info panel
+                Positioned(
+                  bottom: 16,
+                  left: 16,
+                  right: 16,
+                  child: _InfoPanel(
+                    address: _address,
+                    accuracy: _accuracy,
+                    speed: _speed,
+                    position: _position,
+                  ),
+                ),
+              ],
+            ),
       floatingActionButton: (_position != null && !_autoFollow)
           ? FloatingActionButton(
               backgroundColor: AppTheme.turquoise,
@@ -941,8 +962,11 @@ class _NavigationBar extends StatelessWidget {
               color: const Color(0xFF3B82F6).withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: const Icon(Icons.turn_right,
-                color: Color(0xFF3B82F6), size: 22),
+            child: const Icon(
+              Icons.turn_right,
+              color: Color(0xFF3B82F6),
+              size: 22,
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -963,8 +987,7 @@ class _NavigationBar extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   '${_formatDist(distanceM)} · ETA ${_formatDur(durationS)}',
-                  style: const TextStyle(
-                      color: Colors.white70, fontSize: 12),
+                  style: const TextStyle(color: Colors.white70, fontSize: 12),
                 ),
               ],
             ),
@@ -982,8 +1005,7 @@ class _NavigationBar extends StatelessWidget {
               ),
               Text(
                 _formatDur(durationS),
-                style: const TextStyle(
-                    color: Colors.white54, fontSize: 11),
+                style: const TextStyle(color: Colors.white54, fontSize: 11),
               ),
             ],
           ),
@@ -1037,17 +1059,21 @@ class _InfoPanel extends StatelessWidget {
                   color: AppTheme.turquoise.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Icon(Icons.location_on,
-                    color: AppTheme.turquoise, size: 16),
+                child: const Icon(
+                  Icons.location_on,
+                  color: AppTheme.turquoise,
+                  size: 16,
+                ),
               ),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   address,
                   style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600),
+                    color: Colors.white,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -1081,14 +1107,19 @@ class _Stat extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Text(value,
-            style: const TextStyle(
-                color: Colors.white,
-                fontSize: 12,
-                fontWeight: FontWeight.bold)),
+        Text(
+          value,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         const SizedBox(height: 2),
-        Text(label,
-            style: const TextStyle(color: Colors.white54, fontSize: 10)),
+        Text(
+          label,
+          style: const TextStyle(color: Colors.white54, fontSize: 10),
+        ),
       ],
     );
   }
@@ -1107,13 +1138,13 @@ class _ErrorView extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.location_off,
-                size: 64, color: Colors.white38),
+            const Icon(Icons.location_off, size: 64, color: Colors.white38),
             const SizedBox(height: 16),
-            Text(error,
-                style:
-                    const TextStyle(color: Colors.white70, fontSize: 14),
-                textAlign: TextAlign.center),
+            Text(
+              error,
+              style: const TextStyle(color: Colors.white70, fontSize: 14),
+              textAlign: TextAlign.center,
+            ),
             const SizedBox(height: 24),
             ElevatedButton.icon(
               onPressed: onRetry,
@@ -1123,9 +1154,12 @@ class _ErrorView extends StatelessWidget {
                 backgroundColor: AppTheme.turquoise,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(
-                    horizontal: 24, vertical: 12),
+                  horizontal: 24,
+                  vertical: 12,
+                ),
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
             ),
           ],
@@ -1152,8 +1186,9 @@ class _RouteAlternativesCard extends StatelessWidget {
     required this.destName,
   });
 
-  String _dist(double m) =>
-      m >= 1000 ? '${(m / 1000).toStringAsFixed(0)} km' : '${m.toStringAsFixed(0)} m';
+  String _dist(double m) => m >= 1000
+      ? '${(m / 1000).toStringAsFixed(0)} km'
+      : '${m.toStringAsFixed(0)} m';
 
   String _dur(double s) {
     final mins = (s / 60).round();
@@ -1169,8 +1204,7 @@ class _RouteAlternativesCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(18),
         border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
         boxShadow: [
-          BoxShadow(
-              color: Colors.black.withValues(alpha: 0.4), blurRadius: 16),
+          BoxShadow(color: Colors.black.withValues(alpha: 0.4), blurRadius: 16),
         ],
       ),
       child: Column(
@@ -1184,8 +1218,7 @@ class _RouteAlternativesCard extends StatelessWidget {
             time: _dur(carDurS),
             dist: _dist(carDistM),
           ),
-          Divider(
-              color: Colors.white.withValues(alpha: 0.12), height: 14),
+          Divider(color: Colors.white.withValues(alpha: 0.12), height: 14),
           // Flight row
           _RouteRow(
             icon: Icons.flight,
@@ -1202,13 +1235,16 @@ class _RouteAlternativesCard extends StatelessWidget {
                 mode: LaunchMode.externalApplication,
               ),
               child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 5,
+                ),
                 decoration: BoxDecoration(
                   color: AppTheme.turquoise.withValues(alpha: 0.18),
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
-                      color: AppTheme.turquoise.withValues(alpha: 0.5)),
+                    color: AppTheme.turquoise.withValues(alpha: 0.5),
+                  ),
                 ),
                 child: const Text(
                   'Book',
@@ -1254,21 +1290,23 @@ class _RouteRow extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(label,
-                  style: const TextStyle(
-                      color: Colors.white54, fontSize: 11)),
+              Text(
+                label,
+                style: const TextStyle(color: Colors.white54, fontSize: 11),
+              ),
               const SizedBox(height: 1),
-              Text(time,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 15,
-                  )),
+              Text(
+                time,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
+                ),
+              ),
             ],
           ),
         ),
-        Text(dist,
-            style: const TextStyle(color: Colors.white54, fontSize: 12)),
+        Text(dist, style: const TextStyle(color: Colors.white54, fontSize: 12)),
         if (trailing != null) ...[const SizedBox(width: 10), trailing!],
       ],
     );

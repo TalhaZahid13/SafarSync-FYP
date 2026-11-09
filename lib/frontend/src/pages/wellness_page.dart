@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../utils/api_service.dart';
 
 class WellnessPage extends StatefulWidget {
+  const WellnessPage({super.key});
+
   @override
   State<WellnessPage> createState() => _WellnessPageState();
 }
@@ -42,17 +44,21 @@ class _WellnessPageState extends State<WellnessPage> {
                           SizedBox(height: 24),
                           Text('How are you feeling today?'),
                           SizedBox(height: 24),
-                          ...wellnessPrompts.map((prompt) => Padding(
-                            padding: EdgeInsets.symmetric(vertical: 6),
-                            child: ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.purple[200],
+                          ...wellnessPrompts.map(
+                            (prompt) => Padding(
+                              padding: EdgeInsets.symmetric(vertical: 6),
+                              child: ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.purple[200],
+                                ),
+                                onPressed: () => _sendMessage(prompt),
+                                child: Text(
+                                  prompt,
+                                  style: TextStyle(color: Colors.white),
+                                ),
                               ),
-                              onPressed: () => _sendMessage(prompt),
-                              child: Text(prompt,
-                                  style: TextStyle(color: Colors.white)),
                             ),
-                          )),
+                          ),
                         ],
                       ),
                     ),
@@ -63,14 +69,17 @@ class _WellnessPageState extends State<WellnessPage> {
                       final msg = messages[i];
                       final isUser = msg['role'] == 'user';
                       return Align(
-                        alignment:
-                            isUser ? Alignment.centerRight : Alignment.centerLeft,
+                        alignment: isUser
+                            ? Alignment.centerRight
+                            : Alignment.centerLeft,
                         child: Container(
                           margin: EdgeInsets.all(8),
                           padding: EdgeInsets.all(12),
                           constraints: BoxConstraints(maxWidth: 280),
                           decoration: BoxDecoration(
-                            color: isUser ? Colors.blue[200] : Colors.purple[100],
+                            color: isUser
+                                ? Colors.blue[200]
+                                : Colors.purple[100],
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Text(msg['content'] ?? ''),
@@ -98,9 +107,12 @@ class _WellnessPageState extends State<WellnessPage> {
                     decoration: InputDecoration(
                       hintText: 'Share your feelings...',
                       border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(20)),
-                      contentPadding:
-                          EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
                     ),
                     onSubmitted: (_) => _sendMessage(),
                   ),
@@ -119,7 +131,7 @@ class _WellnessPageState extends State<WellnessPage> {
     );
   }
 
-  _sendMessage([String? text]) async {
+  Future<void> _sendMessage([String? text]) async {
     final message = text ?? messageController.text;
     if (message.isEmpty) return;
 
@@ -141,7 +153,9 @@ class _WellnessPageState extends State<WellnessPage> {
       });
 
       if (resp['ai_response'] == null) {
-        throw Exception(resp['message'] ?? resp['error'] ?? 'AI request failed');
+        throw Exception(
+          resp['message'] ?? resp['error'] ?? 'AI request failed',
+        );
       }
       final reply = resp['ai_response'] as String;
 
@@ -158,7 +172,8 @@ class _WellnessPageState extends State<WellnessPage> {
           loading = false;
           messages.add({
             'role': 'assistant',
-            'content': "I'm here to listen and support you. Remember, you're doing great! 💙\n\nTake a deep breath. You have the strength to handle this.",
+            'content':
+                "I'm here to listen and support you. Remember, you're doing great! 💙\n\nTake a deep breath. You have the strength to handle this.",
           });
         });
       }

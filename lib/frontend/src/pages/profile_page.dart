@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import '../utils/app_auth.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../utils/pdf_export.dart'; // TripData, Destination, RouteData, Hotel, Restaurant, TripStats
 import 'profile_settings.dart';
@@ -18,17 +18,17 @@ import '../utils/safe_parse.dart';
 import '../utils/session_manager.dart';
 
 // ── Profile page palette ──────────────────────────────────────────────────────
-const Color _bgTop      = Color(0xFFF8FFFE);
-const Color _bgMid      = Color(0xFFEFF9FA);
-const Color _bgBottom   = Color(0xFFE3F5F7);
-const Color _teal       = Color(0xFF2CAFBC);
-const Color _orange     = Color(0xFFFF8C42);
-const Color _violet     = Color(0xFF7C6FAF);
-const Color _cyan       = Color(0xFF00BCD4);
-const Color _gold       = Color(0xFFFFB830);
+const Color _bgTop = Color(0xFFF8FFFE);
+const Color _bgMid = Color(0xFFEFF9FA);
+const Color _bgBottom = Color(0xFFE3F5F7);
+const Color _teal = Color(0xFF2CAFBC);
+const Color _orange = Color(0xFFFF8C42);
+const Color _violet = Color(0xFF7C6FAF);
+const Color _cyan = Color(0xFF00BCD4);
+const Color _gold = Color(0xFFFFB830);
 const Color _titleColor = Color(0xFF404745);
-const Color _mutedText  = Color(0xFF9A9E9D);
-const Color _cardBg     = Color(0xFFFFFFFF);
+const Color _mutedText = Color(0xFF9A9E9D);
+const Color _cardBg = Color(0xFFFFFFFF);
 const Color _cardOutline = Color(0x1A2CAFBC);
 
 class ProfilePage extends StatefulWidget {
@@ -42,7 +42,7 @@ class _ProfilePageState extends State<ProfilePage> {
   bool _isAdmin = false;
   Map<String, dynamic> _stats = {};
   bool _statsLoaded = false;
-  int? _mysqlUserId;
+  int? _appUserId;
   String? _profileName;
   String? _city;
   String? _photoUrl;
@@ -55,7 +55,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Future<void> _loadData() async {
     final isAdmin = await ApiService.getIsAdmin();
-    final mysqlUserId = await ApiService.getMySqlUserId();
+    final appUserId = await ApiService.getCurrentUserId();
     final statsResp = await ApiService.getRequest('/users/stats');
     final profileResp = await ApiService.getRequest('/users/profile');
     if (mounted) {
@@ -70,7 +70,7 @@ class _ProfilePageState extends State<ProfilePage> {
       }
       setState(() {
         _isAdmin = isAdmin;
-        _mysqlUserId = mysqlUserId;
+        _appUserId = appUserId;
         _stats = (statsResp['stats'] as Map<String, dynamic>?) ?? {};
         _statsLoaded = true;
         _profileName = name;
@@ -97,7 +97,7 @@ class _ProfilePageState extends State<ProfilePage> {
       isAdmin: _isAdmin,
       stats: _stats,
       statsLoaded: _statsLoaded,
-      mysqlUserId: _mysqlUserId,
+      appUserId: _appUserId,
       profileName: _profileName,
       city: _city,
       photoUrl: _photoUrl,
@@ -110,7 +110,7 @@ class _ProfilePageView extends StatelessWidget {
   final bool isAdmin;
   final Map<String, dynamic> stats;
   final bool statsLoaded;
-  final int? mysqlUserId;
+  final int? appUserId;
   final String? profileName;
   final String? city;
   final String? photoUrl;
@@ -121,14 +121,14 @@ class _ProfilePageView extends StatelessWidget {
     required this.stats,
     required this.statsLoaded,
     required this.onEditProfile,
-    this.mysqlUserId,
+    this.appUserId,
     this.profileName,
     this.city,
     this.photoUrl,
   });
 
   void handleExportPDF() {
-    final user = FirebaseAuth.instance.currentUser;
+    final user = AppAuth.currentUser;
     final userName = user?.displayName ?? 'Traveller';
 
     // Use real stats from the backend; fall back to zeros if not yet loaded.
@@ -158,7 +158,9 @@ class _ProfilePageView extends StatelessWidget {
         userInfo: PdfExportUserInfo(
           fullName: userName,
           email: user?.email ?? '',
-          userId: mysqlUserId != null ? 'ID-$mysqlUserId' : (user?.uid ?? 'unknown'),
+          userId: appUserId != null
+              ? 'ID-$appUserId'
+              : (user?.uid ?? 'unknown'),
           profileImageUrl: user?.photoURL,
         ),
         bookingDetails: {
@@ -517,9 +519,7 @@ class _ProfilePageView extends StatelessWidget {
                     'My Wishlist',
                     () => Navigator.push(
                       context,
-                      MaterialPageRoute(
-                        builder: (_) => WishlistPage(),
-                      ),
+                      MaterialPageRoute(builder: (_) => WishlistPage()),
                     ),
                   ),
                   settingsButton(
@@ -528,9 +528,7 @@ class _ProfilePageView extends StatelessWidget {
                     'Wellness Center',
                     () => Navigator.push(
                       context,
-                      MaterialPageRoute(
-                        builder: (_) => WellnessPage(),
-                      ),
+                      MaterialPageRoute(builder: (_) => WellnessPage()),
                     ),
                   ),
                   settingsButton(
@@ -539,16 +537,23 @@ class _ProfilePageView extends StatelessWidget {
                     'Export Trip Data (PDF)',
                     handleExportPDF,
                   ),
-                  settingsButton(context, LucideIcons.logOut, 'Log Out', () async {
-                    await SessionManager.clearAuthState(clearRememberMe: true);
-                    if (context.mounted) {
-                      Navigator.pushAndRemoveUntil(
-                        context,
-                        MaterialPageRoute(builder: (_) => const LoginPage()),
-                        (route) => false,
+                  settingsButton(
+                    context,
+                    LucideIcons.logOut,
+                    'Log Out',
+                    () async {
+                      await SessionManager.clearAuthState(
+                        clearRememberMe: true,
                       );
-                    }
-                  }),
+                      if (context.mounted) {
+                        Navigator.pushAndRemoveUntil(
+                          context,
+                          MaterialPageRoute(builder: (_) => const LoginPage()),
+                          (route) => false,
+                        );
+                      }
+                    },
+                  ),
                 ],
               ),
             ),
@@ -576,12 +581,12 @@ class _ProfilePageView extends StatelessWidget {
   }
 
   Widget _profileMeta() {
-    final user = FirebaseAuth.instance.currentUser;
+    final user = AppAuth.currentUser;
     final name = (profileName?.isNotEmpty == true)
         ? profileName!
         : (user?.displayName?.isNotEmpty == true)
-            ? user!.displayName!
-            : 'Traveller';
+        ? user!.displayName!
+        : 'Traveller';
     final email = user?.email ?? '';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -748,8 +753,9 @@ class _NotificationsBadgeButtonState extends State<_NotificationsBadgeButton> {
   }
 
   void _onUnreadChanged() {
-    if (mounted)
+    if (mounted) {
       setState(() => _unread = NotificationService.instance.unreadCount);
+    }
   }
 
   Future<void> _fetchCount() async {

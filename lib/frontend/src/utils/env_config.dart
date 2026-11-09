@@ -1,65 +1,62 @@
-import 'package:flutter/foundation.dart';
-
-/// Build-time environment configuration.
+/// Build-time configuration for the Supabase cloud backend.
 ///
-/// The backend URL is baked into the app at build time — users never type an
-/// IP address. Provide it with:
+/// The app talks only to Supabase Cloud — there is no local server, IP
+/// address or backend URL for users (or developers) to configure.
 ///
-///   flutter run   --dart-define-from-file=env/production.json
+/// Values can be overridden per environment at build time:
+///
 ///   flutter build apk --release --dart-define-from-file=env/production.json
 ///
-/// where env/production.json contains e.g.
-///   { "API_BASE_URL": "https://safarsync-api.onrender.com/api" }
+/// (see env/production.example.json). The defaults below point at the
+/// production SafarSync Supabase project.
 ///
-/// See env/production.example.json.
-///
-/// A plain `flutter build apk --release` (no dart-define) falls back to
-/// [_productionApiBaseUrl] — set it once the backend is deployed.
+/// SECURITY: the publishable key is designed to ship inside client apps; every
+/// table is protected by Row Level Security and privileged work happens in
+/// the `api` Edge Function. Never put the service_role / secret key here.
 class EnvConfig {
-  /// Hosted HTTPS backend used when API_BASE_URL is not passed at build time,
-  /// e.g. 'https://safarsync-api.onrender.com/api'.
-  static const String _productionApiBaseUrl = '';
-
-  static const String _rawApiBaseUrl = String.fromEnvironment(
-    'API_BASE_URL',
-    defaultValue: _productionApiBaseUrl,
+  static const String supabaseUrl = String.fromEnvironment(
+    'SUPABASE_URL',
+    defaultValue: 'https://zjjbnrqtfnewwfxuahga.supabase.co',
   );
 
-  /// Base URL of the REST API, always ending in `/api`, no trailing slash.
-  static final String apiBaseUrl = _normalize(_rawApiBaseUrl);
+  static const String supabasePublishableKey = String.fromEnvironment(
+    'SUPABASE_PUBLISHABLE_KEY',
+    defaultValue: 'sb_publishable_D05-8RK9AZS9MjEUijotRg_cwAA5dCC',
+  );
 
-  /// Origin of the backend (no `/api`), used for Socket.io and static uploads.
-  static String get serverOrigin => apiBaseUrl.endsWith('/api')
-      ? apiBaseUrl.substring(0, apiBaseUrl.length - 4)
-      : apiBaseUrl;
+  /// Google OAuth *Web* client id (the same one configured in
+  /// Supabase → Authentication → Providers → Google). Needed on Android so
+  /// Google Sign-In returns an ID token Supabase can verify.
+  static const String googleWebClientId = String.fromEnvironment(
+    'GOOGLE_WEB_CLIENT_ID',
+    defaultValue:
+        '495483479742-qoqoir127ehif49jln99bihlmnmssi4r.apps.googleusercontent.com',
+  );
+
+  /// Deep link that Supabase Auth emails (confirm signup, reset password)
+  /// redirect back to. Must also be listed under Authentication → URL
+  /// Configuration → Redirect URLs in the Supabase dashboard.
+  static const String authRedirectUrl = 'io.safarsync.app://login-callback';
+
+  /// Base URL of the SafarSync REST API (Supabase Edge Function `api`).
+  static String get apiBaseUrl => '$supabaseUrl/functions/v1/api';
 
   /// Null when the configuration is usable, otherwise a developer-facing
   /// explanation of what is wrong.
   static String? get configurationError {
-    if (_rawApiBaseUrl.trim().isEmpty) {
-      return 'API_BASE_URL is not set. Build with '
-          '--dart-define-from-file=env/production.json';
+    final uri = Uri.tryParse(supabaseUrl);
+    if (uri == null || uri.scheme != 'https' || !uri.hasAuthority) {
+      return 'SUPABASE_URL "$supabaseUrl" is not a valid https URL';
     }
-    final uri = Uri.tryParse(apiBaseUrl);
-    if (uri == null || !uri.hasAuthority) {
-      return 'API_BASE_URL "$_rawApiBaseUrl" is not a valid URL';
+    if (supabasePublishableKey.trim().isEmpty) {
+      return 'SUPABASE_PUBLISHABLE_KEY is not set';
     }
-    // Release builds must talk to a hosted HTTPS endpoint. Plain http is only
-    // tolerated in debug builds (e.g. pointing at a local dev server).
-    if (uri.scheme != 'https' && !(kDebugMode && uri.scheme == 'http')) {
-      return 'API_BASE_URL must use https:// (got "$_rawApiBaseUrl")';
+    if (supabasePublishableKey.contains('service_role') ||
+        supabasePublishableKey.startsWith('sb_secret_')) {
+      return 'A secret/service_role key must never be bundled in the app';
     }
     return null;
   }
 
   static bool get isConfigured => configurationError == null;
-
-  static String _normalize(String value) {
-    var url = value.trim();
-    while (url.endsWith('/')) {
-      url = url.substring(0, url.length - 1);
-    }
-    if (url.isNotEmpty && !url.endsWith('/api')) url = '$url/api';
-    return url;
-  }
 }

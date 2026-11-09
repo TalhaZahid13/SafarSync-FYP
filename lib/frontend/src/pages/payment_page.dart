@@ -31,8 +31,10 @@ class PaymentFailureScreen extends StatelessWidget {
             Text(
               'Payment Failed',
               textAlign: TextAlign.center,
-              style: theme.textTheme.headlineSmall
-                  ?.copyWith(fontWeight: FontWeight.bold, color: Colors.red),
+              style: theme.textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: Colors.red,
+              ),
             ),
             const SizedBox(height: 12),
             Container(
@@ -60,7 +62,8 @@ class PaymentFailureScreen extends StatelessWidget {
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
               ),
             const SizedBox(height: 12),
@@ -69,7 +72,8 @@ class PaymentFailureScreen extends StatelessWidget {
               style: OutlinedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
               child: const Text('Back to Home'),
             ),
@@ -105,10 +109,9 @@ class PaymentPage extends StatefulWidget {
 class _PaymentPageState extends State<PaymentPage> {
   bool _loading = false;
 
-  double get _subtotal =>
-      widget.totalAmount > 0
-          ? widget.totalAmount
-          : widget.durationDays * widget.pricePerDay * widget.numTravelers;
+  double get _subtotal => widget.totalAmount > 0
+      ? widget.totalAmount
+      : widget.durationDays * widget.pricePerDay * widget.numTravelers;
   double get _tax => _subtotal * 0.10;
   double get _total => _subtotal + _tax;
   int get _totalCents => (_total * 100).round();
@@ -147,18 +150,16 @@ class _PaymentPageState extends State<PaymentPage> {
       setState(() => _loading = false);
       final msg = e.error.localizedMessage ?? 'Payment cancelled or failed';
       if (e.error.code == FailureCode.Canceled) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Payment cancelled')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Payment cancelled')));
         return;
       }
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) => PaymentFailureScreen(
-            failureReason: msg,
-            onRetry: _pay,
-          ),
+          builder: (_) =>
+              PaymentFailureScreen(failureReason: msg, onRetry: _pay),
         ),
       );
     } catch (e) {
@@ -167,10 +168,8 @@ class _PaymentPageState extends State<PaymentPage> {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) => PaymentFailureScreen(
-            failureReason: e.toString(),
-            onRetry: _pay,
-          ),
+          builder: (_) =>
+              PaymentFailureScreen(failureReason: e.toString(), onRetry: _pay),
         ),
       );
     }
@@ -194,28 +193,43 @@ class _PaymentPageState extends State<PaymentPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Booking Summary',
-                        style: theme.textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.bold)),
+                    Text(
+                      'Booking Summary',
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                     const SizedBox(height: 16),
                     _row('Destination', widget.destinationName),
-                    _row('Duration',
-                        '${widget.durationDays} day${widget.durationDays > 1 ? 's' : ''}'),
-                    _row('Travelers',
-                        '${widget.numTravelers} person${widget.numTravelers > 1 ? 's' : ''}'),
-                    _row('Rate per day',
-                        'PKR ${widget.pricePerDay.toStringAsFixed(0)}'),
+                    _row(
+                      'Duration',
+                      '${widget.durationDays} day${widget.durationDays > 1 ? 's' : ''}',
+                    ),
+                    _row(
+                      'Travelers',
+                      '${widget.numTravelers} person${widget.numTravelers > 1 ? 's' : ''}',
+                    ),
+                    _row(
+                      'Rate per day',
+                      'PKR ${widget.pricePerDay.toStringAsFixed(0)}',
+                    ),
                     const Divider(height: 24),
                     _row('Subtotal', 'PKR ${_subtotal.toStringAsFixed(0)}'),
-                    _row('Tax (10%)', 'PKR ${_tax.toStringAsFixed(0)}',
-                        muted: true),
+                    _row(
+                      'Tax (10%)',
+                      'PKR ${_tax.toStringAsFixed(0)}',
+                      muted: true,
+                    ),
                     const Divider(height: 24),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('Total',
-                            style: theme.textTheme.titleMedium
-                                ?.copyWith(fontWeight: FontWeight.bold)),
+                        Text(
+                          'Total',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                         Text(
                           'PKR ${_total.toStringAsFixed(0)}',
                           style: theme.textTheme.titleMedium?.copyWith(
@@ -247,15 +261,19 @@ class _PaymentPageState extends State<PaymentPage> {
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
               child: _loading
                   ? const SizedBox(
                       height: 20,
                       width: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2))
-                  : Text('Pay PKR ${_total.toStringAsFixed(0)}',
-                      style: const TextStyle(fontSize: 16)),
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Text(
+                      'Pay PKR ${_total.toStringAsFixed(0)}',
+                      style: const TextStyle(fontSize: 16),
+                    ),
             ),
           ],
         ),
@@ -264,17 +282,19 @@ class _PaymentPageState extends State<PaymentPage> {
   }
 
   Widget _row(String label, String value, {bool muted = false}) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 5),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(label,
-                style: TextStyle(
-                    color: muted ? Colors.grey : null, fontSize: 14)),
-            Text(value,
-                style: TextStyle(
-                    color: muted ? Colors.grey : null, fontSize: 14)),
-          ],
+    padding: const EdgeInsets.symmetric(vertical: 5),
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: TextStyle(color: muted ? Colors.grey : null, fontSize: 14),
         ),
-      );
+        Text(
+          value,
+          style: TextStyle(color: muted ? Colors.grey : null, fontSize: 14),
+        ),
+      ],
+    ),
+  );
 }

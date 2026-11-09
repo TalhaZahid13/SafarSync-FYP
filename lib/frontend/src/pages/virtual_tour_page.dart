@@ -24,7 +24,10 @@ class _VirtualTourPageState extends State<VirtualTourPage> {
   }
 
   Future<void> _fetchTours() async {
-    setState(() { _loading = true; _error = null; });
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
     try {
       final resp = await ApiService.getRequest('/virtual-tours');
       setState(() => _tours = (resp['tours'] as List? ?? []));
@@ -36,13 +39,16 @@ class _VirtualTourPageState extends State<VirtualTourPage> {
   }
 
   void _openTour(Map<String, dynamic> tour) {
-    Navigator.push(context, MaterialPageRoute(
-      builder: (_) => VirtualTourPlayerPage(
-        tourId: tour['id'] as int,
-        tourTitle: tour['title'] as String? ?? 'Virtual Tour',
-        destinationId: tour['destination_id'] as int?,
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => VirtualTourPlayerPage(
+          tourId: tour['id'] as int,
+          tourTitle: tour['title'] as String? ?? 'Virtual Tour',
+          destinationId: tour['destination_id'] as int?,
+        ),
       ),
-    ));
+    );
   }
 
   @override
@@ -51,7 +57,7 @@ class _VirtualTourPageState extends State<VirtualTourPage> {
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       body: NestedScrollView(
-        headerSliverBuilder: (_, __) => [
+        headerSliverBuilder: (_, _) => [
           SliverAppBar(
             expandedHeight: 180,
             pinned: true,
@@ -59,8 +65,13 @@ class _VirtualTourPageState extends State<VirtualTourPage> {
               background: Container(
                 decoration: const BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [Color(0xFF0D1B2A), Color(0xFF1B3A4C), Color(0xFF1B5A6E)],
-                    begin: Alignment.topLeft, end: Alignment.bottomRight,
+                    colors: [
+                      Color(0xFF0D1B2A),
+                      Color(0xFF1B3A4C),
+                      Color(0xFF1B5A6E),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                   ),
                 ),
                 child: SafeArea(
@@ -69,11 +80,30 @@ class _VirtualTourPageState extends State<VirtualTourPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('360°', style: TextStyle(color: Color(0xFF2CAFBC), fontSize: 32, fontWeight: FontWeight.w900)),
-                        const Text('Virtual Tours', style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
+                        const Text(
+                          '360°',
+                          style: TextStyle(
+                            color: Color(0xFF2CAFBC),
+                            fontSize: 32,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                        const Text(
+                          'Virtual Tours',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                         const SizedBox(height: 6),
-                        Text('${_tours.length} tours available',
-                          style: const TextStyle(color: Colors.white60, fontSize: 13)),
+                        Text(
+                          '${_tours.length} tours available',
+                          style: const TextStyle(
+                            color: Colors.white60,
+                            fontSize: 13,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -88,23 +118,25 @@ class _VirtualTourPageState extends State<VirtualTourPage> {
           ),
         ],
         body: _loading
-            ? const Center(child: CircularProgressIndicator(color: Color(0xFF2CAFBC)))
+            ? const Center(
+                child: CircularProgressIndicator(color: Color(0xFF2CAFBC)),
+              )
             : _error != null
-                ? _buildError()
-                : _tours.isEmpty
-                    ? _buildEmpty()
-                    : RefreshIndicator(
-                        color: const Color(0xFF2CAFBC),
-                        onRefresh: _fetchTours,
-                        child: ListView.builder(
-                          padding: const EdgeInsets.all(16),
-                          itemCount: _tours.length,
-                          itemBuilder: (_, i) => _TourCard(
-                            tour: _tours[i] as Map<String, dynamic>,
-                            onTap: () => _openTour(_tours[i] as Map<String, dynamic>),
-                          ),
-                        ),
-                      ),
+            ? _buildError()
+            : _tours.isEmpty
+            ? _buildEmpty()
+            : RefreshIndicator(
+                color: const Color(0xFF2CAFBC),
+                onRefresh: _fetchTours,
+                child: ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: _tours.length,
+                  itemBuilder: (_, i) => _TourCard(
+                    tour: _tours[i] as Map<String, dynamic>,
+                    onTap: () => _openTour(_tours[i] as Map<String, dynamic>),
+                  ),
+                ),
+              ),
       ),
     );
   }
@@ -115,11 +147,16 @@ class _VirtualTourPageState extends State<VirtualTourPage> {
       children: [
         const Text('🌐', style: TextStyle(fontSize: 52)),
         const SizedBox(height: 12),
-        Text(_error!, textAlign: TextAlign.center,
-          style: const TextStyle(color: Color(0xFF9A9E9D), fontSize: 14)),
+        Text(
+          _error!,
+          textAlign: TextAlign.center,
+          style: const TextStyle(color: Color(0xFF9A9E9D), fontSize: 14),
+        ),
         const SizedBox(height: 16),
         ElevatedButton(
-          style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF2CAFBC)),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF2CAFBC),
+          ),
           onPressed: _fetchTours,
           child: const Text('Retry'),
         ),
@@ -133,10 +170,15 @@ class _VirtualTourPageState extends State<VirtualTourPage> {
       children: [
         Text('🏔️', style: TextStyle(fontSize: 52)),
         SizedBox(height: 12),
-        Text('No virtual tours yet', style: TextStyle(color: Colors.grey, fontSize: 16)),
+        Text(
+          'No virtual tours yet',
+          style: TextStyle(color: Colors.grey, fontSize: 16),
+        ),
         SizedBox(height: 6),
-        Text('Check back soon for immersive experiences',
-          style: TextStyle(color: Colors.grey, fontSize: 13)),
+        Text(
+          'Check back soon for immersive experiences',
+          style: TextStyle(color: Colors.grey, fontSize: 13),
+        ),
       ],
     ),
   );
@@ -166,7 +208,8 @@ class _TourCard extends StatelessWidget {
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.08),
-              blurRadius: 12, offset: const Offset(0, 4),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
             ),
           ],
         ),
@@ -181,54 +224,88 @@ class _TourCard extends StatelessWidget {
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
                     colors: [Color(0xFF0D1B2A), Color(0xFF1B5A6E)],
-                    begin: Alignment.topLeft, end: Alignment.bottomRight,
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                   ),
                   image: hasThumb
                       ? DecorationImage(
                           image: NetworkImage(tour['thumbnail_url'] as String),
-                          fit: BoxFit.cover, colorFilter: ColorFilter.mode(
-                            Colors.black.withValues(alpha: 0.35), BlendMode.darken))
+                          fit: BoxFit.cover,
+                          colorFilter: ColorFilter.mode(
+                            Colors.black.withValues(alpha: 0.35),
+                            BlendMode.darken,
+                          ),
+                        )
                       : null,
                 ),
                 child: Stack(
                   children: [
                     // 360 badge
                     Positioned(
-                      top: 12, right: 12,
+                      top: 12,
+                      right: 12,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF2CAFBC).withValues(alpha: 0.85),
+                          color: const Color(
+                            0xFF2CAFBC,
+                          ).withValues(alpha: 0.85),
                           borderRadius: BorderRadius.circular(20),
                         ),
-                        child: const Text('360°',
-                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 12)),
+                        child: const Text(
+                          '360°',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 12,
+                          ),
+                        ),
                       ),
                     ),
                     // Play button
                     Center(
                       child: Container(
-                        width: 56, height: 56,
+                        width: 56,
+                        height: 56,
                         decoration: BoxDecoration(
                           color: Colors.white.withValues(alpha: 0.15),
                           shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white.withValues(alpha: 0.5), width: 2),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.5),
+                            width: 2,
+                          ),
                         ),
-                        child: const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 32),
+                        child: const Icon(
+                          Icons.play_arrow_rounded,
+                          color: Colors.white,
+                          size: 32,
+                        ),
                       ),
                     ),
                     // Scene count bottom-left
                     if (sceneCount > 0)
                       Positioned(
-                        bottom: 12, left: 12,
+                        bottom: 12,
+                        left: 12,
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.black.withValues(alpha: 0.6),
                             borderRadius: BorderRadius.circular(10),
                           ),
-                          child: Text('$sceneCount scenes',
-                            style: const TextStyle(color: Colors.white70, fontSize: 11)),
+                          child: Text(
+                            '$sceneCount scenes',
+                            style: const TextStyle(
+                              color: Colors.white70,
+                              fontSize: 11,
+                            ),
+                          ),
                         ),
                       ),
                   ],
@@ -240,24 +317,47 @@ class _TourCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(tour['title'] ?? 'Virtual Tour',
-                      style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
-                    if ((tour['destination_name'] ?? '').toString().isNotEmpty) ...[
+                    Text(
+                      tour['title'] ?? 'Virtual Tour',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    if ((tour['destination_name'] ?? '')
+                        .toString()
+                        .isNotEmpty) ...[
                       const SizedBox(height: 4),
                       Row(
                         children: [
-                          const Icon(Icons.location_on, size: 13, color: Color(0xFF2CAFBC)),
+                          const Icon(
+                            Icons.location_on,
+                            size: 13,
+                            color: Color(0xFF2CAFBC),
+                          ),
                           const SizedBox(width: 4),
-                          Text(tour['destination_name'].toString(),
-                            style: const TextStyle(color: Color(0xFF2CAFBC), fontSize: 12, fontWeight: FontWeight.w600)),
+                          Text(
+                            tour['destination_name'].toString(),
+                            style: const TextStyle(
+                              color: Color(0xFF2CAFBC),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                         ],
                       ),
                     ],
                     if ((tour['description'] ?? '').toString().isNotEmpty) ...[
                       const SizedBox(height: 8),
-                      Text(tour['description'].toString(),
-                        maxLines: 2, overflow: TextOverflow.ellipsis,
-                        style: TextStyle(color: theme.textTheme.bodySmall?.color, fontSize: 13, height: 1.5)),
+                      Text(
+                        tour['description'].toString(),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: theme.textTheme.bodySmall?.color,
+                          fontSize: 13,
+                          height: 1.5,
+                        ),
+                      ),
                     ],
                     const SizedBox(height: 14),
                     SizedBox(
@@ -270,7 +370,9 @@ class _TourCard extends StatelessWidget {
                           backgroundColor: const Color(0xFF2CAFBC),
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 12),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                         ),
                       ),
                     ),

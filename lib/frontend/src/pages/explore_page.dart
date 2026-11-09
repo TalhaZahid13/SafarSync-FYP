@@ -127,8 +127,7 @@ class _ExplorePageState extends State<ExplorePage> {
         builder: (sheetCtx, scrollController) => Container(
           decoration: BoxDecoration(
             color: theme.scaffoldBackgroundColor,
-            borderRadius:
-                const BorderRadius.vertical(top: Radius.circular(24)),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
           ),
           child: SingleChildScrollView(
             controller: scrollController,
@@ -166,13 +165,16 @@ class _ExplorePageState extends State<ExplorePage> {
                           Expanded(
                             child: Text(
                               dest['name'] ?? 'Unknown',
-                              style: theme.textTheme.headlineSmall
-                                  ?.copyWith(fontWeight: FontWeight.bold),
+                              style: theme.textTheme.headlineSmall?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
                           Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 10, vertical: 4),
+                              horizontal: 10,
+                              vertical: 4,
+                            ),
                             decoration: BoxDecoration(
                               color: colorScheme.primaryContainer,
                               borderRadius: BorderRadius.circular(12),
@@ -194,57 +196,68 @@ class _ExplorePageState extends State<ExplorePage> {
                       // Location + rating
                       Row(
                         children: [
-                          const Icon(Icons.location_on,
-                              size: 14, color: Colors.grey),
+                          const Icon(
+                            Icons.location_on,
+                            size: 14,
+                            color: Colors.grey,
+                          ),
                           const SizedBox(width: 4),
                           Expanded(
                             child: Text(
-                              (dest['location'] ??
-                                      dest['country'] ??
-                                      'Unknown')
+                              (dest['location'] ?? dest['country'] ?? 'Unknown')
                                   .toString(),
                               style: const TextStyle(
-                                  color: Colors.grey, fontSize: 13),
+                                color: Colors.grey,
+                                fontSize: 13,
+                              ),
                             ),
                           ),
-                          const Icon(Icons.star,
-                              size: 14, color: Colors.amber),
+                          const Icon(Icons.star, size: 14, color: Colors.amber),
                           const SizedBox(width: 4),
                           Text(
                             _parseRating(dest['rating']).toStringAsFixed(1),
                             style: const TextStyle(
-                                fontSize: 13, fontWeight: FontWeight.w600),
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ],
                       ),
                       const SizedBox(height: 16),
                       // Description
-                      if ((dest['description'] ?? '').toString().isNotEmpty)
-                        ...[
-                          Text(
-                            dest['description'].toString(),
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: theme.textTheme.bodyMedium?.color,
-                              height: 1.5,
-                            ),
+                      if ((dest['description'] ?? '')
+                          .toString()
+                          .isNotEmpty) ...[
+                        Text(
+                          dest['description'].toString(),
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: theme.textTheme.bodyMedium?.color,
+                            height: 1.5,
                           ),
-                          const SizedBox(height: 16),
-                        ],
+                        ),
+                        const SizedBox(height: 16),
+                      ],
                       // Price chip
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 8),
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
                         decoration: BoxDecoration(
-                          color: colorScheme.secondaryContainer
-                              .withValues(alpha: 0.5),
+                          color: colorScheme.secondaryContainer.withValues(
+                            alpha: 0.5,
+                          ),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.payments_outlined,
-                                size: 16, color: colorScheme.secondary),
+                            Icon(
+                              Icons.payments_outlined,
+                              size: 16,
+                              color: colorScheme.secondary,
+                            ),
                             const SizedBox(width: 8),
                             Text(
                               dest['price']?.toString() ?? 'N/A',
@@ -277,7 +290,7 @@ class _ExplorePageState extends State<ExplorePage> {
                                       res['success'] == true
                                           ? 'Added to wishlist!'
                                           : res['message'] ??
-                                              'Already in wishlist',
+                                                'Already in wishlist',
                                     ),
                                   ),
                                 );
@@ -294,16 +307,19 @@ class _ExplorePageState extends State<ExplorePage> {
                                 if (!context.mounted) return;
                                 await _autoNavigateTo(dest);
                               },
-                              icon: const Icon(Icons.navigation,
-                                  color: Colors.white),
+                              icon: const Icon(
+                                Icons.navigation,
+                                color: Colors.white,
+                              ),
                               label: const Text(
                                 'Navigate',
                                 style: TextStyle(color: Colors.white),
                               ),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: colorScheme.primary,
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 12),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 12,
+                                ),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
@@ -314,11 +330,17 @@ class _ExplorePageState extends State<ExplorePage> {
                           Expanded(
                             child: ElevatedButton.icon(
                               onPressed: () {
-                                final rawId = dest['destination_id'] ?? dest['id'];
-                                final destId = rawId != null ? int.tryParse('$rawId') : null;
+                                final rawId =
+                                    dest['destination_id'] ?? dest['id'];
+                                final destId = rawId != null
+                                    ? int.tryParse('$rawId')
+                                    : null;
                                 final destName = dest['name']?.toString();
-                                final rawCost = dest['average_cost'] ?? dest['price'];
-                                final avgCost = rawCost != null ? double.tryParse('$rawCost') : null;
+                                final rawCost =
+                                    dest['average_cost'] ?? dest['price'];
+                                final avgCost = rawCost != null
+                                    ? double.tryParse('$rawCost')
+                                    : null;
                                 Navigator.pop(sheetCtx);
                                 Navigator.push(
                                   context,
@@ -331,16 +353,19 @@ class _ExplorePageState extends State<ExplorePage> {
                                   ),
                                 );
                               },
-                              icon: const Icon(Icons.confirmation_number_outlined,
-                                  color: Colors.white),
+                              icon: const Icon(
+                                Icons.confirmation_number_outlined,
+                                color: Colors.white,
+                              ),
                               label: const Text(
                                 'Book Now',
                                 style: TextStyle(color: Colors.white),
                               ),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: const Color(0xFF2CAFBC),
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 12),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 12,
+                                ),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
@@ -352,7 +377,9 @@ class _ExplorePageState extends State<ExplorePage> {
                       const SizedBox(height: 12),
                       // Virtual Tour button (shown for all destinations; checks availability)
                       _VirtualTourButton(
-                        destinationId: int.tryParse('${dest['id'] ?? dest['destination_id'] ?? 0}'),
+                        destinationId: int.tryParse(
+                          '${dest['id'] ?? dest['destination_id'] ?? 0}',
+                        ),
                         destinationName: dest['name']?.toString() ?? '',
                         onClose: () => Navigator.pop(sheetCtx),
                         parentContext: context,
@@ -797,9 +824,15 @@ class _VirtualTourButtonState extends State<_VirtualTourButton> {
     }
     try {
       final r = await ApiService.getRequest(
-          '/virtual-tours/destination/${widget.destinationId}');
+        '/virtual-tours/destination/${widget.destinationId}',
+      );
       if (r['success'] == true) {
-        if (mounted) setState(() { _tour = r['tour'] as Map<String, dynamic>; _checking = false; });
+        if (mounted) {
+          setState(() {
+            _tour = r['tour'] as Map<String, dynamic>;
+            _checking = false;
+          });
+        }
       } else {
         if (mounted) setState(() => _checking = false);
       }
@@ -834,15 +867,24 @@ class _VirtualTourButtonState extends State<_VirtualTourButton> {
             ),
           );
         },
-        icon: const Icon(Icons.threed_rotation, size: 18, color: Color(0xFF2CAFBC)),
+        icon: const Icon(
+          Icons.threed_rotation,
+          size: 18,
+          color: Color(0xFF2CAFBC),
+        ),
         label: const Text(
           'Start Virtual Tour',
-          style: TextStyle(color: Color(0xFF2CAFBC), fontWeight: FontWeight.w600),
+          style: TextStyle(
+            color: Color(0xFF2CAFBC),
+            fontWeight: FontWeight.w600,
+          ),
         ),
         style: OutlinedButton.styleFrom(
           side: const BorderSide(color: Color(0xFF2CAFBC)),
           padding: const EdgeInsets.symmetric(vertical: 12),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
       ),
     );

@@ -12,9 +12,7 @@
 
 [![Flutter](https://img.shields.io/badge/Flutter-3.x-02569B?style=for-the-badge&logo=flutter&logoColor=white)](https://flutter.dev)
 [![Dart](https://img.shields.io/badge/Dart-3.x-0175C2?style=for-the-badge&logo=dart&logoColor=white)](https://dart.dev)
-[![Node.js](https://img.shields.io/badge/Node.js-20.x-339933?style=for-the-badge&logo=node.js&logoColor=white)](https://nodejs.org)
-[![MySQL](https://img.shields.io/badge/MySQL-8.0-4479A1?style=for-the-badge&logo=mysql&logoColor=white)](https://mysql.com)
-[![Firebase](https://img.shields.io/badge/Firebase-Auth-FFCA28?style=for-the-badge&logo=firebase&logoColor=black)](https://firebase.google.com)
+[![Supabase](https://img.shields.io/badge/Supabase-Postgres%20%7C%20Auth%20%7C%20Realtime-3FCF8E?style=for-the-badge&logo=supabase&logoColor=white)](https://supabase.com)
 [![Stripe](https://img.shields.io/badge/Stripe-Payments-635BFF?style=for-the-badge&logo=stripe&logoColor=white)](https://stripe.com)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE)
@@ -29,7 +27,7 @@
 
 **SafarSync** is a full-stack mobile travel companion built as a Final Year Project. It combines AI-driven budget planning, real-time group coordination, offline map access, and emergency safety tools into a single app designed for travellers in Pakistan.
 
-The app has a **Flutter** mobile frontend and a **Node.js / Express** REST API backend, backed by **MySQL**, authenticated via **Firebase**, and enhanced with **Groq AI** (Llama 3.3 70B), **Stripe** payments, and **Socket.io** live tracking.
+The app is a **Flutter** mobile frontend running entirely on **Supabase Cloud** (Postgres with Row Level Security, Supabase Auth for email/Google/Apple, Storage, Realtime, and an Edge Function REST API), enhanced with **Groq AI** and **Stripe** payments. No local server, database, or IP address is needed.
 
 ---
 
@@ -59,7 +57,7 @@ The app has a **Flutter** mobile frontend and a **Node.js / Express** REST API b
 
 ### 👥 Group Travel
 - **Groups** — Create/join travel groups with invite codes
-- **Group Live Tracking** — Real-time GPS sharing across all group members via Socket.io
+- **Group Live Tracking** — Real-time GPS sharing across all group members via Supabase Realtime
 - **Group Chat** — In-app messaging within group bookings
 - **Group Invitations** — Send/accept/decline join requests
 
@@ -102,103 +100,85 @@ The app has a **Flutter** mobile frontend and a **Node.js / Express** REST API b
 |---|---|
 | UI Framework | Flutter 3.x (Dart) |
 | State Management | `Provider` + `ChangeNotifier` |
-| Authentication | Firebase Auth (Email, Google, Apple) |
-| Local Storage | SQLite via `sqflite` |
+| Backend client | `supabase_flutter` (Auth, Storage, Realtime, Edge Function calls) |
+| Authentication | Supabase Auth: email/password, Google (`google_sign_in`), Apple (`sign_in_with_apple`) |
+| Local Storage | SQLite via `sqflite`, `shared_preferences`, `flutter_secure_storage` |
 | Maps | `flutter_map` + OpenStreetMap + `geolocator` |
 | Payments | `flutter_stripe` |
-| Real-time | `socket_io_client` |
-| HTTP | `http` package |
-| Offline Maps | `flutter_map_tile_caching` |
+| Real-time | Supabase Realtime private broadcast channels |
 | Virtual Tours | `webview_flutter` + Pannellum.js |
-| Notifications | `firebase_messaging` + `flutter_local_notifications` |
+| Notifications | `flutter_local_notifications` + Realtime |
 
-### Backend (Node.js)
+### Backend (Supabase Cloud)
 | Layer | Technology |
 |---|---|
-| Runtime | Node.js 20.x |
-| Framework | Express.js |
-| Database | MySQL 8.0 via `mysql2` |
-| Authentication | Firebase Admin SDK + custom JWT |
-| AI | Groq API — Llama 3.3 70B Versatile |
-| Payments | Stripe Node.js SDK |
-| Real-time | Socket.io |
-| Email | Nodemailer |
-| Environment | dotenv |
+| Database | Supabase Postgres: 35 tables, RLS enabled on every table |
+| API | Edge Function `api` (Deno / TypeScript) |
+| Authentication | Supabase Auth (JWT verified inside the function) |
+| Real-time | `realtime.send` broadcasts on RLS-protected topics |
+| Storage | `avatars` bucket (per-user folders) |
+| AI | Groq API (model set by the `GROQ_MODEL` secret) |
+| Payments | Stripe REST API + signed webhook |
+| Email | SMTP via Nodemailer (optional) |
 
 ---
 
 ## Project Architecture
 
 ```
-safarsync_mobileapp/
+SafarSync-FYP/
 ├── lib/
-│   ├── frontend/                    # Flutter App
-│   │   ├── main.dart                # App entry point, AuthGate, routing
-│   │   ├── firebase_options.dart    # Firebase project config
-│   │   └── src/
-│   │       ├── auth/                # Login (Google / Apple / email), Signup
-│   │       ├── pages/               # All 35+ app screens
-│   │       │   ├── home_page.dart
-│   │       │   ├── explore_page.dart
-│   │       │   ├── bookings_page.dart
-│   │       │   ├── smart_dashboard_page.dart
-│   │       │   ├── sasta_tour_page.dart      # AI Budget Planner
-│   │       │   ├── emergency_sos_screen.dart
-│   │       │   ├── virtual_tour_player_page.dart
-│   │       │   └── ...
-│   │       ├── components/          # Reusable widgets
-│   │       │   ├── navigation/      # Top + bottom nav bars
-│   │       │   ├── emergency/       # Floating SOS button
-│   │       │   └── smart/           # Dashboard cards
-│   │       ├── utils/
-│   │       │   ├── api_service.dart       # All HTTP calls + Firebase exchange
-│   │       │   ├── local_database_service.dart  # SQLite offline cache
-│   │       │   ├── session_manager.dart   # 7-day session tracking
-│   │       │   └── auth_storage.dart      # Secure token storage
-│   │       └── ui/
-│   │           ├── app_theme.dart         # Light/Dark themes
-│   │           └── destination_theme.dart # Dynamic gradient themes
-│   │
-│   └── backend/                     # Node.js API
-│       ├── server.js                # Express app + Socket.io init
-│       ├── config/
-│       │   └── db.js                # MySQL connection pool
-│       ├── middleware/
-│       │   └── authMiddleware.js    # JWT + Firebase token verify
-│       ├── routes/                  # 22 route files
-│       ├── controllers/             # Business logic
-│       ├── models/                  # MySQL query functions
-│       └── migration_v*.sql         # 16 incremental DB migrations
+│   ├── main.dart                    # Entry point → frontend/main.dart
+│   └── frontend/
+│       ├── main.dart                # Supabase init, AuthGate, routing
+│       └── src/
+│           ├── auth/                # Login (Google / Apple / email), signup, password reset
+│           ├── pages/               # App screens (home, explore, bookings, SOS, admin, ...)
+│           ├── components/          # Reusable widgets (navigation, emergency, smart, discover, home, ai)
+│           ├── ui/                  # Light/dark + dynamic destination themes
+│           └── utils/
+│               ├── api_service.dart       # All API calls (Supabase + Edge Function)
+│               ├── app_auth.dart          # Supabase Auth wrapper
+│               ├── realtime_service.dart  # Realtime channels (chat, tracking, SOS)
+│               ├── env_config.dart        # Build-time config (--dart-define)
+│               ├── local_database_service.dart  # SQLite offline cache
+│               └── session_manager.dart   # Session tracking
 │
-├── pubspec.yaml                     # Flutter dependencies
-└── google-services.json             # Firebase Android config
+├── supabase/
+│   ├── migrations/                  # Schema, RLS/Realtime/Storage policies, seed data
+│   ├── functions/api/               # Edge Function REST API
+│   └── README.md                    # Backend deploy + secrets guide
+├── env/production.example.json      # Build-time config template
+├── assets/                          # Logo, explore images, Pannellum viewer
+└── pubspec.yaml
 ```
 
 ---
 
 ## Database Schema
 
-The MySQL database is managed through **16 incremental migration files** (`migration_v1.sql` → `migration_v16.sql`). For a fresh install, use `safarsync_complete_migration.sql`.
+The Postgres schema lives in `supabase/migrations/` and is applied with `npx supabase db push`.
 
 **Core tables:**
 
 | Table | Purpose |
 |---|---|
-| `users` | User accounts, Firebase UID, profile, blood group |
+| `users` | Profiles linked to `auth.users`, blood group, location |
 | `destinations` | Travel destinations with geo-coords, ratings, costs |
 | `bookings` | Single destination bookings with payment lifecycle |
 | `group_bookings` | Group trips with invite codes |
 | `group_booking_members` | Group membership |
+| `group_chat_messages` | Group chat |
 | `group_tracking_sessions` | Live GPS sessions |
-| `payments` | Stripe payment intents |
+| `payments` / `transactions` | Stripe payment intents and ledger |
 | `emergency_contacts` | ICE contacts per user |
 | `emergency_alerts` | SOS events with location |
 | `tour_packages` | Sasta tour packages |
-| `virtual_tours` | 360° tour scene data |
-| `wishlist` | Saved destinations |
+| `virtual_tours` | 360° tour scenes and hotspots |
+| `wishlists` | Saved destinations |
 | `notifications` | In-app notification queue |
 | `routes` | User-saved travel routes |
-| `admin_users` | Admin accounts |
+| `admins` | Admin roles |
 
 ---
 
@@ -207,128 +187,47 @@ The MySQL database is managed through **16 incremental migration files** (`migra
 ### Prerequisites
 
 - Flutter SDK 3.x → [install guide](https://docs.flutter.dev/get-started/install)
-- Node.js 20.x + npm
-- MySQL 8.0
-- Firebase project with Android app registered
-- Groq API key → [console.groq.com](https://console.groq.com)
-- Stripe account → [dashboard.stripe.com](https://dashboard.stripe.com)
+- A Supabase project (this app uses `zjjbnrqtfnewwfxuahga`)
+- Node.js, only for the `npx supabase` CLI when changing the backend
 
----
-
-### 1. Clone the repository
+### 1. Clone and install
 
 ```bash
 git clone https://github.com/TalhaZahid1/SafarSync-FYP.git
 cd SafarSync-FYP
-```
-
-### 2. Set up the backend
-
-```bash
-cd lib/backend
-npm install
-```
-
-Create a `.env` file in `lib/backend/`:
-
-```env
-# Server
-PORT=5000
-
-# MySQL
-DB_HOST=localhost
-DB_USER=root
-DB_PASSWORD=your_password
-DB_NAME=safarsync
-
-# Firebase Admin SDK
-FIREBASE_PROJECT_ID=your-firebase-project-id
-FIREBASE_CLIENT_EMAIL=your-service-account@project.iam.gserviceaccount.com
-FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
-
-# JWT
-JWT_SECRET=your_super_secret_jwt_key_min_32_chars
-
-# Groq AI
-GROQ_API_KEY=gsk_...
-
-# Stripe
-STRIPE_SECRET_KEY=sk_test_...
-STRIPE_WEBHOOK_SECRET=whsec_...
-
-# Email (optional)
-EMAIL_HOST=smtp.gmail.com
-EMAIL_USER=your@gmail.com
-EMAIL_PASS=your_app_password
-```
-
-### 3. Set up the database
-
-```bash
-# Create the database
-mysql -u root -p -e "CREATE DATABASE safarsync;"
-
-# Run the complete migration (fresh install)
-mysql -u root -p safarsync < lib/backend/safarsync_complete_migration.sql
-
-# OR apply migrations incrementally
-mysql -u root -p safarsync < lib/backend/migration_v1.sql
-# ... repeat for v2 through v16
-```
-
-### 4. Start the backend
-
-```bash
-cd lib/backend
-node server.js
-# Server running on http://localhost:5000
-```
-
-### 5. Set up Flutter
-
-```bash
-# From project root
 flutter pub get
 ```
 
-Add your `google-services.json` (Firebase Android config) to the project root.
+### 2. Build-time config
 
-Update `lib/frontend/src/utils/app_config.dart`:
-```dart
-static const String stripePublishableKey = 'pk_test_YOUR_KEY';
-```
+Copy `env/production.example.json` to `env/production.json` and fill in the values
+(Supabase URL + publishable key, Google **Web** client ID, Stripe publishable key).
+Only public client keys belong here. Never put a service-role key or secret in the app.
 
-### 6. Point the app at the hosted backend
-
-The app has **no server/IP setup screen**. The backend URL is compiled in from
-`env/production.json` (copy `env/production.example.json`):
-
-```json
-{ "API_BASE_URL": "https://safarsync-api.onrender.com/api" }
-```
-
-Release builds require `https://`. (Debug builds also accept `http://` for a
-local dev server, e.g. `http://10.0.2.2:5000/api` on the Android emulator.)
-
-### 7. Run / build the app
+### 3. Run / build
 
 ```bash
 flutter run --dart-define-from-file=env/production.json
 flutter build apk --release --dart-define-from-file=env/production.json
+flutter build appbundle --release --dart-define-from-file=env/production.json
 ```
 
-Users then just tap **Continue with Google** — no PC server, no shared Wi-Fi.
+### 4. Backend changes (optional)
+
+See [`supabase/README.md`](supabase/README.md) for migrations, deploying the
+`api` Edge Function, Realtime topics, admin setup and the Edge Function secrets
+(`GROQ_API_KEY`, `GROQ_MODEL`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, email).
 
 ---
 
 ## API Endpoints Summary
 
-The backend exposes **22 route groups** under `/api/`:
+The `api` Edge Function (`https://<project>.supabase.co/functions/v1/api/...`) exposes these route groups:
 
 | Route Group | Endpoints | Description |
 |---|---|---|
-| `/auth` | POST login, signup, firebase-exchange | Authentication + Firebase token exchange |
-| `/admin/auth` | POST login, forgot-password, reset | Admin authentication |
+| `/auth` | POST session, GET me | Records sign-in, returns the app user id |
+| `/admin/auth` | GET me | Admin role check |
 | `/users` | GET profile, PUT update, POST photo | User profile management |
 | `/destinations` | GET list, GET `:id`, POST, PUT, DELETE | Destination CRUD |
 | `/bookings` | POST create, GET list, GET `:id`, PUT status, POST cancel | Booking lifecycle |
@@ -361,13 +260,13 @@ CreateBookingScreen (destination pre-filled)
         ↓
 User enters: travelers · dates · duration · notes
         ↓
-POST /api/bookings/create → status: Pending
+POST /functions/v1/api/bookings/create → status: Pending
         ↓
-PaymentPage (Stripe) → POST /api/payments/create-intent
+PaymentPage (Stripe) → POST /functions/v1/api/payments/create-intent
         ↓
 Stripe Payment Sheet → confirm payment
         ↓
-Webhook: POST /api/payments/webhook → status: Confirmed
+Webhook: POST /functions/v1/api/payments/webhook → status: Confirmed
         ↓
 Booking Details Screen (receipt, cancel, refund request)
 ```
@@ -383,7 +282,7 @@ Menu expands: Ambulance 1122 · Police 15 · Tourist Police 1422 · ICE Contacts
         ↓
 Tap any option → GPS location captured → dial / navigate
         ↓
-SOS Alert → POST /api/emergency/trigger → FCM push to emergency contacts
+SOS Alert → POST /functions/v1/api/emergency/trigger → email + in-app alert to contacts and admins
         ↓
 Real-time location broadcast to contacts
 ```
@@ -395,11 +294,11 @@ Real-time location broadcast to contacts
 ```
 User enters: budget · travelers · days · start city · preferences
         ↓
-POST /api/tours/budget-plan (35s timeout for AI)
+POST /functions/v1/api/tours/budget-plan (45s timeout for AI)
         ↓
-Backend queries affordable destinations from MySQL
+Edge Function queries affordable destinations from Postgres
         ↓
-Groq AI (Llama 3.3 70B) generates:
+Groq AI generates:
   - Day-by-day itinerary with activities + costs
   - Recommended destinations
   - Money-saving tips
@@ -424,55 +323,12 @@ Flutter renders: itinerary cards · destination cost cards · tips · included i
 
 ---
 
-## Environment Variables Reference
-
-| Variable | Required | Description |
-|---|---|---|
-| `PORT` | No (default 5000) | Express server port |
-| `DB_HOST` | Yes | MySQL host |
-| `DB_USER` | Yes | MySQL username |
-| `DB_PASSWORD` | Yes | MySQL password |
-| `DB_NAME` | Yes | MySQL database name |
-| `FIREBASE_PROJECT_ID` | Yes | Firebase project ID |
-| `FIREBASE_CLIENT_EMAIL` | Yes | Service account email |
-| `FIREBASE_PRIVATE_KEY` | Yes | Service account private key |
-| `JWT_SECRET` | Yes | JWT signing secret (32+ chars) |
-| `GROQ_API_KEY` | Yes | Groq API key for AI features |
-| `STRIPE_SECRET_KEY` | Yes | Stripe secret key |
-| `STRIPE_WEBHOOK_SECRET` | Yes | Stripe webhook signing secret |
-| `EMAIL_HOST` | No | SMTP host for email notifications |
-| `EMAIL_USER` | No | SMTP username |
-| `EMAIL_PASS` | No | SMTP password |
-
----
-
-## Database Migrations
-
-Migrations are numbered and applied incrementally:
-
-| Migration | Changes |
-|---|---|
-| `v1–v3` | Base schema: users, destinations, routes, wishlist |
-| `v4` | Booking lifecycle columns, payment tables |
-| `v5` | Virtual tours schema |
-| `v6` | Group chat, group tracking |
-| `v7` | Dynamic destination themes |
-| `v8` | Virtual tour scenes + hotspots |
-| `v9` | SOS multi-option, admin analytics, refund workflow |
-| `v10` | Sasta tour packages, budget plan history |
-| `v11–v14` | Auth improvements, session management, FCM tokens |
-| `v15` | Group invite codes |
-| `v16` | Bookings table fix — expanded status ENUM, missing columns |
-
----
-
 ## Known Setup Notes
 
-- **Hosting the backend**: `render.yaml` deploys `lib/backend` to Render as an HTTPS service. Set `NODE_ENV=production` and `FIREBASE_SERVICE_ACCOUNT_KEY`; without the key, production sign-in is refused (tokens are never accepted unverified). See `lib/backend/.env.example`.
-- **Google sign-in on Android**: register your debug *and* release SHA-1 fingerprints in Firebase Console → Project settings → Android app, then re-download `android/app/google-services.json`.
-- **Offline maps**: Require a map tile download before going offline. Tap the download icon on the Offline Maps screen.
-- **Stripe webhooks**: For local testing, use [Stripe CLI](https://stripe.com/docs/stripe-cli): `stripe listen --forward-to localhost:5000/api/payments/webhook`
-- **Firebase Admin**: Download the service account JSON from Firebase Console → Project Settings → Service Accounts → Generate new private key.
+- **Google sign-in on Android**: needs an Android OAuth client (package `com.safarsync.app` + the signing SHA-1) and a Web OAuth client in the same Google Cloud project. The Web client ID/secret go in Supabase → Authentication → Providers → Google, with "Skip nonce checks" on. Add the Play Console app-signing SHA-1 before release.
+- **Auth redirect**: allow-list `io.safarsync.app://login-callback` under Supabase → Authentication → URL Configuration.
+- **Offline maps**: require a map tile download before going offline. Tap the download icon on the Offline Maps screen.
+- **Stripe webhooks**: point Stripe at `https://<project>.supabase.co/functions/v1/api/payments/webhook`.
 
 ---
 
@@ -480,7 +336,7 @@ Migrations are numbered and applied incrementally:
 
 | Name | Role |
 |---|---|
-| **Muhammad Talha Zahid** | Full-Stack Developer (Flutter + Node.js) |
+| **Muhammad Talha Zahid** | Full-Stack Developer (Flutter + Supabase) |
 
 **Supervisor**: University Final Year Project — 8th Semester
 
@@ -496,6 +352,6 @@ This project is licensed under the [MIT License](LICENSE).
 
 **SafarSync** — Making Pakistan travel smarter, safer, and more affordable.
 
-*Built with Flutter · Powered by AI · Secured by Firebase*
+*Built with Flutter · Powered by AI · Backed by Supabase*
 
 </div>

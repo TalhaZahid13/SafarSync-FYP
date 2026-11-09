@@ -9,12 +9,18 @@ import 'group_chat_page.dart';
 
 Color _groupStatusColor(String? s) {
   switch (s) {
-    case 'Open': return Colors.blue;
-    case 'Full': return Colors.amber;
-    case 'Active': return Colors.teal;
-    case 'Completed': return Colors.grey;
-    case 'Cancelled': return Colors.red;
-    default: return Colors.indigo;
+    case 'Open':
+      return Colors.blue;
+    case 'Full':
+      return Colors.amber;
+    case 'Active':
+      return Colors.teal;
+    case 'Completed':
+      return Colors.grey;
+    case 'Cancelled':
+      return Colors.red;
+    default:
+      return Colors.indigo;
   }
 }
 
@@ -67,18 +73,23 @@ class _GroupBookingsPageState extends State<GroupBookingsPage> {
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel')),
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
           ElevatedButton(
-              onPressed: () => Navigator.pop(ctx, controller.text.trim()),
-              child: const Text('Join')),
+            onPressed: () => Navigator.pop(ctx, controller.text.trim()),
+            child: const Text('Join'),
+          ),
         ],
       ),
     );
     if (groupId == null || groupId.isEmpty) return;
 
     try {
-      final r = await ApiService.postRequest('/group-bookings/$groupId/join', {});
+      final r = await ApiService.postRequest(
+        '/group-bookings/$groupId/join',
+        {},
+      );
       if (!mounted) return;
       _snack(
         r['success'] == true
@@ -93,10 +104,12 @@ class _GroupBookingsPageState extends State<GroupBookingsPage> {
   }
 
   void _snack(String msg, {bool success = false}) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(msg),
-      backgroundColor: success ? Colors.green : null,
-    ));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg),
+        backgroundColor: success ? Colors.green : null,
+      ),
+    );
   }
 
   @override
@@ -116,7 +129,8 @@ class _GroupBookingsPageState extends State<GroupBookingsPage> {
             onPressed: () => Navigator.push(
               context,
               MaterialPageRoute(
-                  builder: (_) => const CreateGroupBookingScreen()),
+                builder: (_) => const CreateGroupBookingScreen(),
+              ),
             ).then((_) => _load()),
           ),
         ],
@@ -124,51 +138,52 @@ class _GroupBookingsPageState extends State<GroupBookingsPage> {
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _groups.isEmpty
-              ? _emptyState()
-              : RefreshIndicator(
-                  onRefresh: _load,
-                  child: ListView.builder(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: _groups.length,
-                    itemBuilder: (_, i) {
-                      final g = _groups[i];
-                      return _GroupCard(
-                        group: g,
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => GroupBookingDetailsScreen(
-                              groupBookingId: g['group_booking_id'] as int,
-                            ),
-                          ),
-                        ).then((_) => _load()),
-                      );
-                    },
-                  ),
-                ),
+          ? _emptyState()
+          : RefreshIndicator(
+              onRefresh: _load,
+              child: ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: _groups.length,
+                itemBuilder: (_, i) {
+                  final g = _groups[i];
+                  return _GroupCard(
+                    group: g,
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => GroupBookingDetailsScreen(
+                          groupBookingId: g['group_booking_id'] as int,
+                        ),
+                      ),
+                    ).then((_) => _load()),
+                  );
+                },
+              ),
+            ),
     );
   }
 
   Widget _emptyState() => Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.groups, size: 72, color: Colors.grey),
-            const SizedBox(height: 16),
-            const Text('No group trips yet',
-                style: TextStyle(color: Colors.grey, fontSize: 16)),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (_) => const CreateGroupBookingScreen()),
-              ).then((_) => _load()),
-              child: const Text('Create Group Trip'),
-            ),
-          ],
+    child: Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        const Icon(Icons.groups, size: 72, color: Colors.grey),
+        const SizedBox(height: 16),
+        const Text(
+          'No group trips yet',
+          style: TextStyle(color: Colors.grey, fontSize: 16),
         ),
-      );
+        const SizedBox(height: 20),
+        ElevatedButton(
+          onPressed: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const CreateGroupBookingScreen()),
+          ).then((_) => _load()),
+          child: const Text('Create Group Trip'),
+        ),
+      ],
+    ),
+  );
 }
 
 class _GroupCard extends StatelessWidget {
@@ -201,40 +216,52 @@ class _GroupCard extends StatelessWidget {
                     child: Text(
                       group['trip_name'] as String? ?? 'Unknown Trip',
                       style: const TextStyle(
-                          fontSize: 16, fontWeight: FontWeight.bold),
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                   Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 4),
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: color.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(20),
-                      border:
-                          Border.all(color: color.withValues(alpha: 0.4)),
+                      border: Border.all(color: color.withValues(alpha: 0.4)),
                     ),
-                    child: Text(status,
-                        style: TextStyle(
-                            color: color,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600)),
+                    child: Text(
+                      status,
+                      style: TextStyle(
+                        color: color,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ),
                 ],
               ),
               const SizedBox(height: 8),
               Row(
                 children: [
-                  const Icon(Icons.people_outline, size: 14,
-                      color: Colors.grey),
+                  const Icon(
+                    Icons.people_outline,
+                    size: 14,
+                    color: Colors.grey,
+                  ),
                   const SizedBox(width: 4),
-                  Text('$members / $maxMembers members',
-                      style: const TextStyle(
-                          fontSize: 12, color: Colors.grey)),
+                  Text(
+                    '$members / $maxMembers members',
+                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
                   const Spacer(),
                   if (myRole != null)
                     Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 2),
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
                         color: myRole == 'organizer'
                             ? Colors.amber.withValues(alpha: 0.15)
@@ -319,24 +346,27 @@ class _CreateGroupBookingScreenState extends State<CreateGroupBookingScreen> {
 
       if (!mounted) return;
       if (r['success'] == true) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Group trip created! You are the organizer.'),
-          backgroundColor: Colors.green,
-        ));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Group trip created! You are the organizer.'),
+            backgroundColor: Colors.green,
+          ),
+        );
         Navigator.pop(context);
       } else {
-        final errMsg = r['error'] as String?
-            ?? r['message'] as String?
-            ?? 'Failed to create group trip';
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(errMsg)),
-        );
+        final errMsg =
+            r['error'] as String? ??
+            r['message'] as String? ??
+            'Failed to create group trip';
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(errMsg)));
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     } finally {
       if (mounted) setState(() => _submitting = false);
@@ -344,10 +374,10 @@ class _CreateGroupBookingScreenState extends State<CreateGroupBookingScreen> {
   }
 
   InputDecoration _dec(String label, IconData icon) => InputDecoration(
-        labelText: label,
-        prefixIcon: Icon(icon),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-      );
+    labelText: label,
+    prefixIcon: Icon(icon),
+    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -375,14 +405,18 @@ class _CreateGroupBookingScreenState extends State<CreateGroupBookingScreen> {
               const SizedBox(height: 16),
               if (_destinations.isNotEmpty)
                 DropdownButtonFormField<int>(
-                  value: _destinationId,
+                  initialValue: _destinationId,
                   decoration: _dec('Destination (optional)', Icons.place),
                   items: _destinations
-                      .where((d) => asInt(d['destination_id'] ?? d['id']) != null)
-                      .map((d) => DropdownMenuItem<int>(
-                            value: asInt(d['destination_id'] ?? d['id'])!,
-                            child: Text(d['name'] as String? ?? ''),
-                          ))
+                      .where(
+                        (d) => asInt(d['destination_id'] ?? d['id']) != null,
+                      )
+                      .map(
+                        (d) => DropdownMenuItem<int>(
+                          value: asInt(d['destination_id'] ?? d['id'])!,
+                          child: Text(d['name'] as String? ?? ''),
+                        ),
+                      )
                       .toList(),
                   onChanged: (v) => setState(() => _destinationId = v),
                 ),
@@ -421,13 +455,15 @@ class _CreateGroupBookingScreenState extends State<CreateGroupBookingScreen> {
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
                 child: _submitting
                     ? const SizedBox(
                         height: 20,
                         width: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2))
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
                     : const Text('Create Trip', style: TextStyle(fontSize: 16)),
               ),
             ],
@@ -449,8 +485,7 @@ class GroupBookingDetailsScreen extends StatefulWidget {
       _GroupBookingDetailsScreenState();
 }
 
-class _GroupBookingDetailsScreenState
-    extends State<GroupBookingDetailsScreen> {
+class _GroupBookingDetailsScreenState extends State<GroupBookingDetailsScreen> {
   Map<String, dynamic>? _gb;
   bool _loading = true;
   bool _isOrganizer = false;
@@ -463,28 +498,29 @@ class _GroupBookingDetailsScreenState
   }
 
   Future<void> _loadUserId() async {
-    final id = await ApiService.getMySqlUserId();
+    final id = await ApiService.getCurrentUserId();
     if (mounted) setState(() => _myUserId = id);
   }
 
   Future<void> _load() async {
     try {
       final r = await ApiService.getRequest(
-          '/group-bookings/${widget.groupBookingId}');
+        '/group-bookings/${widget.groupBookingId}',
+      );
       if (mounted && r['success'] == true) {
         final gb = r['group_booking'] as Map<String, dynamic>;
         final members = gb['members'] as List? ?? [];
         final myRole = members
-            .where((m) =>
-                m['user_id'] == _myUserId ||
-                (gb['created_by'] is int &&
-                    gb['created_by'] == _myUserId))
+            .where(
+              (m) =>
+                  m['user_id'] == _myUserId ||
+                  (gb['created_by'] is int && gb['created_by'] == _myUserId),
+            )
             .map((m) => m['role'] as String?)
             .firstWhere((r) => r != null, orElse: () => null);
         setState(() {
           _gb = gb;
-          _isOrganizer = myRole == 'organizer' ||
-              gb['created_by'] == _myUserId;
+          _isOrganizer = myRole == 'organizer' || gb['created_by'] == _myUserId;
           _loading = false;
         });
       }
@@ -495,15 +531,16 @@ class _GroupBookingDetailsScreenState
 
   Future<void> _startTracking() async {
     try {
-      await ApiService.postRequest('/group-bookings/tracking/start',
-          {'group_booking_id': widget.groupBookingId});
+      await ApiService.postRequest('/group-bookings/tracking/start', {
+        'group_booking_id': widget.groupBookingId,
+      });
     } catch (_) {}
     if (!mounted) return;
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => GroupLiveTrackingPage(
-            groupBookingId: widget.groupBookingId),
+        builder: (_) =>
+            GroupLiveTrackingPage(groupBookingId: widget.groupBookingId),
       ),
     );
   }
@@ -517,8 +554,10 @@ class _GroupBookingDetailsScreenState
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('Enter the email of the SafarSync user to invite.',
-                style: TextStyle(color: Colors.grey, fontSize: 13)),
+            const Text(
+              'Enter the email of the SafarSync user to invite.',
+              style: TextStyle(color: Colors.grey, fontSize: 13),
+            ),
             const SizedBox(height: 12),
             TextField(
               controller: emailCtrl,
@@ -533,11 +572,13 @@ class _GroupBookingDetailsScreenState
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel')),
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
           ElevatedButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Invite')),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Invite'),
+          ),
         ],
       ),
     );
@@ -570,13 +611,13 @@ class _GroupBookingDetailsScreenState
         content: const Text('Remove this member from the group?'),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel')),
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Remove',
-                style: TextStyle(color: Colors.white)),
+            child: const Text('Remove', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -585,10 +626,13 @@ class _GroupBookingDetailsScreenState
 
     try {
       final r = await ApiService.deleteRequest(
-          '/group-bookings/${widget.groupBookingId}/members/$userId');
+        '/group-bookings/${widget.groupBookingId}/members/$userId',
+      );
       if (!mounted) return;
       _snack(
-        r['success'] == true ? 'Member removed' : r['error'] as String? ?? 'Error',
+        r['success'] == true
+            ? 'Member removed'
+            : r['error'] as String? ?? 'Error',
         success: r['success'] == true,
       );
       if (r['success'] == true) _load();
@@ -605,13 +649,16 @@ class _GroupBookingDetailsScreenState
         content: const Text('This will cancel the group trip. Continue?'),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Keep')),
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Keep'),
+          ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Close Group',
-                style: TextStyle(color: Colors.white)),
+            child: const Text(
+              'Close Group',
+              style: TextStyle(color: Colors.white),
+            ),
           ),
         ],
       ),
@@ -620,10 +667,14 @@ class _GroupBookingDetailsScreenState
 
     try {
       final r = await ApiService.postRequest(
-          '/group-bookings/${widget.groupBookingId}/close', {});
+        '/group-bookings/${widget.groupBookingId}/close',
+        {},
+      );
       if (!mounted) return;
       _snack(
-        r['success'] == true ? 'Group closed' : r['error'] as String? ?? 'Error',
+        r['success'] == true
+            ? 'Group closed'
+            : r['error'] as String? ?? 'Error',
         success: r['success'] == true,
       );
       if (r['success'] == true) _load();
@@ -634,10 +685,12 @@ class _GroupBookingDetailsScreenState
 
   void _snack(String msg, {bool success = false}) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(msg),
-      backgroundColor: success ? Colors.green : null,
-    ));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg),
+        backgroundColor: success ? Colors.green : null,
+      ),
+    );
   }
 
   @override
@@ -660,8 +713,8 @@ class _GroupBookingDetailsScreenState
     final members = gb['members'] as List? ?? [];
     final maxMembers = asInt(gb['max_members']) ?? 20;
     final color = _groupStatusColor(status);
-    final canClose = _isOrganizer &&
-        !['Completed', 'Cancelled'].contains(status);
+    final canClose =
+        _isOrganizer && !['Completed', 'Cancelled'].contains(status);
 
     return Scaffold(
       appBar: AppBar(
@@ -691,50 +744,63 @@ class _GroupBookingDetailsScreenState
               Text(
                 gb['trip_name'] as String? ?? 'Unknown Trip',
                 style: const TextStyle(
-                    fontSize: 22, fontWeight: FontWeight.bold),
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               const SizedBox(height: 8),
               Row(
                 children: [
                   Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 6),
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
                     decoration: BoxDecoration(
                       color: color.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(20),
-                      border:
-                          Border.all(color: color.withValues(alpha: 0.4)),
+                      border: Border.all(color: color.withValues(alpha: 0.4)),
                     ),
-                    child: Text(status,
-                        style: TextStyle(
-                            color: color,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 12)),
+                    child: Text(
+                      status,
+                      style: TextStyle(
+                        color: color,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 12,
+                      ),
+                    ),
                   ),
                   const SizedBox(width: 8),
-                  Text('${members.length}/$maxMembers members',
-                      style: const TextStyle(color: Colors.grey)),
+                  Text(
+                    '${members.length}/$maxMembers members',
+                    style: const TextStyle(color: Colors.grey),
+                  ),
                 ],
               ),
               const SizedBox(height: 16),
               if (gb['destination_name'] != null)
                 _infoRow(Icons.place, gb['destination_name'] as String),
               if (gb['start_date'] != null)
-                _infoRow(Icons.calendar_today,
-                    '${gb['start_date']} – ${gb['end_date'] ?? '?'}'),
+                _infoRow(
+                  Icons.calendar_today,
+                  '${gb['start_date']} – ${gb['end_date'] ?? '?'}',
+                ),
               if (gb['description'] != null &&
                   (gb['description'] as String).isNotEmpty) ...[
                 const SizedBox(height: 8),
-                Text(gb['description'] as String,
-                    style: const TextStyle(color: Colors.grey)),
+                Text(
+                  gb['description'] as String,
+                  style: const TextStyle(color: Colors.grey),
+                ),
               ],
               const SizedBox(height: 20),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('Members',
-                      style: TextStyle(
-                          fontSize: 15, fontWeight: FontWeight.bold)),
+                  const Text(
+                    'Members',
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                  ),
                   TextButton.icon(
                     icon: const Icon(Icons.person_add, size: 16),
                     label: const Text('Invite'),
@@ -743,13 +809,14 @@ class _GroupBookingDetailsScreenState
                 ],
               ),
               const SizedBox(height: 8),
-              ...members.map((m) => _MemberTile(
-                    member: m as Map<String, dynamic>,
-                    isOrganizer: _isOrganizer,
-                    isMe: m['user_id'] == _myUserId,
-                    onRemove: () =>
-                        _removeMember(m['user_id'] as int),
-                  )),
+              ...members.map(
+                (m) => _MemberTile(
+                  member: m as Map<String, dynamic>,
+                  isOrganizer: _isOrganizer,
+                  isMe: m['user_id'] == _myUserId,
+                  onRemove: () => _removeMember(m['user_id'] as int),
+                ),
+              ),
               const SizedBox(height: 24),
               Row(
                 children: [
@@ -779,7 +846,8 @@ class _GroupBookingDetailsScreenState
                     onPressed: () => Navigator.push(
                       context,
                       MaterialPageRoute(
-                          builder: (_) => const GroupInvitationsPage()),
+                        builder: (_) => const GroupInvitationsPage(),
+                      ),
                     ),
                     icon: const Icon(Icons.mail_outline, size: 16),
                     label: const Text('Invitations'),
@@ -795,15 +863,15 @@ class _GroupBookingDetailsScreenState
   }
 
   Widget _infoRow(IconData icon, String text) => Padding(
-        padding: const EdgeInsets.only(bottom: 6),
-        child: Row(
-          children: [
-            Icon(icon, size: 16, color: Colors.grey),
-            const SizedBox(width: 6),
-            Text(text, style: const TextStyle(fontSize: 13, color: Colors.grey)),
-          ],
-        ),
-      );
+    padding: const EdgeInsets.only(bottom: 6),
+    child: Row(
+      children: [
+        Icon(icon, size: 16, color: Colors.grey),
+        const SizedBox(width: 6),
+        Text(text, style: const TextStyle(fontSize: 13, color: Colors.grey)),
+      ],
+    ),
+  );
 }
 
 class _MemberTile extends StatelessWidget {
@@ -845,8 +913,10 @@ class _MemberTile extends StatelessWidget {
                 color: Colors.blue.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: const Text('You',
-                  style: TextStyle(fontSize: 10, color: Colors.blue)),
+              child: const Text(
+                'You',
+                style: TextStyle(fontSize: 10, color: Colors.blue),
+              ),
             ),
           if (isOrganizerMember)
             Container(
@@ -856,20 +926,28 @@ class _MemberTile extends StatelessWidget {
                 color: Colors.amber.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: const Text('Organizer',
-                  style: TextStyle(
-                      fontSize: 10,
-                      color: Colors.amber,
-                      fontWeight: FontWeight.bold)),
+              child: const Text(
+                'Organizer',
+                style: TextStyle(
+                  fontSize: 10,
+                  color: Colors.amber,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
         ],
       ),
-      subtitle: Text(member['email'] as String? ?? '',
-          style: const TextStyle(fontSize: 12)),
+      subtitle: Text(
+        member['email'] as String? ?? '',
+        style: const TextStyle(fontSize: 12),
+      ),
       trailing: isOrganizer && !isMe && !isOrganizerMember
           ? IconButton(
-              icon: const Icon(Icons.remove_circle_outline,
-                  color: Colors.red, size: 20),
+              icon: const Icon(
+                Icons.remove_circle_outline,
+                color: Colors.red,
+                size: 20,
+              ),
               tooltip: 'Remove member',
               onPressed: onRemove,
             )
@@ -893,25 +971,25 @@ class _DatePicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => TextFormField(
-        readOnly: true,
-        controller: TextEditingController(
-          text: value != null
-              ? '${value!.year}-${value!.month.toString().padLeft(2, '0')}-${value!.day.toString().padLeft(2, '0')}'
-              : '',
-        ),
-        decoration: InputDecoration(
-          labelText: label,
-          prefixIcon: const Icon(Icons.calendar_today),
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-        ),
-        onTap: () async {
-          final picked = await showDatePicker(
-            context: context,
-            initialDate: value ?? firstDate,
-            firstDate: firstDate,
-            lastDate: DateTime.now().add(const Duration(days: 730)),
-          );
-          if (picked != null) onPicked(picked);
-        },
+    readOnly: true,
+    controller: TextEditingController(
+      text: value != null
+          ? '${value!.year}-${value!.month.toString().padLeft(2, '0')}-${value!.day.toString().padLeft(2, '0')}'
+          : '',
+    ),
+    decoration: InputDecoration(
+      labelText: label,
+      prefixIcon: const Icon(Icons.calendar_today),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+    ),
+    onTap: () async {
+      final picked = await showDatePicker(
+        context: context,
+        initialDate: value ?? firstDate,
+        firstDate: firstDate,
+        lastDate: DateTime.now().add(const Duration(days: 730)),
       );
+      if (picked != null) onPicked(picked);
+    },
+  );
 }

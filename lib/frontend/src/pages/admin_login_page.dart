@@ -36,7 +36,10 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
 
     setState(() => _isLoading = true);
     try {
-      final result = await ApiService.adminLogin(email: email, password: password);
+      final result = await ApiService.adminLogin(
+        email: email,
+        password: password,
+      );
 
       if (result['success'] == true) {
         await SessionManager.recordActivity();
@@ -96,7 +99,11 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
                       colors: [cs.secondary, cs.primary],
                     ),
                   ),
-                  child: Icon(LucideIcons.shieldCheck, size: 36, color: cs.onPrimary),
+                  child: Icon(
+                    LucideIcons.shieldCheck,
+                    size: 36,
+                    color: cs.onPrimary,
+                  ),
                 ),
                 const SizedBox(height: 16),
                 Text(
@@ -110,7 +117,10 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
                 const SizedBox(height: 4),
                 Text(
                   'Restricted access — administrators only',
-                  style: TextStyle(fontSize: 13, color: theme.textTheme.bodySmall?.color),
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: theme.textTheme.bodySmall?.color,
+                  ),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 32),
@@ -131,7 +141,8 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
                   controller: _passwordCtrl,
                   isPassword: true,
                   obscureText: _obscurePassword,
-                  onToggle: () => setState(() => _obscurePassword = !_obscurePassword),
+                  onToggle: () =>
+                      setState(() => _obscurePassword = !_obscurePassword),
                 ),
                 const SizedBox(height: 24),
 
@@ -142,7 +153,9 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: cs.primary,
                       padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
                     ),
                     child: _isLoading
                         ? SizedBox(
@@ -153,7 +166,13 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
                               valueColor: AlwaysStoppedAnimation(cs.onPrimary),
                             ),
                           )
-                        : const Text('Login', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                        : const Text(
+                            'Login',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                   ),
                 ),
 
@@ -162,7 +181,9 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
                   onPressed: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (_) => const AdminForgotPasswordPage()),
+                      MaterialPageRoute(
+                        builder: (_) => const AdminForgotPasswordPage(),
+                      ),
                     );
                   },
                   child: Text(
@@ -192,7 +213,13 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: TextStyle(color: theme.textTheme.bodySmall?.color, fontSize: 12)),
+        Text(
+          label,
+          style: TextStyle(
+            color: theme.textTheme.bodySmall?.color,
+            fontSize: 12,
+          ),
+        ),
         const SizedBox(height: 6),
         TextField(
           controller: controller,

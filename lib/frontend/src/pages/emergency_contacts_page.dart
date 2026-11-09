@@ -25,7 +25,9 @@ class _EmergencyContactsPageState extends State<EmergencyContactsPage> {
       if (!mounted) return;
       final raw = resp['contacts'] as List? ?? [];
       setState(() {
-        _contacts = raw.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+        _contacts = raw
+            .map((e) => Map<String, dynamic>.from(e as Map))
+            .toList();
         _loading = false;
       });
     } catch (_) {
@@ -40,7 +42,10 @@ class _EmergencyContactsPageState extends State<EmergencyContactsPage> {
         title: const Text('Delete Contact'),
         content: const Text('Remove this emergency contact?'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
             child: const Text('Delete', style: TextStyle(color: Colors.red)),
@@ -69,12 +74,18 @@ class _EmergencyContactsPageState extends State<EmergencyContactsPage> {
           try {
             if (contact == null) {
               // Create
-              final resp = await ApiService.postRequest('/emergency-contacts', data);
+              final resp = await ApiService.postRequest(
+                '/emergency-contacts',
+                data,
+              );
               if (!mounted) return;
               if (resp['success'] == true) _load();
             } else {
               // Update
-              await ApiService.putRequest('/emergency-contacts/${contact['contact_id']}', data);
+              await ApiService.putRequest(
+                '/emergency-contacts/${contact['contact_id']}',
+                data,
+              );
               if (!mounted) return;
               _load();
             }
@@ -115,12 +126,20 @@ class _EmergencyContactsPageState extends State<EmergencyContactsPage> {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             child: Row(
               children: [
-                const Icon(Icons.info_outline, color: Color(0xFFF57C00), size: 18),
+                const Icon(
+                  Icons.info_outline,
+                  color: Color(0xFFF57C00),
+                  size: 18,
+                ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
                     'When you trigger an SOS, emails are sent automatically to contacts that have an email address.',
-                    style: TextStyle(fontSize: 12, color: Colors.orange.shade900, height: 1.4),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.orange.shade900,
+                      height: 1.4,
+                    ),
                   ),
                 ),
               ],
@@ -132,22 +151,22 @@ class _EmergencyContactsPageState extends State<EmergencyContactsPage> {
             child: _loading
                 ? const Center(child: CircularProgressIndicator())
                 : _contacts.isEmpty
-                    ? _EmptyState(onAdd: () => _openForm())
-                    : RefreshIndicator(
-                        onRefresh: _load,
-                        child: ListView.builder(
-                          padding: const EdgeInsets.only(bottom: 100),
-                          itemCount: _contacts.length,
-                          itemBuilder: (_, i) {
-                            final c = _contacts[i];
-                            return _ContactTile(
-                              contact: c,
-                              onEdit: () => _openForm(contact: c, index: i),
-                              onDelete: () => _delete(c['contact_id'] as int, i),
-                            );
-                          },
-                        ),
-                      ),
+                ? _EmptyState(onAdd: () => _openForm())
+                : RefreshIndicator(
+                    onRefresh: _load,
+                    child: ListView.builder(
+                      padding: const EdgeInsets.only(bottom: 100),
+                      itemCount: _contacts.length,
+                      itemBuilder: (_, i) {
+                        final c = _contacts[i];
+                        return _ContactTile(
+                          contact: c,
+                          onEdit: () => _openForm(contact: c, index: i),
+                          onDelete: () => _delete(c['contact_id'] as int, i),
+                        );
+                      },
+                    ),
+                  ),
           ),
         ],
       ),
@@ -173,7 +192,8 @@ class _ContactTile extends StatelessWidget {
     final phone = contact['contact_phone'] as String? ?? '';
     final email = contact['contact_email'] as String?;
     final relationship = contact['relationship'] as String?;
-    final isPrimary = contact['is_primary'] == 1 || contact['is_primary'] == true;
+    final isPrimary =
+        contact['is_primary'] == 1 || contact['is_primary'] == true;
     final initial = name.isNotEmpty ? name[0].toUpperCase() : '?';
 
     return Card(
@@ -181,18 +201,33 @@ class _ContactTile extends StatelessWidget {
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: isPrimary ? const Color(0xFFE53935) : Colors.grey.shade200),
+        side: BorderSide(
+          color: isPrimary ? const Color(0xFFE53935) : Colors.grey.shade200,
+        ),
       ),
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         leading: CircleAvatar(
-          backgroundColor: isPrimary ? const Color(0xFFB71C1C) : Colors.blueGrey.shade100,
+          backgroundColor: isPrimary
+              ? const Color(0xFFB71C1C)
+              : Colors.blueGrey.shade100,
           foregroundColor: isPrimary ? Colors.white : Colors.blueGrey.shade700,
-          child: Text(initial, style: const TextStyle(fontWeight: FontWeight.bold)),
+          child: Text(
+            initial,
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
         ),
         title: Row(
           children: [
-            Flexible(child: Text(name, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15))),
+            Flexible(
+              child: Text(
+                name,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 15,
+                ),
+              ),
+            ),
             if (isPrimary) ...[
               const SizedBox(width: 8),
               Container(
@@ -201,7 +236,14 @@ class _ContactTile extends StatelessWidget {
                   color: const Color(0xFFB71C1C),
                   borderRadius: BorderRadius.circular(4),
                 ),
-                child: const Text('Primary', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                child: const Text(
+                  'Primary',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
             ],
           ],
@@ -223,7 +265,15 @@ class _ContactTile extends StatelessWidget {
                 children: [
                   const Icon(Icons.email, size: 13, color: Color(0xFF2E7D32)),
                   const SizedBox(width: 4),
-                  Flexible(child: Text(email, style: const TextStyle(fontSize: 12, color: Color(0xFF2E7D32)))),
+                  Flexible(
+                    child: Text(
+                      email,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFF2E7D32),
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ] else ...[
@@ -232,13 +282,19 @@ class _ContactTile extends StatelessWidget {
                 children: [
                   Icon(Icons.email_outlined, size: 13, color: Colors.orange),
                   SizedBox(width: 4),
-                  Text('No email — SOS email won\'t be sent', style: TextStyle(fontSize: 11, color: Colors.orange)),
+                  Text(
+                    'No email — SOS email won\'t be sent',
+                    style: TextStyle(fontSize: 11, color: Colors.orange),
+                  ),
                 ],
               ),
             ],
             if (relationship != null && relationship.isNotEmpty) ...[
               const SizedBox(height: 2),
-              Text(relationship, style: TextStyle(fontSize: 12, color: Colors.grey.shade500)),
+              Text(
+                relationship,
+                style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+              ),
             ],
           ],
         ),
@@ -288,16 +344,21 @@ class _ContactFormState extends State<_ContactForm> {
   void initState() {
     super.initState();
     final c = widget.initial;
-    _name         = TextEditingController(text: c?['contact_name']  as String? ?? '');
-    _phone        = TextEditingController(text: c?['contact_phone'] as String? ?? '');
-    _email        = TextEditingController(text: c?['contact_email'] as String? ?? '');
-    _relationship = TextEditingController(text: c?['relationship']  as String? ?? '');
-    _isPrimary    = c?['is_primary'] == 1 || c?['is_primary'] == true;
+    _name = TextEditingController(text: c?['contact_name'] as String? ?? '');
+    _phone = TextEditingController(text: c?['contact_phone'] as String? ?? '');
+    _email = TextEditingController(text: c?['contact_email'] as String? ?? '');
+    _relationship = TextEditingController(
+      text: c?['relationship'] as String? ?? '',
+    );
+    _isPrimary = c?['is_primary'] == 1 || c?['is_primary'] == true;
   }
 
   @override
   void dispose() {
-    _name.dispose(); _phone.dispose(); _email.dispose(); _relationship.dispose();
+    _name.dispose();
+    _phone.dispose();
+    _email.dispose();
+    _relationship.dispose();
     super.dispose();
   }
 
@@ -305,11 +366,13 @@ class _ContactFormState extends State<_ContactForm> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _saving = true);
     await widget.onSaved({
-      'contact_name':  _name.text.trim(),
+      'contact_name': _name.text.trim(),
       'contact_phone': _phone.text.trim(),
       'contact_email': _email.text.trim().isEmpty ? null : _email.text.trim(),
-      'relationship':  _relationship.text.trim().isEmpty ? null : _relationship.text.trim(),
-      'is_primary':    _isPrimary,
+      'relationship': _relationship.text.trim().isEmpty
+          ? null
+          : _relationship.text.trim(),
+      'is_primary': _isPrimary,
     });
     if (mounted) Navigator.pop(context);
   }
@@ -334,8 +397,12 @@ class _ContactFormState extends State<_ContactForm> {
             // Drag handle
             Center(
               child: Container(
-                width: 40, height: 4,
-                decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
               ),
             ),
             const SizedBox(height: 16),
@@ -346,40 +413,67 @@ class _ContactFormState extends State<_ContactForm> {
             ),
             const SizedBox(height: 20),
 
-            _Field(controller: _name, label: 'Full Name', hint: 'e.g. Ahmad Khan', required: true),
-            const SizedBox(height: 14),
             _Field(
-              controller: _phone, label: 'Phone Number', hint: 'e.g. +92 300 1234567',
-              required: true, keyboard: TextInputType.phone,
+              controller: _name,
+              label: 'Full Name',
+              hint: 'e.g. Ahmad Khan',
+              required: true,
             ),
             const SizedBox(height: 14),
             _Field(
-              controller: _email, label: 'Email Address (optional)',
+              controller: _phone,
+              label: 'Phone Number',
+              hint: 'e.g. +92 300 1234567',
+              required: true,
+              keyboard: TextInputType.phone,
+            ),
+            const SizedBox(height: 14),
+            _Field(
+              controller: _email,
+              label: 'Email Address (optional)',
               hint: 'SOS alert will be sent here',
               keyboard: TextInputType.emailAddress,
               validator: (v) {
                 if (v == null || v.isEmpty) return null;
-                if (!v.contains('@') || !v.contains('.')) return 'Enter a valid email';
+                if (!v.contains('@') || !v.contains('.')) {
+                  return 'Enter a valid email';
+                }
                 return null;
               },
             ),
             const SizedBox(height: 14),
-            _Field(controller: _relationship, label: 'Relationship (optional)', hint: 'e.g. Father, Friend, Doctor'),
+            _Field(
+              controller: _relationship,
+              label: 'Relationship (optional)',
+              hint: 'e.g. Father, Friend, Doctor',
+            ),
             const SizedBox(height: 14),
 
             // Primary toggle
             Container(
               decoration: BoxDecoration(
-                color: _isPrimary ? const Color(0xFFFFF3F3) : Colors.grey.shade50,
+                color: _isPrimary
+                    ? const Color(0xFFFFF3F3)
+                    : Colors.grey.shade50,
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: _isPrimary ? const Color(0xFFE53935) : Colors.grey.shade200),
+                border: Border.all(
+                  color: _isPrimary
+                      ? const Color(0xFFE53935)
+                      : Colors.grey.shade200,
+                ),
               ),
               child: SwitchListTile(
                 value: _isPrimary,
                 onChanged: (v) => setState(() => _isPrimary = v),
-                title: const Text('Primary Contact', style: TextStyle(fontWeight: FontWeight.w500)),
-                subtitle: const Text('Gets highlighted; used first in emergencies', style: TextStyle(fontSize: 12)),
-                activeColor: const Color(0xFFB71C1C),
+                title: const Text(
+                  'Primary Contact',
+                  style: TextStyle(fontWeight: FontWeight.w500),
+                ),
+                subtitle: const Text(
+                  'Gets highlighted; used first in emergencies',
+                  style: TextStyle(fontSize: 12),
+                ),
+                activeThumbColor: const Color(0xFFB71C1C),
                 dense: true,
               ),
             ),
@@ -393,11 +487,26 @@ class _ContactFormState extends State<_ContactForm> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFFB71C1C),
                   foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
                 child: _saving
-                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                    : Text(isEditing ? 'Save Changes' : 'Add Contact', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : Text(
+                        isEditing ? 'Save Changes' : 'Add Contact',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
               ),
             ),
           ],
@@ -433,11 +542,17 @@ class _Field extends StatelessWidget {
         labelText: label,
         hintText: hint,
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 14,
+          vertical: 12,
+        ),
       ),
-      validator: validator ??
+      validator:
+          validator ??
           (v) {
-            if (required && (v == null || v.trim().isEmpty)) return '$label is required';
+            if (required && (v == null || v.trim().isEmpty)) {
+              return '$label is required';
+            }
             return null;
           },
     );
@@ -457,13 +572,24 @@ class _EmptyState extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.contact_emergency_outlined, size: 80, color: Colors.grey.shade300),
+            Icon(
+              Icons.contact_emergency_outlined,
+              size: 80,
+              color: Colors.grey.shade300,
+            ),
             const SizedBox(height: 20),
-            const Text('No Emergency Contacts', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+            const Text(
+              'No Emergency Contacts',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+            ),
             const SizedBox(height: 8),
             Text(
               'Add trusted people who should be notified by email when you trigger an SOS.',
-              style: TextStyle(fontSize: 14, color: Colors.grey.shade500, height: 1.5),
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey.shade500,
+                height: 1.5,
+              ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 28),
@@ -474,8 +600,13 @@ class _EmptyState extends StatelessWidget {
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFB71C1C),
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 12,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
             ),
           ],

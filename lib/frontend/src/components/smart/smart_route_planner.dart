@@ -16,8 +16,7 @@ class SmartRoutePlanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bool hasControllers =
-        fromController != null && toController != null;
+    final bool hasControllers = fromController != null && toController != null;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -43,8 +42,11 @@ class SmartRoutePlanner extends StatelessWidget {
                   ),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(Icons.navigation,
-                    color: Colors.white, size: 20),
+                child: const Icon(
+                  Icons.navigation,
+                  color: Colors.white,
+                  size: 20,
+                ),
               ),
               const SizedBox(width: 8),
               const Expanded(
@@ -65,8 +67,7 @@ class SmartRoutePlanner extends StatelessWidget {
                       'Optimized for weather & traffic',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style:
-                          TextStyle(color: Colors.white70, fontSize: 12),
+                      style: TextStyle(color: Colors.white70, fontSize: 12),
                     ),
                   ],
                 ),
@@ -81,7 +82,9 @@ class SmartRoutePlanner extends StatelessWidget {
                     borderRadius: BorderRadius.circular(16),
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 8),
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
                       decoration: BoxDecoration(
                         gradient: const LinearGradient(
                           colors: [Color(0xFFFDB913), Color(0xFF1B5A6E)],
@@ -128,9 +131,14 @@ class SmartRoutePlanner extends StatelessWidget {
                       width: 32,
                       height: 32,
                       decoration: const BoxDecoration(
-                          color: Colors.green, shape: BoxShape.circle),
-                      child: const Icon(Icons.location_on,
-                          size: 16, color: Colors.white),
+                        color: Colors.green,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.location_on,
+                        size: 16,
+                        color: Colors.white,
+                      ),
                     ),
                     const SizedBox(width: 8),
                     Expanded(
@@ -140,18 +148,24 @@ class SmartRoutePlanner extends StatelessWidget {
                               decoration: const InputDecoration(
                                 hintText: 'From — city or address',
                                 hintStyle: TextStyle(
-                                    fontSize: 13, color: Colors.grey),
+                                  fontSize: 13,
+                                  color: Colors.grey,
+                                ),
                                 isDense: true,
                                 border: InputBorder.none,
                                 contentPadding: EdgeInsets.zero,
                               ),
                               style: const TextStyle(
-                                  fontSize: 14, color: Colors.black87),
+                                fontSize: 14,
+                                color: Colors.black87,
+                              ),
                             )
                           : const Text(
                               'Starting point',
                               style: TextStyle(
-                                  fontSize: 13, color: Colors.black54),
+                                fontSize: 13,
+                                color: Colors.black54,
+                              ),
                             ),
                     ),
                   ],
@@ -160,7 +174,9 @@ class SmartRoutePlanner extends StatelessWidget {
                 // Divider
                 Container(
                   margin: const EdgeInsets.symmetric(
-                      vertical: 8, horizontal: 16),
+                    vertical: 8,
+                    horizontal: 16,
+                  ),
                   height: 1,
                   color: Colors.grey.shade200,
                 ),
@@ -173,9 +189,14 @@ class SmartRoutePlanner extends StatelessWidget {
                       width: 32,
                       height: 32,
                       decoration: const BoxDecoration(
-                          color: Colors.red, shape: BoxShape.circle),
-                      child: const Icon(Icons.location_on,
-                          size: 16, color: Colors.white),
+                        color: Colors.red,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.location_on,
+                        size: 16,
+                        color: Colors.white,
+                      ),
                     ),
                     const SizedBox(width: 8),
                     Expanded(
@@ -185,18 +206,24 @@ class SmartRoutePlanner extends StatelessWidget {
                               decoration: const InputDecoration(
                                 hintText: 'To — city or address',
                                 hintStyle: TextStyle(
-                                    fontSize: 13, color: Colors.grey),
+                                  fontSize: 13,
+                                  color: Colors.grey,
+                                ),
                                 isDense: true,
                                 border: InputBorder.none,
                                 contentPadding: EdgeInsets.zero,
                               ),
                               style: const TextStyle(
-                                  fontSize: 14, color: Colors.black87),
+                                fontSize: 14,
+                                color: Colors.black87,
+                              ),
                             )
                           : const Text(
                               'Destination',
                               style: TextStyle(
-                                  fontSize: 13, color: Colors.black54),
+                                fontSize: 13,
+                                color: Colors.black54,
+                              ),
                             ),
                     ),
                   ],
@@ -216,7 +243,8 @@ class SmartRoutePlanner extends StatelessWidget {
                   color: Colors.white.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.15)),
+                    color: Colors.white.withValues(alpha: 0.15),
+                  ),
                 ),
                 child: const Row(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -225,8 +253,7 @@ class SmartRoutePlanner extends StatelessWidget {
                     SizedBox(width: 8),
                     Text(
                       'Tap to plan your route',
-                      style:
-                          TextStyle(color: Colors.white70, fontSize: 13),
+                      style: TextStyle(color: Colors.white70, fontSize: 13),
                     ),
                   ],
                 ),

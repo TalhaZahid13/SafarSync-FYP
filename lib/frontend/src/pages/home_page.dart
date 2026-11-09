@@ -56,8 +56,7 @@ class _HomePageState extends State<HomePage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (dtProvider.isNonDefault)
-              _JourneyThemeBanner(theme: dtTheme),
+            if (dtProvider.isNonDefault) _JourneyThemeBanner(theme: dtTheme),
             SearchBar(onTabChange: widget.onTabChange),
             SizedBox(height: padding),
             // RepaintBoundary isolates each section so rebuilds don't cascade
@@ -156,7 +155,10 @@ class ResponsiveWeatherEmergency extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: AppTheme.homeGradient,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppTheme.turquoise.withValues(alpha: 0.45), width: 1),
+        border: Border.all(
+          color: AppTheme.turquoise.withValues(alpha: 0.45),
+          width: 1,
+        ),
         boxShadow: [
           BoxShadow(
             color: AppTheme.turquoise.withValues(alpha: 0.20),

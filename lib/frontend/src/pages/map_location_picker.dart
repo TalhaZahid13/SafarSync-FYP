@@ -23,8 +23,7 @@ class MapLocationPickerPage extends StatefulWidget {
   });
 
   @override
-  State<MapLocationPickerPage> createState() =>
-      _MapLocationPickerPageState();
+  State<MapLocationPickerPage> createState() => _MapLocationPickerPageState();
 }
 
 class _MapLocationPickerPageState extends State<MapLocationPickerPage> {
@@ -79,8 +78,7 @@ class _MapLocationPickerPageState extends State<MapLocationPickerPage> {
   Future<void> _reverseGeocode(LatLng pos) async {
     if (mounted) setState(() => _geocoding = true);
     try {
-      final marks =
-          await placemarkFromCoordinates(pos.latitude, pos.longitude);
+      final marks = await placemarkFromCoordinates(pos.latitude, pos.longitude);
       if (marks.isNotEmpty && mounted) {
         final p = marks.first;
         final parts = <String>[
@@ -95,8 +93,10 @@ class _MapLocationPickerPageState extends State<MapLocationPickerPage> {
       }
     } catch (_) {
       if (mounted) {
-        setState(() => _address =
-            '${pos.latitude.toStringAsFixed(5)}, ${pos.longitude.toStringAsFixed(5)}');
+        setState(
+          () => _address =
+              '${pos.latitude.toStringAsFixed(5)}, ${pos.longitude.toStringAsFixed(5)}',
+        );
       }
     } finally {
       if (mounted) setState(() => _geocoding = false);
@@ -113,7 +113,9 @@ class _MapLocationPickerPageState extends State<MapLocationPickerPage> {
         title: Text(
           widget.title,
           style: const TextStyle(
-              color: Colors.white, fontWeight: FontWeight.bold),
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         iconTheme: const IconThemeData(color: Colors.white),
         actions: [
@@ -126,7 +128,8 @@ class _MapLocationPickerPageState extends State<MapLocationPickerPage> {
       ),
       body: _loading
           ? const Center(
-              child: CircularProgressIndicator(color: AppTheme.turquoise))
+              child: CircularProgressIndicator(color: AppTheme.turquoise),
+            )
           : Stack(
               children: [
                 FlutterMap(
@@ -138,10 +141,12 @@ class _MapLocationPickerPageState extends State<MapLocationPickerPage> {
                       if (hasGesture) {
                         _center = camera.center;
                         _debounce?.cancel();
-                        _debounce =
-                            Timer(const Duration(milliseconds: 700), () {
-                          _reverseGeocode(_center);
-                        });
+                        _debounce = Timer(
+                          const Duration(milliseconds: 700),
+                          () {
+                            _reverseGeocode(_center);
+                          },
+                        );
                       }
                     },
                   ),
@@ -168,15 +173,19 @@ class _MapLocationPickerPageState extends State<MapLocationPickerPage> {
                           shape: BoxShape.circle,
                           boxShadow: [
                             BoxShadow(
-                              color:
-                                  const Color(0xFFEF4444).withValues(alpha: 0.4),
+                              color: const Color(
+                                0xFFEF4444,
+                              ).withValues(alpha: 0.4),
                               blurRadius: 12,
                               spreadRadius: 2,
                             ),
                           ],
                         ),
-                        child: const Icon(Icons.location_on,
-                            color: Colors.white, size: 24),
+                        child: const Icon(
+                          Icons.location_on,
+                          color: Colors.white,
+                          size: 24,
+                        ),
                       ),
                       Container(
                         width: 3,
@@ -212,7 +221,8 @@ class _MapLocationPickerPageState extends State<MapLocationPickerPage> {
                     decoration: BoxDecoration(
                       color: const Color(0xFF1B3A4C),
                       borderRadius: const BorderRadius.vertical(
-                          top: Radius.circular(24)),
+                        top: Radius.circular(24),
+                      ),
                       boxShadow: [
                         BoxShadow(
                           color: Colors.black.withValues(alpha: 0.35),
@@ -240,15 +250,19 @@ class _MapLocationPickerPageState extends State<MapLocationPickerPage> {
                         const Text(
                           'Selected location',
                           style: TextStyle(
-                              color: Colors.white54,
-                              fontSize: 11,
-                              letterSpacing: 0.5),
+                            color: Colors.white54,
+                            fontSize: 11,
+                            letterSpacing: 0.5,
+                          ),
                         ),
                         const SizedBox(height: 6),
                         Row(
                           children: [
-                            const Icon(Icons.location_on,
-                                color: Color(0xFFEF4444), size: 18),
+                            const Icon(
+                              Icons.location_on,
+                              color: Color(0xFFEF4444),
+                              size: 18,
+                            ),
                             const SizedBox(width: 8),
                             Expanded(
                               child: _geocoding
@@ -266,17 +280,19 @@ class _MapLocationPickerPageState extends State<MapLocationPickerPage> {
                                         Text(
                                           'Finding address…',
                                           style: TextStyle(
-                                              color: Colors.white70,
-                                              fontSize: 14),
+                                            color: Colors.white70,
+                                            fontSize: 14,
+                                          ),
                                         ),
                                       ],
                                     )
                                   : Text(
                                       _address,
                                       style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w500),
+                                        color: Colors.white,
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w500,
+                                      ),
                                       maxLines: 2,
                                       overflow: TextOverflow.ellipsis,
                                     ),
@@ -290,27 +306,29 @@ class _MapLocationPickerPageState extends State<MapLocationPickerPage> {
                             onPressed: _geocoding
                                 ? null
                                 : () => Navigator.pop(
-                                      context,
-                                      MapPickerResult(
-                                        latlng: _center,
-                                        address: _address,
-                                      ),
+                                    context,
+                                    MapPickerResult(
+                                      latlng: _center,
+                                      address: _address,
                                     ),
+                                  ),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppTheme.turquoise,
                               foregroundColor: Colors.white,
-                              disabledBackgroundColor:
-                                  AppTheme.turquoise.withValues(alpha: 0.4),
-                              padding:
-                                  const EdgeInsets.symmetric(vertical: 14),
+                              disabledBackgroundColor: AppTheme.turquoise
+                                  .withValues(alpha: 0.4),
+                              padding: const EdgeInsets.symmetric(vertical: 14),
                               shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(14)),
+                                borderRadius: BorderRadius.circular(14),
+                              ),
                               elevation: 0,
                             ),
                             child: const Text(
                               'Confirm Location',
                               style: TextStyle(
-                                  fontSize: 15, fontWeight: FontWeight.bold),
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
                         ),

@@ -17,7 +17,6 @@ class FloatingEmergencyButton extends StatefulWidget {
 
 class _FloatingEmergencyButtonState extends State<FloatingEmergencyButton>
     with TickerProviderStateMixin {
-
   bool _isExpanded = false;
 
   // Pulse animation for the main button
@@ -37,16 +36,20 @@ class _FloatingEmergencyButtonState extends State<FloatingEmergencyButton>
       duration: const Duration(milliseconds: 1200),
     )..repeat(reverse: true);
 
-    _pulseScale = Tween<double>(begin: 1.0, end: 1.12).animate(
-      CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut),
-    );
+    _pulseScale = Tween<double>(
+      begin: 1.0,
+      end: 1.12,
+    ).animate(CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut));
 
     _expandCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 280),
     );
 
-    _expandAnim = CurvedAnimation(parent: _expandCtrl, curve: Curves.easeOutBack);
+    _expandAnim = CurvedAnimation(
+      parent: _expandCtrl,
+      curve: Curves.easeOutBack,
+    );
   }
 
   @override
@@ -86,7 +89,11 @@ class _FloatingEmergencyButtonState extends State<FloatingEmergencyButton>
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Unable to open dialer. Please call $number manually.')),
+          SnackBar(
+            content: Text(
+              'Unable to open dialer. Please call $number manually.',
+            ),
+          ),
         );
       }
       return;
@@ -95,7 +102,9 @@ class _FloatingEmergencyButtonState extends State<FloatingEmergencyButton>
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Calling $number — logging your location in background'),
+          content: Text(
+            'Calling $number — logging your location in background',
+          ),
           backgroundColor: Colors.red.shade800,
           duration: const Duration(seconds: 3),
         ),
@@ -110,9 +119,11 @@ class _FloatingEmergencyButtonState extends State<FloatingEmergencyButton>
     try {
       Position? pos;
       final perm = await Geolocator.checkPermission();
-      if (perm != LocationPermission.denied && perm != LocationPermission.deniedForever) {
-        pos = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.medium)
-            .timeout(const Duration(seconds: 8));
+      if (perm != LocationPermission.denied &&
+          perm != LocationPermission.deniedForever) {
+        pos = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.medium,
+        ).timeout(const Duration(seconds: 8));
       }
       ApiService.postRequest('/emergency/event', {
         'type': eventType,
@@ -124,16 +135,16 @@ class _FloatingEmergencyButtonState extends State<FloatingEmergencyButton>
 
   void _openICEContacts() {
     _closeMenu();
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const EmergencyContactsPage()),
-    );
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => const EmergencyContactsPage()));
   }
 
   void _openSOSAlert() {
     _closeMenu();
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const EmergencySOSScreen()),
-    );
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => const EmergencySOSScreen()));
   }
 
   @override

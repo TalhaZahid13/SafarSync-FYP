@@ -120,14 +120,24 @@ class _WeatherForecastPageState extends State<WeatherForecastPage> {
     final lng = widget.initialLng;
 
     if (lat == null || lng == null) {
-      if (mounted) setState(() { _loading = false; _error = 'Location not available'; });
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _error = 'Location not available';
+        });
+      }
       return;
     }
 
     if (!forceRefresh) {
       final cached = _ExtCache.get(lat, lng);
       if (cached != null) {
-        if (mounted) setState(() { _data = cached; _loading = false; });
+        if (mounted) {
+          setState(() {
+            _data = cached;
+            _loading = false;
+          });
+        }
         _applyCurrentFields(cached.current);
         return;
       }
@@ -135,7 +145,12 @@ class _WeatherForecastPageState extends State<WeatherForecastPage> {
       _ExtCache.invalidate();
     }
 
-    if (mounted) setState(() { _loading = true; _error = null; });
+    if (mounted) {
+      setState(() {
+        _loading = true;
+        _error = null;
+      });
+    }
 
     try {
       final uri = Uri.parse(
@@ -150,8 +165,7 @@ class _WeatherForecastPageState extends State<WeatherForecastPage> {
         '&forecast_days=7',
       );
 
-      final response =
-          await http.get(uri).timeout(const Duration(seconds: 20));
+      final response = await http.get(uri).timeout(const Duration(seconds: 20));
 
       if (response.statusCode != 200) {
         throw Exception('HTTP ${response.statusCode}');
@@ -164,8 +178,7 @@ class _WeatherForecastPageState extends State<WeatherForecastPage> {
 
       // ── Hourly: next 24 h from now ───────────────────────────────────────
       final hourlyRaw = raw['hourly'] as Map<String, dynamic>;
-      final hTimes =
-          (hourlyRaw['time'] as List).cast<String>();
+      final hTimes = (hourlyRaw['time'] as List).cast<String>();
       final hTemps = (hourlyRaw['temperature_2m'] as List)
           .map((e) => (e as num).round())
           .toList();
@@ -180,8 +193,7 @@ class _WeatherForecastPageState extends State<WeatherForecastPage> {
       int startIdx = 0;
       for (int i = 0; i < hTimes.length; i++) {
         final t = DateTime.tryParse(hTimes[i]);
-        if (t != null &&
-            t.isAfter(now.subtract(const Duration(minutes: 30)))) {
+        if (t != null && t.isAfter(now.subtract(const Duration(minutes: 30)))) {
           startIdx = i;
           break;
         }
@@ -216,22 +228,27 @@ class _WeatherForecastPageState extends State<WeatherForecastPage> {
           .map((e) => (e as num?)?.toDouble() ?? 0.0)
           .toList();
 
-      final daily = List.generate(dTimes.length, (i) => {
-            'date': dTimes[i],
-            'max': dMax[i],
-            'min': dMin[i],
-            'code': dCodes[i],
-            'precip': dPrecip[i],
-            'uv': dUV[i],
-          });
+      final daily = List.generate(
+        dTimes.length,
+        (i) => {
+          'date': dTimes[i],
+          'max': dMax[i],
+          'min': dMin[i],
+          'code': dCodes[i],
+          'precip': dPrecip[i],
+          'uv': dUV[i],
+        },
+      );
 
       final current = raw['current'] as Map<String, dynamic>;
-      final cache = _ExtCache(
-          current: current, hourly: hourly, daily: daily);
+      final cache = _ExtCache(current: current, hourly: hourly, daily: daily);
       _ExtCache.store(cache, lat, lng);
 
       if (!mounted) return;
-      setState(() { _data = cache; _loading = false; });
+      setState(() {
+        _data = cache;
+        _loading = false;
+      });
       _applyCurrentFields(current);
     } catch (e) {
       if (mounted) {
@@ -247,14 +264,10 @@ class _WeatherForecastPageState extends State<WeatherForecastPage> {
     if (!mounted) return;
     setState(() {
       _temp = (c['temperature_2m'] as num?)?.round() ?? _temp;
-      _humidity =
-          (c['relative_humidity_2m'] as num?)?.round() ?? _humidity;
-      _windSpeed =
-          (c['wind_speed_10m'] as num?)?.round() ?? _windSpeed;
-      _feelsLike =
-          (c['apparent_temperature'] as num?)?.round() ?? _feelsLike;
-      _weatherCode =
-          (c['weather_code'] as num?)?.toInt() ?? _weatherCode;
+      _humidity = (c['relative_humidity_2m'] as num?)?.round() ?? _humidity;
+      _windSpeed = (c['wind_speed_10m'] as num?)?.round() ?? _windSpeed;
+      _feelsLike = (c['apparent_temperature'] as num?)?.round() ?? _feelsLike;
+      _weatherCode = (c['weather_code'] as num?)?.toInt() ?? _weatherCode;
       _condition = _conditionFromCode(_weatherCode);
     });
   }
@@ -316,7 +329,9 @@ class _WeatherForecastPageState extends State<WeatherForecastPage> {
       final today = DateTime.now();
       if (dt.year == today.year &&
           dt.month == today.month &&
-          dt.day == today.day) return 'Today';
+          dt.day == today.day) {
+        return 'Today';
+      }
       if (dt.difference(today).inDays == 1) return 'Tomorrow';
       return DateFormat('EEE, MMM d').format(dt);
     } catch (_) {
@@ -341,82 +356,164 @@ class _WeatherForecastPageState extends State<WeatherForecastPage> {
 
     // Condition-based
     if (code == 0) {
-      insights.add(const _Insight(Icons.wb_sunny_rounded,
-          'Clear sky — ideal for outdoor activities', Color(0xFFF59E0B)));
+      insights.add(
+        const _Insight(
+          Icons.wb_sunny_rounded,
+          'Clear sky — ideal for outdoor activities',
+          Color(0xFFF59E0B),
+        ),
+      );
     } else if (code <= 2) {
-      insights.add(const _Insight(Icons.wb_cloudy_rounded,
-          'Mostly clear — great day for travel', Color(0xFFF97316)));
+      insights.add(
+        const _Insight(
+          Icons.wb_cloudy_rounded,
+          'Mostly clear — great day for travel',
+          Color(0xFFF97316),
+        ),
+      );
     } else if (code == 3) {
-      insights.add(const _Insight(Icons.cloud_rounded,
+      insights.add(
+        const _Insight(
+          Icons.cloud_rounded,
           'Overcast but comfortable — perfect for sightseeing',
-          AppTheme.mediumGray));
+          AppTheme.mediumGray,
+        ),
+      );
     } else if (code <= 48) {
-      insights.add(const _Insight(Icons.foggy,
+      insights.add(
+        const _Insight(
+          Icons.foggy,
           'Fog expected — keep headlights on while driving',
-          AppTheme.mediumGray));
+          AppTheme.mediumGray,
+        ),
+      );
     } else if (code <= 65) {
-      insights.add(const _Insight(Icons.umbrella,
-          'Rain expected — carry an umbrella', Colors.blue));
+      insights.add(
+        const _Insight(
+          Icons.umbrella,
+          'Rain expected — carry an umbrella',
+          Colors.blue,
+        ),
+      );
     } else if (code <= 77) {
-      insights.add(const _Insight(Icons.ac_unit_rounded,
-          'Snow conditions — dress warmly in layers', Colors.lightBlue));
+      insights.add(
+        const _Insight(
+          Icons.ac_unit_rounded,
+          'Snow conditions — dress warmly in layers',
+          Colors.lightBlue,
+        ),
+      );
     } else if (code <= 82) {
-      insights.add(const _Insight(Icons.water_drop_rounded,
-          'Showers throughout the day — stay prepared', Colors.blue));
+      insights.add(
+        const _Insight(
+          Icons.water_drop_rounded,
+          'Showers throughout the day — stay prepared',
+          Colors.blue,
+        ),
+      );
     } else if (code <= 99) {
-      insights.add(const _Insight(Icons.thunderstorm_rounded,
+      insights.add(
+        const _Insight(
+          Icons.thunderstorm_rounded,
           'Thunderstorm warning — avoid outdoor activities',
-          Colors.deepPurple));
+          Colors.deepPurple,
+        ),
+      );
     }
 
     // Temperature
     if (temp > 38) {
-      insights.add(const _Insight(Icons.thermostat,
-          'Extreme heat — stay hydrated and seek shade', Colors.red));
+      insights.add(
+        const _Insight(
+          Icons.thermostat,
+          'Extreme heat — stay hydrated and seek shade',
+          Colors.red,
+        ),
+      );
     } else if (temp > 32) {
-      insights.add(_Insight(Icons.thermostat,
+      insights.add(
+        _Insight(
+          Icons.thermostat,
           'Very warm at $temp°C — hydrate frequently',
-          Colors.orange.shade700));
+          Colors.orange.shade700,
+        ),
+      );
     } else if (temp >= 20 && temp <= 28 && code <= 3) {
-      insights.add(const _Insight(Icons.thumb_up_rounded,
-          'Perfect temperature — great day for travel', Colors.green));
+      insights.add(
+        const _Insight(
+          Icons.thumb_up_rounded,
+          'Perfect temperature — great day for travel',
+          Colors.green,
+        ),
+      );
     } else if (temp < 5) {
-      insights.add(const _Insight(Icons.severe_cold_rounded,
-          'Very cold — bundle up with heavy layers', Colors.lightBlue));
+      insights.add(
+        const _Insight(
+          Icons.severe_cold_rounded,
+          'Very cold — bundle up with heavy layers',
+          Colors.lightBlue,
+        ),
+      );
     }
 
     // Wind
     if (wind > 60) {
-      insights.add(_Insight(Icons.air,
+      insights.add(
+        _Insight(
+          Icons.air,
           'Strong winds ($wind km/h) — secure loose items outdoors',
-          Colors.deepOrange));
+          Colors.deepOrange,
+        ),
+      );
     } else if (wind > 35) {
-      insights.add(_Insight(
-          Icons.air, 'Breezy at $wind km/h — hold onto hats!', Colors.orange));
+      insights.add(
+        _Insight(
+          Icons.air,
+          'Breezy at $wind km/h — hold onto hats!',
+          Colors.orange,
+        ),
+      );
     }
 
     // UV
     if (todayUV >= 8) {
-      insights.add(_Insight(Icons.wb_sunny_outlined,
+      insights.add(
+        _Insight(
+          Icons.wb_sunny_outlined,
           'Very high UV (${todayUV.round()}) — SPF 50+ sunscreen essential',
-          Colors.red.shade700));
+          Colors.red.shade700,
+        ),
+      );
     } else if (todayUV >= 5) {
-      insights.add(_Insight(Icons.wb_sunny_outlined,
+      insights.add(
+        _Insight(
+          Icons.wb_sunny_outlined,
           'Moderate-High UV (${todayUV.round()}) — sunscreen recommended',
-          Colors.orange));
+          Colors.orange,
+        ),
+      );
     }
 
     // Humidity
     if (humidity > 85) {
-      insights.add(_Insight(Icons.water_drop_outlined,
+      insights.add(
+        _Insight(
+          Icons.water_drop_outlined,
           'Very high humidity ($humidity%) — feels uncomfortable',
-          Colors.blue.shade700));
+          Colors.blue.shade700,
+        ),
+      );
     }
 
     // Rain probability from today's daily
     if (todayPrecip > 70 && code <= 65) {
-      insights.add(_Insight(Icons.umbrella,
-          '$todayPrecip% chance of rain — umbrella is a must', Colors.blue));
+      insights.add(
+        _Insight(
+          Icons.umbrella,
+          '$todayPrecip% chance of rain — umbrella is a must',
+          Colors.blue,
+        ),
+      );
     }
 
     return insights;
@@ -431,38 +528,91 @@ class _WeatherForecastPageState extends State<WeatherForecastPage> {
         : 0;
 
     if (code == 0 || code <= 2) {
-      advisories.add(const _Advisory(Icons.directions_car_rounded,
-          'Safe for road travel', Colors.green));
-      advisories.add(const _Advisory(Icons.flight_rounded,
-          'Excellent flying conditions', Colors.green));
+      advisories.add(
+        const _Advisory(
+          Icons.directions_car_rounded,
+          'Safe for road travel',
+          Colors.green,
+        ),
+      );
+      advisories.add(
+        const _Advisory(
+          Icons.flight_rounded,
+          'Excellent flying conditions',
+          Colors.green,
+        ),
+      );
     } else if (code <= 48) {
-      advisories.add(const _Advisory(Icons.visibility_off,
+      advisories.add(
+        const _Advisory(
+          Icons.visibility_off,
           'Fog advisory — reduce speed, use fog lights',
-          Colors.orange));
+          Colors.orange,
+        ),
+      );
     } else if (code <= 65 || todayPrecip > 50) {
-      advisories.add(const _Advisory(Icons.directions_car_rounded,
-          'Rain may impact travel — allow extra time', Colors.orange));
-      advisories.add(const _Advisory(Icons.terrain,
-          'Hiking trails may be slippery', Colors.orange));
+      advisories.add(
+        const _Advisory(
+          Icons.directions_car_rounded,
+          'Rain may impact travel — allow extra time',
+          Colors.orange,
+        ),
+      );
+      advisories.add(
+        const _Advisory(
+          Icons.terrain,
+          'Hiking trails may be slippery',
+          Colors.orange,
+        ),
+      );
     } else if (code <= 77) {
-      advisories.add(const _Advisory(Icons.directions_car_rounded,
-          'Winter driving — check road conditions first', Colors.red));
-      advisories.add(const _Advisory(Icons.hiking_rounded,
-          'Outdoor activities not recommended', Colors.red));
+      advisories.add(
+        const _Advisory(
+          Icons.directions_car_rounded,
+          'Winter driving — check road conditions first',
+          Colors.red,
+        ),
+      );
+      advisories.add(
+        const _Advisory(
+          Icons.hiking_rounded,
+          'Outdoor activities not recommended',
+          Colors.red,
+        ),
+      );
     } else if (code >= 95) {
-      advisories.add(const _Advisory(Icons.warning_rounded,
-          'Storm warning — postpone non-essential travel', Colors.red));
-      advisories.add(const _Advisory(Icons.flight_rounded,
-          'Check with airline for flight updates', Colors.red));
+      advisories.add(
+        const _Advisory(
+          Icons.warning_rounded,
+          'Storm warning — postpone non-essential travel',
+          Colors.red,
+        ),
+      );
+      advisories.add(
+        const _Advisory(
+          Icons.flight_rounded,
+          'Check with airline for flight updates',
+          Colors.red,
+        ),
+      );
     } else {
-      advisories.add(const _Advisory(Icons.directions_car_rounded,
-          'Road conditions are acceptable', Colors.teal));
+      advisories.add(
+        const _Advisory(
+          Icons.directions_car_rounded,
+          'Road conditions are acceptable',
+          Colors.teal,
+        ),
+      );
     }
 
     if (wind > 50) {
-      advisories.add(_Advisory(Icons.air,
+      advisories.add(
+        _Advisory(
+          Icons.air,
           'Strong wind advisory ($wind km/h) — caution on open roads',
-          Colors.deepOrange));
+          Colors.deepOrange,
+        ),
+      );
     }
 
     return advisories;
@@ -481,29 +631,49 @@ class _WeatherForecastPageState extends State<WeatherForecastPage> {
         : 0;
 
     if (code >= 95) {
-      alerts.add(const _Alert('Thunderstorm Warning',
+      alerts.add(
+        const _Alert(
+          'Thunderstorm Warning',
           'Severe thunderstorm in the area. Seek shelter indoors.',
-          Colors.deepPurple));
+          Colors.deepPurple,
+        ),
+      );
     }
     if (temp >= 40) {
-      alerts.add(const _Alert('Extreme Heat Alert',
+      alerts.add(
+        const _Alert(
+          'Extreme Heat Alert',
           'Temperature at or above 40°C. Avoid prolonged sun exposure.',
-          Colors.red));
+          Colors.red,
+        ),
+      );
     }
     if (wind >= 60) {
-      alerts.add(_Alert('Wind Advisory',
+      alerts.add(
+        _Alert(
+          'Wind Advisory',
           'Winds of $wind km/h expected. Secure outdoor objects.',
-          Colors.deepOrange));
+          Colors.deepOrange,
+        ),
+      );
     }
     if (todayPrecip >= 85 && code >= 51 && code <= 82) {
-      alerts.add(const _Alert('Heavy Rain Warning',
+      alerts.add(
+        const _Alert(
+          'Heavy Rain Warning',
           'High probability of heavy rainfall. Flooding possible in low areas.',
-          Colors.blue));
+          Colors.blue,
+        ),
+      );
     }
     if (todayUV >= 10) {
-      alerts.add(const _Alert('Extreme UV Alert',
+      alerts.add(
+        const _Alert(
+          'Extreme UV Alert',
           'UV index is extreme. Minimize sun exposure between 10AM–4PM.',
-          Colors.orange));
+          Colors.orange,
+        ),
+      );
     }
     return alerts;
   }
@@ -550,8 +720,7 @@ class _WeatherForecastPageState extends State<WeatherForecastPage> {
               ],
               flexibleSpace: FlexibleSpaceBar(
                 collapseMode: CollapseMode.parallax,
-                titlePadding:
-                    const EdgeInsets.only(left: 60, bottom: 14),
+                titlePadding: const EdgeInsets.only(left: 60, bottom: 14),
                 title: Text(
                   _city,
                   style: const TextStyle(
@@ -571,53 +740,53 @@ class _WeatherForecastPageState extends State<WeatherForecastPage> {
                       height: 300,
                       child: Center(
                         child: CircularProgressIndicator(
-                          color: AppTheme.turquoise),
+                          color: AppTheme.turquoise,
+                        ),
                       ),
                     )
                   : _error != null
-                      ? _buildError()
-                      : Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            // Alerts (only if severe)
-                            if (alerts.isNotEmpty)
-                              _buildAlertsSection(alerts),
+                  ? _buildError()
+                  : Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // Alerts (only if severe)
+                        if (alerts.isNotEmpty) _buildAlertsSection(alerts),
 
-                            const SizedBox(height: 16),
+                        const SizedBox(height: 16),
 
-                            // Current weather detail grid
-                            _buildCurrentDetails(
-                              todayUV: todayUV,
-                              pressure: pressure,
-                              precipitation: precipitation,
-                            ),
-
-                            const SizedBox(height: 20),
-
-                            // Hourly forecast
-                            if (_data?.hourly.isNotEmpty == true)
-                              _buildHourlySection(),
-
-                            const SizedBox(height: 20),
-
-                            // 7-day forecast
-                            if (_data?.daily.isNotEmpty == true)
-                              _buildDailySection(),
-
-                            const SizedBox(height: 20),
-
-                            // Insights
-                            if (insights.isNotEmpty)
-                              _buildInsightsSection(insights),
-
-                            const SizedBox(height: 20),
-
-                            // Travel advisory
-                            _buildAdvisorySection(advisories),
-
-                            const SizedBox(height: 32),
-                          ],
+                        // Current weather detail grid
+                        _buildCurrentDetails(
+                          todayUV: todayUV,
+                          pressure: pressure,
+                          precipitation: precipitation,
                         ),
+
+                        const SizedBox(height: 20),
+
+                        // Hourly forecast
+                        if (_data?.hourly.isNotEmpty == true)
+                          _buildHourlySection(),
+
+                        const SizedBox(height: 20),
+
+                        // 7-day forecast
+                        if (_data?.daily.isNotEmpty == true)
+                          _buildDailySection(),
+
+                        const SizedBox(height: 20),
+
+                        // Insights
+                        if (insights.isNotEmpty)
+                          _buildInsightsSection(insights),
+
+                        const SizedBox(height: 20),
+
+                        // Travel advisory
+                        _buildAdvisorySection(advisories),
+
+                        const SizedBox(height: 32),
+                      ],
+                    ),
             ),
           ],
         ),
@@ -631,11 +800,7 @@ class _WeatherForecastPageState extends State<WeatherForecastPage> {
     return Container(
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-          colors: [
-            Color(0xFF1A9DAA),
-            Color(0xFF2CAFBC),
-            Color(0xFF3DBFCC),
-          ],
+          colors: [Color(0xFF1A9DAA), Color(0xFF2CAFBC), Color(0xFF3DBFCC)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -648,16 +813,20 @@ class _WeatherForecastPageState extends State<WeatherForecastPage> {
             children: [
               Row(
                 children: [
-                  const Icon(Icons.location_on_rounded,
-                      color: Colors.white70, size: 14),
+                  const Icon(
+                    Icons.location_on_rounded,
+                    color: Colors.white70,
+                    size: 14,
+                  ),
                   const SizedBox(width: 4),
                   Expanded(
                     child: Text(
                       _city,
                       style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w700),
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                      ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -667,8 +836,7 @@ class _WeatherForecastPageState extends State<WeatherForecastPage> {
               const SizedBox(height: 2),
               Text(
                 '$dateStr  ·  $timeStr',
-                style: const TextStyle(
-                    color: Colors.white70, fontSize: 12),
+                style: const TextStyle(color: Colors.white70, fontSize: 12),
               ),
               const Spacer(),
               Row(
@@ -709,7 +877,9 @@ class _WeatherForecastPageState extends State<WeatherForecastPage> {
                           Text(
                             'Feels like $_feelsLike°',
                             style: const TextStyle(
-                                color: Colors.white70, fontSize: 12),
+                              color: Colors.white70,
+                              fontSize: 12,
+                            ),
                           ),
                       ],
                     ),
@@ -720,11 +890,17 @@ class _WeatherForecastPageState extends State<WeatherForecastPage> {
               // Quick stats row
               Row(
                 children: [
-                  _heroStat(Icons.water_drop_outlined,
-                      '${_humidity ?? '--'}%', 'Humidity'),
+                  _heroStat(
+                    Icons.water_drop_outlined,
+                    '${_humidity ?? '--'}%',
+                    'Humidity',
+                  ),
                   const SizedBox(width: 20),
-                  _heroStat(Icons.air_rounded,
-                      '${_windSpeed ?? '--'} km/h', 'Wind'),
+                  _heroStat(
+                    Icons.air_rounded,
+                    '${_windSpeed ?? '--'} km/h',
+                    'Wind',
+                  ),
                 ],
               ),
             ],
@@ -735,24 +911,28 @@ class _WeatherForecastPageState extends State<WeatherForecastPage> {
   }
 
   Widget _heroStat(IconData icon, String value, String label) => Row(
+    children: [
+      Icon(icon, color: Colors.white70, size: 14),
+      const SizedBox(width: 4),
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: Colors.white70, size: 14),
-          const SizedBox(width: 4),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(value,
-                  style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600)),
-              Text(label,
-                  style: const TextStyle(
-                      color: Colors.white60, fontSize: 10)),
-            ],
+          Text(
+            value,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          Text(
+            label,
+            style: const TextStyle(color: Colors.white60, fontSize: 10),
           ),
         ],
-      );
+      ),
+    ],
+  );
 
   // ── Current detail grid ───────────────────────────────────────────────────
 
@@ -764,8 +944,8 @@ class _WeatherForecastPageState extends State<WeatherForecastPage> {
     final uvColor = todayUV >= 8
         ? Colors.red
         : todayUV >= 5
-            ? Colors.orange
-            : Colors.green;
+        ? Colors.orange
+        : Colors.green;
 
     return _sectionCard(
       title: 'Current Conditions',
@@ -779,34 +959,54 @@ class _WeatherForecastPageState extends State<WeatherForecastPage> {
           mainAxisSpacing: 8,
           crossAxisSpacing: 8,
           children: [
-            _detailCell(Icons.thermostat_rounded,
-                '${_feelsLike ?? '--'}°', 'Feels Like',
-                color: AppTheme.turquoise),
-            _detailCell(Icons.water_drop_rounded,
-                '${_humidity ?? '--'}%', 'Humidity',
-                color: Colors.blue),
-            _detailCell(Icons.air_rounded,
-                '${_windSpeed ?? '--'} km/h', 'Wind',
-                color: Colors.teal),
-            _detailCell(Icons.wb_sunny_outlined,
-                todayUV > 0 ? todayUV.round().toString() : '--',
-                'UV Index',
-                color: uvColor),
-            _detailCell(Icons.compress_rounded,
-                pressure != null ? '$pressure hPa' : '--', 'Pressure',
-                color: AppTheme.darkSlate),
-            _detailCell(Icons.grain_rounded,
-                '${precipitation.toStringAsFixed(1)} mm',
-                'Precipitation',
-                color: Colors.indigo),
+            _detailCell(
+              Icons.thermostat_rounded,
+              '${_feelsLike ?? '--'}°',
+              'Feels Like',
+              color: AppTheme.turquoise,
+            ),
+            _detailCell(
+              Icons.water_drop_rounded,
+              '${_humidity ?? '--'}%',
+              'Humidity',
+              color: Colors.blue,
+            ),
+            _detailCell(
+              Icons.air_rounded,
+              '${_windSpeed ?? '--'} km/h',
+              'Wind',
+              color: Colors.teal,
+            ),
+            _detailCell(
+              Icons.wb_sunny_outlined,
+              todayUV > 0 ? todayUV.round().toString() : '--',
+              'UV Index',
+              color: uvColor,
+            ),
+            _detailCell(
+              Icons.compress_rounded,
+              pressure != null ? '$pressure hPa' : '--',
+              'Pressure',
+              color: AppTheme.darkSlate,
+            ),
+            _detailCell(
+              Icons.grain_rounded,
+              '${precipitation.toStringAsFixed(1)} mm',
+              'Precipitation',
+              color: Colors.indigo,
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _detailCell(IconData icon, String value, String label,
-      {required Color color}) {
+  Widget _detailCell(
+    IconData icon,
+    String value,
+    String label, {
+    required Color color,
+  }) {
     return Container(
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.07),
@@ -819,20 +1019,24 @@ class _WeatherForecastPageState extends State<WeatherForecastPage> {
         children: [
           Icon(icon, color: color, size: 20),
           const SizedBox(height: 3),
-          Text(value,
-              style: TextStyle(
-                  color: color,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 13),
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis),
-          Text(label,
-              style: TextStyle(
-                  color: AppTheme.mediumGray, fontSize: 10),
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis),
+          Text(
+            value,
+            style: TextStyle(
+              color: color,
+              fontWeight: FontWeight.w700,
+              fontSize: 13,
+            ),
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          Text(
+            label,
+            style: TextStyle(color: AppTheme.mediumGray, fontSize: 10),
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
         ],
       ),
     );
@@ -849,7 +1053,7 @@ class _WeatherForecastPageState extends State<WeatherForecastPage> {
           scrollDirection: Axis.horizontal,
           padding: const EdgeInsets.symmetric(horizontal: 4),
           itemCount: _data!.hourly.length,
-          separatorBuilder: (_, __) => const SizedBox(width: 8),
+          separatorBuilder: (_, _) => const SizedBox(width: 8),
           itemBuilder: (_, i) {
             final h = _data!.hourly[i];
             final code = h['code'] as int;
@@ -911,29 +1115,33 @@ class _WeatherForecastPageState extends State<WeatherForecastPage> {
       icon: Icons.lightbulb_outline_rounded,
       child: Column(
         children: insights
-            .map((ins) => Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: ins.color.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(10),
+            .map(
+              (ins) => Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: ins.color.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Icon(ins.icon, color: ins.color, size: 18),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        ins.text,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: AppTheme.darkSlate,
                         ),
-                        child:
-                            Icon(ins.icon, color: ins.color, size: 18),
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(ins.text,
-                            style: const TextStyle(
-                                fontSize: 13,
-                                color: AppTheme.darkSlate)),
-                      ),
-                    ],
-                  ),
-                ))
+                    ),
+                  ],
+                ),
+              ),
+            )
             .toList(),
       ),
     );
@@ -947,41 +1155,45 @@ class _WeatherForecastPageState extends State<WeatherForecastPage> {
       icon: Icons.travel_explore_rounded,
       child: Column(
         children: advisories
-            .map((adv) => Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: adv.color.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(10),
+            .map(
+              (adv) => Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: adv.color.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Icon(adv.icon, color: adv.color, size: 18),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        adv.text,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: AppTheme.darkSlate,
                         ),
-                        child: Icon(adv.icon,
-                            color: adv.color, size: 18),
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(adv.text,
-                            style: const TextStyle(
-                                fontSize: 13,
-                                color: AppTheme.darkSlate)),
-                      ),
-                      _statusDot(adv.color),
-                    ],
-                  ),
-                ))
+                    ),
+                    _statusDot(adv.color),
+                  ],
+                ),
+              ),
+            )
             .toList(),
       ),
     );
   }
 
   Widget _statusDot(Color color) => Container(
-        width: 8,
-        height: 8,
-        margin: const EdgeInsets.only(left: 8),
-        decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-      );
+    width: 8,
+    height: 8,
+    margin: const EdgeInsets.only(left: 8),
+    decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+  );
 
   // ── Weather Alerts ────────────────────────────────────────────────────────
 
@@ -1003,12 +1215,17 @@ class _WeatherForecastPageState extends State<WeatherForecastPage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.cloud_off_rounded,
-                size: 56, color: AppTheme.mediumGray),
+            const Icon(
+              Icons.cloud_off_rounded,
+              size: 56,
+              color: AppTheme.mediumGray,
+            ),
             const SizedBox(height: 16),
-            Text(_error ?? 'Unknown error',
-                style: const TextStyle(color: AppTheme.mediumGray),
-                textAlign: TextAlign.center),
+            Text(
+              _error ?? 'Unknown error',
+              style: const TextStyle(color: AppTheme.mediumGray),
+              textAlign: TextAlign.center,
+            ),
             const SizedBox(height: 16),
             ElevatedButton.icon(
               onPressed: () => _load(forceRefresh: true),
@@ -1034,8 +1251,7 @@ class _WeatherForecastPageState extends State<WeatherForecastPage> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-              color: AppTheme.turquoise.withValues(alpha: 0.15)),
+          border: Border.all(color: AppTheme.turquoise.withValues(alpha: 0.15)),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.04),
@@ -1134,8 +1350,11 @@ class _HourCard extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.water_drop_rounded,
-                    size: 9, color: Colors.blue),
+                const Icon(
+                  Icons.water_drop_rounded,
+                  size: 9,
+                  color: Colors.blue,
+                ),
                 const SizedBox(width: 1),
                 Text(
                   '$precip%',
@@ -1197,11 +1416,8 @@ class _DayRow extends StatelessWidget {
               dayLabel,
               style: TextStyle(
                 fontSize: 13,
-                fontWeight:
-                    isToday ? FontWeight.w700 : FontWeight.w500,
-                color: isToday
-                    ? AppTheme.turquoise
-                    : AppTheme.darkSlate,
+                fontWeight: isToday ? FontWeight.w700 : FontWeight.w500,
+                color: isToday ? AppTheme.turquoise : AppTheme.darkSlate,
               ),
             ),
           ),
@@ -1211,8 +1427,7 @@ class _DayRow extends StatelessWidget {
           Expanded(
             child: Text(
               condition,
-              style: const TextStyle(
-                  fontSize: 11, color: AppTheme.mediumGray),
+              style: const TextStyle(fontSize: 11, color: AppTheme.mediumGray),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
@@ -1225,48 +1440,53 @@ class _DayRow extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('$min°',
-                        style: const TextStyle(
-                            fontSize: 11,
-                            color: AppTheme.mediumGray,
-                            fontWeight: FontWeight.w500)),
-                    Text('$max°',
-                        style: const TextStyle(
-                            fontSize: 13,
-                            color: AppTheme.darkSlate,
-                            fontWeight: FontWeight.w700)),
+                    Text(
+                      '$min°',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: AppTheme.mediumGray,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    Text(
+                      '$max°',
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: AppTheme.darkSlate,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 4),
-                LayoutBuilder(builder: (ctx, box) {
-                  return Stack(
-                    children: [
-                      Container(
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: AppTheme.lightGray,
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      ),
-                      Positioned(
-                        left: box.maxWidth * leftFrac,
-                        child: Container(
+                LayoutBuilder(
+                  builder: (ctx, box) {
+                    return Stack(
+                      children: [
+                        Container(
                           height: 4,
-                          width: box.maxWidth * widthFrac,
                           decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [
-                                Color(0xFF3DBFCC),
-                                Color(0xFFF59E0B)
-                              ],
-                            ),
+                            color: AppTheme.lightGray,
                             borderRadius: BorderRadius.circular(2),
                           ),
                         ),
-                      ),
-                    ],
-                  );
-                }),
+                        Positioned(
+                          left: box.maxWidth * leftFrac,
+                          child: Container(
+                            height: 4,
+                            width: box.maxWidth * widthFrac,
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFF3DBFCC), Color(0xFFF59E0B)],
+                              ),
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                ),
               ],
             ),
           ),
@@ -1275,14 +1495,20 @@ class _DayRow extends StatelessWidget {
             const SizedBox(width: 8),
             Row(
               children: [
-                const Icon(Icons.water_drop_rounded,
-                    size: 11, color: Colors.blue),
+                const Icon(
+                  Icons.water_drop_rounded,
+                  size: 11,
+                  color: Colors.blue,
+                ),
                 const SizedBox(width: 2),
-                Text('$precip%',
-                    style: const TextStyle(
-                        fontSize: 11,
-                        color: Colors.blue,
-                        fontWeight: FontWeight.w600)),
+                Text(
+                  '$precip%',
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: Colors.blue,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ],
             ),
           ],
@@ -1308,22 +1534,28 @@ class _AlertBanner extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(Icons.warning_amber_rounded,
-              color: alert.color, size: 20),
+          Icon(Icons.warning_amber_rounded, color: alert.color, size: 20),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(alert.title,
-                    style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                        color: alert.color,
-                        fontSize: 13)),
+                Text(
+                  alert.title,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    color: alert.color,
+                    fontSize: 13,
+                  ),
+                ),
                 const SizedBox(height: 2),
-                Text(alert.message,
-                    style: const TextStyle(
-                        fontSize: 12, color: AppTheme.darkSlate)),
+                Text(
+                  alert.message,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppTheme.darkSlate,
+                  ),
+                ),
               ],
             ),
           ),

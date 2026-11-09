@@ -34,7 +34,10 @@ class _GroupsPageState extends State<GroupsPage>
   // ── API ────────────────────────────────────────────────────────────────────
 
   Future<void> _load() async {
-    setState(() { _loading = true; _error = null; });
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
     try {
       final r = await ApiService.getRequest('/groups/my-groups');
       if (!mounted) return;
@@ -52,7 +55,12 @@ class _GroupsPageState extends State<GroupsPage>
         });
       }
     } catch (e) {
-      if (mounted) setState(() { _error = e.toString(); _loading = false; });
+      if (mounted) {
+        setState(() {
+          _error = e.toString();
+          _loading = false;
+        });
+      }
     }
   }
 
@@ -61,8 +69,8 @@ class _GroupsPageState extends State<GroupsPage>
   Future<void> _showCreateDialog() async {
     final nameCtrl = TextEditingController();
     final descCtrl = TextEditingController();
-    final maxCtrl  = TextEditingController(text: '10');
-    bool creating  = false;
+    final maxCtrl = TextEditingController(text: '10');
+    bool creating = false;
 
     await showDialog(
       context: context,
@@ -119,7 +127,7 @@ class _GroupsPageState extends State<GroupsPage>
                       setSt(() => creating = true);
 
                       final r = await ApiService.postRequest('/groups/create', {
-                        'group_name':  name,
+                        'group_name': name,
                         'description': descCtrl.text.trim(),
                         'max_members': int.tryParse(maxCtrl.text) ?? 10,
                       });
@@ -136,13 +144,17 @@ class _GroupsPageState extends State<GroupsPage>
                         );
                         _load();
                       } else {
-                        _snack(r['error'] as String? ?? 'Failed to create group');
+                        _snack(
+                          r['error'] as String? ?? 'Failed to create group',
+                        );
                       }
                     },
               child: creating
                   ? const SizedBox(
-                      width: 16, height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2))
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
                   : const Text('Create'),
             ),
           ],
@@ -155,7 +167,7 @@ class _GroupsPageState extends State<GroupsPage>
 
   Future<void> _showJoinDialog() async {
     final codeCtrl = TextEditingController();
-    bool joining   = false;
+    bool joining = false;
 
     await showDialog(
       context: context,
@@ -194,8 +206,10 @@ class _GroupsPageState extends State<GroupsPage>
                       Navigator.pop(ctx);
 
                       if (r['success'] == true) {
-                        _snack('Joined "${r['group_name']}" successfully!',
-                            success: true);
+                        _snack(
+                          'Joined "${r['group_name']}" successfully!',
+                          success: true,
+                        );
                         _load();
                       } else {
                         _snack(r['error'] as String? ?? 'Failed to join group');
@@ -203,8 +217,10 @@ class _GroupsPageState extends State<GroupsPage>
                     },
               child: joining
                   ? const SizedBox(
-                      width: 16, height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2))
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
                   : const Text('Join'),
             ),
           ],
@@ -224,8 +240,10 @@ class _GroupsPageState extends State<GroupsPage>
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Group: $name',
-                style: const TextStyle(fontWeight: FontWeight.w600)),
+            Text(
+              'Group: $name',
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
             const SizedBox(height: 16),
             const Text('Share this invite code with friends:'),
             const SizedBox(height: 10),
@@ -254,9 +272,7 @@ class _GroupsPageState extends State<GroupsPage>
   void _openGroupDetail(int groupId) {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (_) => GroupDetailPage(groupId: groupId),
-      ),
+      MaterialPageRoute(builder: (_) => GroupDetailPage(groupId: groupId)),
     ).then((_) => _load());
   }
 
@@ -264,10 +280,12 @@ class _GroupsPageState extends State<GroupsPage>
 
   void _snack(String msg, {bool success = false}) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(msg),
-      backgroundColor: success ? Colors.green : Colors.red,
-    ));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg),
+        backgroundColor: success ? Colors.green : Colors.red,
+      ),
+    );
   }
 
   // ── Build ──────────────────────────────────────────────────────────────────
@@ -293,26 +311,21 @@ class _GroupsPageState extends State<GroupsPage>
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
-              ? _ErrorView(message: _error!, onRetry: _load)
-              : _groups.isEmpty
-                  ? _EmptyState(
-                      onCreate: _showCreateDialog,
-                      onJoin: _showJoinDialog,
-                    )
-                  : RefreshIndicator(
-                      onRefresh: _load,
-                      child: ListView.separated(
-                        padding: const EdgeInsets.all(12),
-                        itemCount: _groups.length,
-                        separatorBuilder: (context, index) => const SizedBox(height: 8),
-                        itemBuilder: (_, i) => _GroupCard(
-                          group: _groups[i],
-                          onTap: () => _openGroupDetail(
-                            _groups[i]['group_id'] as int,
-                          ),
-                        ),
-                      ),
-                    ),
+          ? _ErrorView(message: _error!, onRetry: _load)
+          : _groups.isEmpty
+          ? _EmptyState(onCreate: _showCreateDialog, onJoin: _showJoinDialog)
+          : RefreshIndicator(
+              onRefresh: _load,
+              child: ListView.separated(
+                padding: const EdgeInsets.all(12),
+                itemCount: _groups.length,
+                separatorBuilder: (context, index) => const SizedBox(height: 8),
+                itemBuilder: (_, i) => _GroupCard(
+                  group: _groups[i],
+                  onTap: () => _openGroupDetail(_groups[i]['group_id'] as int),
+                ),
+              ),
+            ),
       floatingActionButton: _groups.isNotEmpty
           ? FloatingActionButton.extended(
               onPressed: _showCreateDialog,
@@ -334,9 +347,9 @@ class _GroupCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme  = Theme.of(context);
-    final role   = group['my_role'] as String? ?? 'member';
-    final count  = group['member_count'] ?? 0;
+    final theme = Theme.of(context);
+    final role = group['my_role'] as String? ?? 'member';
+    final count = group['member_count'] ?? 0;
     final status = group['status'] as String? ?? 'Open';
 
     return Card(
@@ -361,14 +374,16 @@ class _GroupCard extends StatelessWidget {
                   children: [
                     Text(
                       group['group_name'] as String? ?? 'Group',
-                      style: theme.textTheme.titleMedium
-                          ?.copyWith(fontWeight: FontWeight.w600),
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       '$count member${count == 1 ? '' : 's'} · $status',
-                      style: theme.textTheme.bodySmall
-                          ?.copyWith(color: theme.colorScheme.outline),
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.outline,
+                      ),
                     ),
                     if ((group['invite_code'] as String?)?.isNotEmpty == true)
                       Padding(
@@ -389,8 +404,10 @@ class _GroupCard extends StatelessWidget {
                 children: [
                   if (role == 'organizer')
                     Chip(
-                      label: const Text('Organizer',
-                          style: TextStyle(fontSize: 10)),
+                      label: const Text(
+                        'Organizer',
+                        style: TextStyle(fontSize: 10),
+                      ),
                       padding: EdgeInsets.zero,
                       visualDensity: VisualDensity.compact,
                     ),
@@ -422,17 +439,20 @@ class _EmptyState extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.group_outlined, size: 72,
-                color: theme.colorScheme.outline),
+            Icon(
+              Icons.group_outlined,
+              size: 72,
+              color: theme.colorScheme.outline,
+            ),
             const SizedBox(height: 16),
-            Text('No groups yet',
-                style: theme.textTheme.headlineSmall),
+            Text('No groups yet', style: theme.textTheme.headlineSmall),
             const SizedBox(height: 8),
             Text(
               'Create a group and share the invite code\nwith your travel buddies.',
               textAlign: TextAlign.center,
-              style: theme.textTheme.bodyMedium
-                  ?.copyWith(color: theme.colorScheme.outline),
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.outline,
+              ),
             ),
             const SizedBox(height: 28),
             ElevatedButton.icon(
@@ -441,7 +461,10 @@ class _EmptyState extends StatelessWidget {
               label: const Text('Create a Group'),
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(
-                    horizontal: 24, vertical: 14)),
+                  horizontal: 24,
+                  vertical: 14,
+                ),
+              ),
             ),
             const SizedBox(height: 12),
             OutlinedButton.icon(
@@ -450,7 +473,10 @@ class _EmptyState extends StatelessWidget {
               label: const Text('Join with Invite Code'),
               style: OutlinedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(
-                    horizontal: 24, vertical: 14)),
+                  horizontal: 24,
+                  vertical: 14,
+                ),
+              ),
             ),
           ],
         ),
@@ -500,9 +526,9 @@ class _InviteCodeTile extends StatelessWidget {
     return GestureDetector(
       onTap: () {
         Clipboard.setData(ClipboardData(text: code));
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Invite code copied!')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Invite code copied!')));
       },
       child: Container(
         width: double.infinity,
@@ -511,7 +537,8 @@ class _InviteCodeTile extends StatelessWidget {
           color: theme.colorScheme.primaryContainer,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
-              color: theme.colorScheme.primary.withValues(alpha: 0.3)),
+            color: theme.colorScheme.primary.withValues(alpha: 0.3),
+          ),
         ),
         child: Row(
           children: [
@@ -558,13 +585,16 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
   }
 
   Future<void> _load() async {
-    setState(() { _loading = true; _error = null; });
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
     try {
       final r = await ApiService.getRequest('/groups/${widget.groupId}');
       if (!mounted) return;
       if (r['success'] == true) {
         setState(() {
-          _group   = Map<String, dynamic>.from(r['group'] as Map);
+          _group = Map<String, dynamic>.from(r['group'] as Map);
           _members = (r['members'] as List? ?? [])
               .map((e) => Map<String, dynamic>.from(e as Map))
               .toList();
@@ -572,12 +602,17 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
         });
       } else {
         setState(() {
-          _error   = r['error'] as String? ?? 'Failed to load group';
+          _error = r['error'] as String? ?? 'Failed to load group';
           _loading = false;
         });
       }
     } catch (e) {
-      if (mounted) setState(() { _error = e.toString(); _loading = false; });
+      if (mounted) {
+        setState(() {
+          _error = e.toString();
+          _loading = false;
+        });
+      }
     }
   }
 
@@ -589,14 +624,14 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
         content: const Text('Are you sure you want to leave this group?'),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel')),
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
           ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red),
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Leave',
-                  style: TextStyle(color: Colors.white))),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Leave', style: TextStyle(color: Colors.white)),
+          ),
         ],
       ),
     );
@@ -607,7 +642,8 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
     if (myId == null) return;
 
     final r = await ApiService.deleteRequest(
-        '/groups/${widget.groupId}/members/$myId');
+      '/groups/${widget.groupId}/members/$myId',
+    );
     if (!mounted) return;
     if (r['success'] == true) {
       Navigator.pop(context);
@@ -642,118 +678,122 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.error_outline, size: 48,
-                          color: Colors.grey),
-                      const SizedBox(height: 12),
-                      Text(_error!),
-                      const SizedBox(height: 16),
-                      ElevatedButton(
-                          onPressed: _load,
-                          child: const Text('Retry')),
-                    ],
-                  ),
-                )
-              : SingleChildScrollView(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // ── Group info card
-                      Card(
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12)),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.error_outline, size: 48, color: Colors.grey),
+                  const SizedBox(height: 12),
+                  Text(_error!),
+                  const SizedBox(height: 16),
+                  ElevatedButton(onPressed: _load, child: const Text('Retry')),
+                ],
+              ),
+            )
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // ── Group info card
+                  Card(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
                             children: [
-                              Row(
-                                children: [
-                                  CircleAvatar(
-                                    radius: 28,
-                                    backgroundColor:
-                                        theme.colorScheme.primaryContainer,
-                                    child: Icon(Icons.group,
-                                        color: theme.colorScheme.primary,
-                                        size: 28),
-                                  ),
-                                  const SizedBox(width: 14),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          _group!['group_name'] as String? ?? '',
-                                          style: theme.textTheme.titleLarge
-                                              ?.copyWith(
-                                                  fontWeight:
-                                                      FontWeight.bold),
-                                        ),
-                                        Text(
-                                          '${_members.length}/${_group!['max_members'] ?? '?'} members',
-                                          style: theme.textTheme.bodyMedium
-                                              ?.copyWith(
-                                                  color: theme
-                                                      .colorScheme.outline),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
+                              CircleAvatar(
+                                radius: 28,
+                                backgroundColor:
+                                    theme.colorScheme.primaryContainer,
+                                child: Icon(
+                                  Icons.group,
+                                  color: theme.colorScheme.primary,
+                                  size: 28,
+                                ),
                               ),
-                              if ((_group!['description'] as String?)
-                                      ?.isNotEmpty ==
-                                  true) ...[
-                                const Divider(height: 24),
-                                Text(_group!['description'] as String),
-                              ],
-                              const Divider(height: 24),
-                              // Invite code
-                              const Text('Invite Code',
-                                  style: TextStyle(
-                                      fontWeight: FontWeight.w600)),
-                              const SizedBox(height: 8),
-                              _InviteCodeTile(
-                                  code: _group!['invite_code'] as String? ?? ''),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Tap to copy — share with friends to join',
-                                style: theme.textTheme.bodySmall
-                                    ?.copyWith(
-                                        color: theme.colorScheme.outline),
+                              const SizedBox(width: 14),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      _group!['group_name'] as String? ?? '',
+                                      style: theme.textTheme.titleLarge
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                    ),
+                                    Text(
+                                      '${_members.length}/${_group!['max_members'] ?? '?'} members',
+                                      style: theme.textTheme.bodyMedium
+                                          ?.copyWith(
+                                            color: theme.colorScheme.outline,
+                                          ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ],
                           ),
-                        ),
+                          if ((_group!['description'] as String?)?.isNotEmpty ==
+                              true) ...[
+                            const Divider(height: 24),
+                            Text(_group!['description'] as String),
+                          ],
+                          const Divider(height: 24),
+                          // Invite code
+                          const Text(
+                            'Invite Code',
+                            style: TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                          const SizedBox(height: 8),
+                          _InviteCodeTile(
+                            code: _group!['invite_code'] as String? ?? '',
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Tap to copy — share with friends to join',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.outline,
+                            ),
+                          ),
+                        ],
                       ),
+                    ),
+                  ),
 
-                      // ── Members
-                      const SizedBox(height: 20),
-                      Text('Members',
-                          style: theme.textTheme.titleMedium
-                              ?.copyWith(fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 10),
-                      ..._members.map((m) => _MemberTile(member: m)),
+                  // ── Members
+                  const SizedBox(height: 20),
+                  Text(
+                    'Members',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  ..._members.map((m) => _MemberTile(member: m)),
 
-                      if (_members.isEmpty)
-                        Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 24),
-                          child: Center(
-                            child: Text('No members found.',
-                                style: theme.textTheme.bodyMedium
-                                    ?.copyWith(
-                                        color:
-                                            theme.colorScheme.outline)),
+                  if (_members.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 24),
+                      child: Center(
+                        child: Text(
+                          'No members found.',
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: theme.colorScheme.outline,
                           ),
                         ),
-                    ],
-                  ),
-                ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
     );
   }
 }
@@ -766,9 +806,9 @@ class _MemberTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme   = Theme.of(context);
-    final name    = member['full_name'] as String? ?? 'Unknown';
-    final role    = member['role'] as String? ?? 'member';
+    final theme = Theme.of(context);
+    final name = member['full_name'] as String? ?? 'Unknown';
+    final role = member['role'] as String? ?? 'member';
     final initials = name.isNotEmpty ? name[0].toUpperCase() : '?';
 
     return Card(
@@ -776,17 +816,19 @@ class _MemberTile extends StatelessWidget {
       child: ListTile(
         leading: CircleAvatar(
           backgroundColor: theme.colorScheme.secondaryContainer,
-          child: Text(initials,
-              style: TextStyle(
-                  color: theme.colorScheme.onSecondaryContainer,
-                  fontWeight: FontWeight.bold)),
+          child: Text(
+            initials,
+            style: TextStyle(
+              color: theme.colorScheme.onSecondaryContainer,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
         ),
         title: Text(name),
         subtitle: Text(member['email'] as String? ?? ''),
         trailing: role == 'organizer'
             ? Chip(
-                label: const Text('Organizer',
-                    style: TextStyle(fontSize: 11)),
+                label: const Text('Organizer', style: TextStyle(fontSize: 11)),
                 padding: EdgeInsets.zero,
                 visualDensity: VisualDensity.compact,
                 backgroundColor: theme.colorScheme.primaryContainer,

@@ -58,7 +58,9 @@ class _SafarAiChatPageState extends State<SafarAiChatPage> {
       });
 
       if (resp['ai_response'] == null) {
-        throw Exception(resp['message'] ?? resp['error'] ?? 'AI request failed');
+        throw Exception(
+          resp['message'] ?? resp['error'] ?? 'AI request failed',
+        );
       }
       final reply = resp['ai_response'] as String;
 

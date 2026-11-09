@@ -1,5 +1,5 @@
 import 'package:intl/intl.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'app_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:pdf/pdf.dart';
@@ -180,10 +180,7 @@ Future<void> exportTripToPDF(
                     height: 42,
                     decoration: pw.BoxDecoration(
                       shape: pw.BoxShape.circle,
-                      border: pw.Border.all(
-                        color: PdfColors.white,
-                        width: 1.5,
-                      ),
+                      border: pw.Border.all(color: PdfColors.white, width: 1.5),
                     ),
                     child: pw.ClipOval(
                       child: pw.Image(profileImage, fit: pw.BoxFit.cover),
@@ -196,11 +193,17 @@ Future<void> exportTripToPDF(
                     children: [
                       pw.Text(
                         'Travel Companion',
-                        style: pw.TextStyle(fontSize: 24, color: PdfColors.white),
+                        style: pw.TextStyle(
+                          fontSize: 24,
+                          color: PdfColors.white,
+                        ),
                       ),
                       pw.Text(
                         'Trip Summary & Itinerary',
-                        style: pw.TextStyle(fontSize: 14, color: PdfColors.white),
+                        style: pw.TextStyle(
+                          fontSize: 14,
+                          color: PdfColors.white,
+                        ),
                       ),
                     ],
                   ),
@@ -427,22 +430,24 @@ Future<void> exportTripToPDF(
   );
 }
 
-/// Builds user info for the PDF header by combining Firebase auth data with
-/// the MySQL user_id stored in SharedPreferences after login.
+/// Builds user info for the PDF header by combining Supabase auth data with
+/// the SafarSync user_id stored in SharedPreferences after login.
 Future<PdfExportUserInfo> _buildCurrentUserInfo() async {
-  final user = FirebaseAuth.instance.currentUser;
+  final user = AppAuth.currentUser;
   final prefs = await SharedPreferences.getInstance();
 
   final savedName = prefs.getString('user_full_name');
   final savedEmail = prefs.getString('user_email');
-  final mysqlId = prefs.getInt('user_id');
+  final appUserId = prefs.getInt('user_id');
 
   return PdfExportUserInfo(
     fullName: savedName?.trim().isNotEmpty == true
         ? savedName!.trim()
-        : (user?.displayName?.trim().isNotEmpty == true ? user!.displayName!.trim() : 'Traveller'),
+        : (user?.displayName?.trim().isNotEmpty == true
+              ? user!.displayName!.trim()
+              : 'Traveller'),
     email: savedEmail?.isNotEmpty == true ? savedEmail! : (user?.email ?? ''),
-    userId: mysqlId != null ? 'ID-$mysqlId' : (user?.uid ?? 'unknown-user'),
+    userId: appUserId != null ? 'ID-$appUserId' : (user?.uid ?? 'unknown-user'),
     profileImageUrl: user?.photoURL,
   );
 }

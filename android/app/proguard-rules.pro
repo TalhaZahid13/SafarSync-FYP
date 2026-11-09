@@ -6,19 +6,11 @@
 -keep class io.flutter.** { *; }
 -keep class io.flutter.plugins.** { *; }
 
-# Firebase
--keep class com.google.firebase.** { *; }
+# Google Play services (Google Sign-In)
 -keep class com.google.android.gms.** { *; }
--dontwarn com.google.firebase.**
 -dontwarn com.google.android.gms.**
 
-# Socket.IO
--keep class io.socket.** { *; }
--keep class okhttp3.** { *; }
--dontwarn io.socket.**
--dontwarn okhttp3.**
-
-# Gson (used by some Firebase/Socket.IO libs)
+# Gson (used by some plugins)
 -keepattributes Signature
 -keepattributes *Annotation*
 -keep class sun.misc.Unsafe { *; }

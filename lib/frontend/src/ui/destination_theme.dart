@@ -25,8 +25,8 @@ class DestinationTheme {
   final String emoji;
   final Color primary;
   final Color accent;
-  final List<Color> heroDark;    // dark-mode hero/header
-  final List<Color> heroLight;   // light-mode hero/header
+  final List<Color> heroDark; // dark-mode hero/header
+  final List<Color> heroLight; // light-mode hero/header
   final List<Color> navGradient; // bottom nav active gradient
 
   const DestinationTheme({
@@ -41,22 +41,22 @@ class DestinationTheme {
   });
 
   LinearGradient get heroGradientDark => LinearGradient(
-        colors: heroDark,
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      );
+    colors: heroDark,
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
 
   LinearGradient get heroGradientLight => LinearGradient(
-        colors: heroLight,
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      );
+    colors: heroLight,
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
 
   LinearGradient get navActiveGradient => LinearGradient(
-        colors: navGradient,
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      );
+    colors: navGradient,
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
 
   // ── Predefined themes ─────────────────────────────────────────────────────
 
@@ -66,7 +66,7 @@ class DestinationTheme {
     emoji: '✈️',
     primary: Color(0xFF2CAFBC),
     accent: Color(0xFFFDB913),
-    heroDark:  [Color(0xFF0D1B2A), Color(0xFF1B3A4C), Color(0xFF1B5A6E)],
+    heroDark: [Color(0xFF0D1B2A), Color(0xFF1B3A4C), Color(0xFF1B5A6E)],
     heroLight: [Color(0xFFF5F6FA), Color(0xFFEFF9FA), Color(0xFFE3F5F7)],
     navGradient: [Color(0xFF9A9E9D), Color(0xFF2CAFBC)],
   );
@@ -77,7 +77,7 @@ class DestinationTheme {
     emoji: '❄️',
     primary: Color(0xFF7EC8E3),
     accent: Color(0xFFB8E0FF),
-    heroDark:  [Color(0xFF1A2A3A), Color(0xFF2A3D52), Color(0xFF4A7A9B)],
+    heroDark: [Color(0xFF1A2A3A), Color(0xFF2A3D52), Color(0xFF4A7A9B)],
     heroLight: [Color(0xFFF0F8FF), Color(0xFFDCEEFA), Color(0xFFC8DEFF)],
     navGradient: [Color(0xFF4A7A9B), Color(0xFF7EC8E3)],
   );
@@ -88,7 +88,7 @@ class DestinationTheme {
     emoji: '🏜️',
     primary: Color(0xFFD4955A),
     accent: Color(0xFFF0C070),
-    heroDark:  [Color(0xFF2D1B0E), Color(0xFF5C3317), Color(0xFF8B5E3C)],
+    heroDark: [Color(0xFF2D1B0E), Color(0xFF5C3317), Color(0xFF8B5E3C)],
     heroLight: [Color(0xFFFFF8F0), Color(0xFFFFE8D0), Color(0xFFF5D0A0)],
     navGradient: [Color(0xFF8B5E3C), Color(0xFFD4955A)],
   );
@@ -99,7 +99,7 @@ class DestinationTheme {
     emoji: '🌊',
     primary: Color(0xFF00B4D8),
     accent: Color(0xFF90E0EF),
-    heroDark:  [Color(0xFF03045E), Color(0xFF0077B6), Color(0xFF00B4D8)],
+    heroDark: [Color(0xFF03045E), Color(0xFF0077B6), Color(0xFF00B4D8)],
     heroLight: [Color(0xFFCAF0F8), Color(0xFF90E0EF), Color(0xFF48CAE4)],
     navGradient: [Color(0xFF0077B6), Color(0xFF00B4D8)],
   );
@@ -110,7 +110,7 @@ class DestinationTheme {
     emoji: '⛰️',
     primary: Color(0xFF4A7C59),
     accent: Color(0xFF8BC34A),
-    heroDark:  [Color(0xFF1A2E22), Color(0xFF2D4A35), Color(0xFF4A7C59)],
+    heroDark: [Color(0xFF1A2E22), Color(0xFF2D4A35), Color(0xFF4A7C59)],
     heroLight: [Color(0xFFE8F5E9), Color(0xFFC8E6C9), Color(0xFFA5D6A7)],
     navGradient: [Color(0xFF2D4A35), Color(0xFF4A7C59)],
   );
@@ -121,7 +121,7 @@ class DestinationTheme {
     emoji: '🌲',
     primary: Color(0xFF2E7D32),
     accent: Color(0xFF66BB6A),
-    heroDark:  [Color(0xFF0D1F10), Color(0xFF1B3A1E), Color(0xFF2E7D32)],
+    heroDark: [Color(0xFF0D1F10), Color(0xFF1B3A1E), Color(0xFF2E7D32)],
     heroLight: [Color(0xFFE8F5E9), Color(0xFFC8E6C9), Color(0xFF81C784)],
     navGradient: [Color(0xFF1B3A1E), Color(0xFF2E7D32)],
   );
@@ -132,24 +132,37 @@ class DestinationTheme {
     emoji: '🏙️',
     primary: Color(0xFF546E7A),
     accent: Color(0xFF78909C),
-    heroDark:  [Color(0xFF1A1A2E), Color(0xFF16213E), Color(0xFF0F3460)],
+    heroDark: [Color(0xFF1A1A2E), Color(0xFF16213E), Color(0xFF0F3460)],
     heroLight: [Color(0xFFECEFF1), Color(0xFFCFD8DC), Color(0xFFB0BEC5)],
     navGradient: [Color(0xFF16213E), Color(0xFF546E7A)],
   );
 
   static const List<DestinationTheme> all = [
-    kDefault, kSnow, kDesert, kBeach, kMountain, kForest, kUrban,
+    kDefault,
+    kSnow,
+    kDesert,
+    kBeach,
+    kMountain,
+    kForest,
+    kUrban,
   ];
 
   static DestinationTheme fromType(DestinationThemeType t) {
     switch (t) {
-      case DestinationThemeType.snow:    return kSnow;
-      case DestinationThemeType.desert:  return kDesert;
-      case DestinationThemeType.beach:   return kBeach;
-      case DestinationThemeType.mountain: return kMountain;
-      case DestinationThemeType.forest:  return kForest;
-      case DestinationThemeType.urban:   return kUrban;
-      case DestinationThemeType.defaultTheme: return kDefault;
+      case DestinationThemeType.snow:
+        return kSnow;
+      case DestinationThemeType.desert:
+        return kDesert;
+      case DestinationThemeType.beach:
+        return kBeach;
+      case DestinationThemeType.mountain:
+        return kMountain;
+      case DestinationThemeType.forest:
+        return kForest;
+      case DestinationThemeType.urban:
+        return kUrban;
+      case DestinationThemeType.defaultTheme:
+        return kDefault;
     }
   }
 
@@ -167,42 +180,129 @@ DestinationThemeType typeFromDestination(String name, String? category) {
   final n = name.toLowerCase();
   final c = (category ?? '').toLowerCase();
 
-  if (_m(n, ['skardu', 'nathiagali', 'malam jabba', 'kalam', 'snow',
-      'winter', 'glacier', 'siachin', 'frozen', 'naltar'])) {
+  if (_m(n, [
+    'skardu',
+    'nathiagali',
+    'malam jabba',
+    'kalam',
+    'snow',
+    'winter',
+    'glacier',
+    'siachin',
+    'frozen',
+    'naltar',
+  ])) {
     return DestinationThemeType.snow;
   }
-  if (_m(n, ['beach', 'clifton', 'maldives', 'gwadar', 'sea view',
-      'ocean', 'coastal', 'island', 'bay', 'cape', 'makran', 'ormara'])) {
+  if (_m(n, [
+    'beach',
+    'clifton',
+    'maldives',
+    'gwadar',
+    'sea view',
+    'ocean',
+    'coastal',
+    'island',
+    'bay',
+    'cape',
+    'makran',
+    'ormara',
+  ])) {
     return DestinationThemeType.beach;
   }
-  if (_m(n, ['thar', 'desert', 'dubai', 'cholistan', 'sand dune',
-      'dune', 'arid', 'rajasthan', 'sinai', 'sahara', 'barren'])) {
+  if (_m(n, [
+    'thar',
+    'desert',
+    'dubai',
+    'cholistan',
+    'sand dune',
+    'dune',
+    'arid',
+    'rajasthan',
+    'sinai',
+    'sahara',
+    'barren',
+  ])) {
     return DestinationThemeType.desert;
   }
-  if (_m(n, ['forest', 'jungle', 'amazon', 'deosai', 'mangrove',
-      'rainforest', 'woodland', 'timber', 'grove'])) {
+  if (_m(n, [
+    'forest',
+    'jungle',
+    'amazon',
+    'deosai',
+    'mangrove',
+    'rainforest',
+    'woodland',
+    'timber',
+    'grove',
+  ])) {
     return DestinationThemeType.forest;
   }
-  if (_m(n, ['lahore', 'karachi', 'islamabad', 'rawalpindi', 'city',
-      'downtown', 'metro', 'faisalabad', 'multan', 'peshawar',
-      'hyderabad', 'quetta', 'sialkot', 'gujranwala', 'urban'])) {
+  if (_m(n, [
+    'lahore',
+    'karachi',
+    'islamabad',
+    'rawalpindi',
+    'city',
+    'downtown',
+    'metro',
+    'faisalabad',
+    'multan',
+    'peshawar',
+    'hyderabad',
+    'quetta',
+    'sialkot',
+    'gujranwala',
+    'urban',
+  ])) {
     return DestinationThemeType.urban;
   }
-  if (_m(n, ['hunza', 'naran', 'murree', 'kaghan', 'swat', 'valley',
-      'mountain', 'hills', 'peak', 'summit', 'pass', 'k2', 'trek',
-      'fairy meadows', 'attabad', 'khyber', 'margalla', 'karakoram',
-      'hindukush', 'himalaya', 'gilgit', 'baltistan', 'chitral',
-      'rohtas', 'fort', 'lake', 'nanga parbat', 'babusar'])) {
+  if (_m(n, [
+    'hunza',
+    'naran',
+    'murree',
+    'kaghan',
+    'swat',
+    'valley',
+    'mountain',
+    'hills',
+    'peak',
+    'summit',
+    'pass',
+    'k2',
+    'trek',
+    'fairy meadows',
+    'attabad',
+    'khyber',
+    'margalla',
+    'karakoram',
+    'hindukush',
+    'himalaya',
+    'gilgit',
+    'baltistan',
+    'chitral',
+    'rohtas',
+    'fort',
+    'lake',
+    'nanga parbat',
+    'babusar',
+  ])) {
     return DestinationThemeType.mountain;
   }
 
   switch (c) {
-    case 'nature':    return DestinationThemeType.mountain;
-    case 'adventure': return DestinationThemeType.mountain;
-    case 'cultural':  return DestinationThemeType.urban;
-    case 'food':      return DestinationThemeType.urban;
-    case 'history':   return DestinationThemeType.urban;
-    default:          return DestinationThemeType.defaultTheme;
+    case 'nature':
+      return DestinationThemeType.mountain;
+    case 'adventure':
+      return DestinationThemeType.mountain;
+    case 'cultural':
+      return DestinationThemeType.urban;
+    case 'food':
+      return DestinationThemeType.urban;
+    case 'history':
+      return DestinationThemeType.urban;
+    default:
+      return DestinationThemeType.defaultTheme;
   }
 }
 
@@ -216,8 +316,8 @@ bool _m(String text, List<String> kw) => kw.any((k) => text.contains(k));
 
 // ─── Provider ─────────────────────────────────────────────────────────────────
 
-const _kPrefKey    = 'destination_theme_pref';
-const _kManualKey  = 'destination_theme_manual';
+const _kPrefKey = 'destination_theme_pref';
+const _kManualKey = 'destination_theme_manual';
 
 class DestinationThemeProvider extends ChangeNotifier {
   DestinationThemeType _type = DestinationThemeType.defaultTheme;
@@ -262,12 +362,19 @@ class DestinationThemeProvider extends ChangeNotifier {
   Future<void> checkActiveBooking({int? weatherCode}) async {
     if (_isManual) return;
     try {
-      final r = await ApiService.getRequest('/bookings?status=confirmed&limit=1');
+      final r = await ApiService.getRequest(
+        '/bookings?status=confirmed&limit=1',
+      );
       final bookings = (r['bookings'] as List?) ?? [];
       if (bookings.isEmpty) {
-        final r2 = await ApiService.getRequest('/bookings?status=upcoming&limit=1');
+        final r2 = await ApiService.getRequest(
+          '/bookings?status=upcoming&limit=1',
+        );
         final upcoming = (r2['bookings'] as List?) ?? [];
-        if (upcoming.isEmpty) { _setAuto(DestinationThemeType.defaultTheme); return; }
+        if (upcoming.isEmpty) {
+          _setAuto(DestinationThemeType.defaultTheme);
+          return;
+        }
         _applyBooking(upcoming.first as Map<String, dynamic>, weatherCode);
         return;
       }
@@ -277,7 +384,7 @@ class DestinationThemeProvider extends ChangeNotifier {
 
   void _applyBooking(Map<String, dynamic> b, int? weatherCode) {
     final name = (b['destination_name'] ?? b['name'] ?? '') as String;
-    final cat  = (b['category'] ?? '') as String;
+    final cat = (b['category'] ?? '') as String;
     var t = typeFromDestination(name, cat);
     if (weatherCode != null) t = applyWeatherModifier(t, weatherCode);
     _setAuto(t);
@@ -320,25 +427,39 @@ class DestinationThemeProvider extends ChangeNotifier {
 
   static String _toStr(DestinationThemeType t) {
     switch (t) {
-      case DestinationThemeType.snow:     return 'snow';
-      case DestinationThemeType.desert:   return 'desert';
-      case DestinationThemeType.beach:    return 'beach';
-      case DestinationThemeType.mountain: return 'mountain';
-      case DestinationThemeType.forest:   return 'forest';
-      case DestinationThemeType.urban:    return 'urban';
-      case DestinationThemeType.defaultTheme: return 'default';
+      case DestinationThemeType.snow:
+        return 'snow';
+      case DestinationThemeType.desert:
+        return 'desert';
+      case DestinationThemeType.beach:
+        return 'beach';
+      case DestinationThemeType.mountain:
+        return 'mountain';
+      case DestinationThemeType.forest:
+        return 'forest';
+      case DestinationThemeType.urban:
+        return 'urban';
+      case DestinationThemeType.defaultTheme:
+        return 'default';
     }
   }
 
   static DestinationThemeType _fromStr(String s) {
     switch (s) {
-      case 'snow':     return DestinationThemeType.snow;
-      case 'desert':   return DestinationThemeType.desert;
-      case 'beach':    return DestinationThemeType.beach;
-      case 'mountain': return DestinationThemeType.mountain;
-      case 'forest':   return DestinationThemeType.forest;
-      case 'urban':    return DestinationThemeType.urban;
-      default:         return DestinationThemeType.defaultTheme;
+      case 'snow':
+        return DestinationThemeType.snow;
+      case 'desert':
+        return DestinationThemeType.desert;
+      case 'beach':
+        return DestinationThemeType.beach;
+      case 'mountain':
+        return DestinationThemeType.mountain;
+      case 'forest':
+        return DestinationThemeType.forest;
+      case 'urban':
+        return DestinationThemeType.urban;
+      default:
+        return DestinationThemeType.defaultTheme;
     }
   }
 }
