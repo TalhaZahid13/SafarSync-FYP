@@ -68,7 +68,6 @@ class AppTheme {
   static const Color pink = Color(0xFFDCEEF0);
   static const Color sky = Color(0xFF2CAFBC);
   static const Color purple = Color(0xFF404745);
-  static const Color Rose = Color(0xFF2CAFBC);
 
   // ✅ Weather Card Colors (bright scheme)
   static const Color weatherCardStart = Color(0xFFEAEBEC);
@@ -96,10 +95,10 @@ class AppTheme {
   static BoxDecoration weatherCardDecoration = BoxDecoration(
     gradient: weatherCardGradient,
     borderRadius: BorderRadius.circular(20),
-    border: Border.all(color: weatherBorder.withValues(alpha:0.35), width: 1),
+    border: Border.all(color: weatherBorder.withValues(alpha: 0.35), width: 1),
     boxShadow: [
       BoxShadow(
-        color: weatherBorder.withValues(alpha:0.15),
+        color: weatherBorder.withValues(alpha: 0.15),
         blurRadius: 20,
         offset: const Offset(0, 10),
       ),
@@ -184,7 +183,10 @@ class AppTheme {
         surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
-          side: BorderSide(color: veryLightGray.withValues(alpha:0.5), width: 1),
+          side: BorderSide(
+            color: veryLightGray.withValues(alpha: 0.5),
+            width: 1,
+          ),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(

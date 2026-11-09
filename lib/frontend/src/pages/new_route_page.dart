@@ -122,8 +122,9 @@ class _NewRoutePageState extends State<NewRoutePage> {
           content: const Text('Could not get current location'),
           backgroundColor: Colors.red.shade600,
           behavior: SnackBarBehavior.floating,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
       );
     } finally {
@@ -145,8 +146,9 @@ class _NewRoutePageState extends State<NewRoutePage> {
           content: const Text('Please select a travel date'),
           backgroundColor: Colors.red.shade600,
           behavior: SnackBarBehavior.floating,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
       );
       return;
@@ -205,11 +207,13 @@ class _NewRoutePageState extends State<NewRoutePage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text(
-              'Could not find location — check spelling and try again'),
+            'Could not find location — check spelling and try again',
+          ),
           backgroundColor: Colors.red.shade600,
           behavior: SnackBarBehavior.floating,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
       );
     } finally {
@@ -225,8 +229,11 @@ class _NewRoutePageState extends State<NewRoutePage> {
         backgroundColor: AppTheme.pureWhite,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new,
-              size: 18, color: AppTheme.darkSlate),
+          icon: const Icon(
+            Icons.arrow_back_ios_new,
+            size: 18,
+            color: AppTheme.darkSlate,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
@@ -265,8 +272,11 @@ class _NewRoutePageState extends State<NewRoutePage> {
                       color: Colors.white.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(14),
                     ),
-                    child: const Icon(Icons.route,
-                        color: Colors.white, size: 28),
+                    child: const Icon(
+                      Icons.route,
+                      color: Colors.white,
+                      size: 28,
+                    ),
                   ),
                   const SizedBox(width: 14),
                   const Expanded(
@@ -284,8 +294,7 @@ class _NewRoutePageState extends State<NewRoutePage> {
                         SizedBox(height: 4),
                         Text(
                           'Enter details to activate navigation',
-                          style: TextStyle(
-                              color: Colors.white70, fontSize: 12),
+                          style: TextStyle(color: Colors.white70, fontSize: 12),
                         ),
                       ],
                     ),
@@ -331,7 +340,8 @@ class _NewRoutePageState extends State<NewRoutePage> {
                         child: TextFormField(
                           controller: _fromCtrl,
                           decoration: _inlineInputDecoration(
-                              'Starting location — city or address'),
+                            'Starting location — city or address',
+                          ),
                           validator: (v) => (v?.trim().isEmpty ?? true)
                               ? 'Enter starting location'
                               : null,
@@ -348,13 +358,18 @@ class _NewRoutePageState extends State<NewRoutePage> {
                               ),
                             )
                           : IconButton(
-                              icon: const Icon(Icons.my_location,
-                                  size: 20, color: AppTheme.turquoise),
+                              icon: const Icon(
+                                Icons.my_location,
+                                size: 20,
+                                color: AppTheme.turquoise,
+                              ),
                               tooltip: 'Use current location',
                               onPressed: _useCurrentLocation,
                               padding: EdgeInsets.zero,
                               constraints: const BoxConstraints(
-                                  minWidth: 32, minHeight: 32),
+                                minWidth: 32,
+                                minHeight: 32,
+                              ),
                             ),
                     ],
                   ),
@@ -362,12 +377,7 @@ class _NewRoutePageState extends State<NewRoutePage> {
                   // Dotted connector
                   Padding(
                     padding: const EdgeInsets.only(left: 9),
-                    child: Row(
-                      children: [
-                        _dottedLine(),
-                        const Spacer(),
-                      ],
-                    ),
+                    child: Row(children: [_dottedLine(), const Spacer()]),
                   ),
 
                   // To field
@@ -379,7 +389,8 @@ class _NewRoutePageState extends State<NewRoutePage> {
                         child: TextFormField(
                           controller: _toCtrl,
                           decoration: _inlineInputDecoration(
-                              'Destination — city or address'),
+                            'Destination — city or address',
+                          ),
                           validator: (v) => (v?.trim().isEmpty ?? true)
                               ? 'Enter destination'
                               : null,
@@ -399,7 +410,9 @@ class _NewRoutePageState extends State<NewRoutePage> {
               onTap: _pickDate,
               child: Container(
                 padding: const EdgeInsets.symmetric(
-                    horizontal: 16, vertical: 16),
+                  horizontal: 16,
+                  vertical: 16,
+                ),
                 decoration: BoxDecoration(
                   color: AppTheme.offWhite,
                   borderRadius: BorderRadius.circular(14),
@@ -421,8 +434,7 @@ class _NewRoutePageState extends State<NewRoutePage> {
                     const SizedBox(width: 12),
                     Text(
                       _travelDate != null
-                          ? DateFormat('EEEE, d MMMM yyyy')
-                              .format(_travelDate!)
+                          ? DateFormat('EEEE, d MMMM yyyy').format(_travelDate!)
                           : 'Select travel date',
                       style: TextStyle(
                         color: _travelDate != null
@@ -432,8 +444,11 @@ class _NewRoutePageState extends State<NewRoutePage> {
                       ),
                     ),
                     const Spacer(),
-                    const Icon(Icons.chevron_right,
-                        color: AppTheme.mediumGray, size: 20),
+                    const Icon(
+                      Icons.chevron_right,
+                      color: AppTheme.mediumGray,
+                      size: 20,
+                    ),
                   ],
                 ),
               ),
@@ -447,12 +462,15 @@ class _NewRoutePageState extends State<NewRoutePage> {
               const SizedBox(height: 8),
               Container(
                 padding: const EdgeInsets.symmetric(
-                    horizontal: 16, vertical: 14),
+                  horizontal: 16,
+                  vertical: 14,
+                ),
                 decoration: BoxDecoration(
                   color: AppTheme.turquoise.withValues(alpha: 0.07),
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
-                      color: AppTheme.turquoise.withValues(alpha: 0.25)),
+                    color: AppTheme.turquoise.withValues(alpha: 0.25),
+                  ),
                 ),
                 child: Row(
                   children: [
@@ -469,8 +487,11 @@ class _NewRoutePageState extends State<NewRoutePage> {
                     ),
                     const Padding(
                       padding: EdgeInsets.symmetric(horizontal: 8),
-                      child: Icon(Icons.arrow_forward,
-                          color: AppTheme.turquoise, size: 18),
+                      child: Icon(
+                        Icons.arrow_forward,
+                        color: AppTheme.turquoise,
+                        size: 18,
+                      ),
                     ),
                     Expanded(
                       child: Text(
@@ -494,7 +515,11 @@ class _NewRoutePageState extends State<NewRoutePage> {
       // Activate Route button pinned to bottom
       bottomNavigationBar: Padding(
         padding: EdgeInsets.fromLTRB(
-            20, 12, 20, MediaQuery.of(context).padding.bottom + 16),
+          20,
+          12,
+          20,
+          MediaQuery.of(context).padding.bottom + 16,
+        ),
         child: SizedBox(
           width: double.infinity,
           height: 56,
@@ -506,8 +531,7 @@ class _NewRoutePageState extends State<NewRoutePage> {
                   : AppTheme.mediumGray.withValues(alpha: 0.4),
               foregroundColor: Colors.white,
               elevation: _canActivate ? 4 : 0,
-              shadowColor:
-                  AppTheme.turquoise.withValues(alpha: 0.4),
+              shadowColor: AppTheme.turquoise.withValues(alpha: 0.4),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
               ),
@@ -517,7 +541,9 @@ class _NewRoutePageState extends State<NewRoutePage> {
                     width: 24,
                     height: 24,
                     child: CircularProgressIndicator(
-                        strokeWidth: 2.5, color: Colors.white),
+                      strokeWidth: 2.5,
+                      color: Colors.white,
+                    ),
                   )
                 : Row(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -552,17 +578,17 @@ class _NewRoutePageState extends State<NewRoutePage> {
     );
   }
 
-  InputDecoration _inputDecoration(
-      {required String hint, required IconData icon}) {
+  InputDecoration _inputDecoration({
+    required String hint,
+    required IconData icon,
+  }) {
     return InputDecoration(
       hintText: hint,
-      hintStyle:
-          const TextStyle(color: AppTheme.mediumGray, fontSize: 14),
+      hintStyle: const TextStyle(color: AppTheme.mediumGray, fontSize: 14),
       prefixIcon: Icon(icon, size: 20, color: AppTheme.turquoise),
       filled: true,
       fillColor: AppTheme.offWhite,
-      contentPadding:
-          const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
         borderSide: const BorderSide(color: AppTheme.veryLightGray),
@@ -573,8 +599,7 @@ class _NewRoutePageState extends State<NewRoutePage> {
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide:
-            const BorderSide(color: AppTheme.turquoise, width: 1.5),
+        borderSide: const BorderSide(color: AppTheme.turquoise, width: 1.5),
       ),
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
@@ -590,8 +615,7 @@ class _NewRoutePageState extends State<NewRoutePage> {
   InputDecoration _inlineInputDecoration(String hint) {
     return InputDecoration(
       hintText: hint,
-      hintStyle:
-          const TextStyle(color: AppTheme.mediumGray, fontSize: 13),
+      hintStyle: const TextStyle(color: AppTheme.mediumGray, fontSize: 13),
       isDense: true,
       border: InputBorder.none,
       contentPadding: const EdgeInsets.symmetric(vertical: 4),

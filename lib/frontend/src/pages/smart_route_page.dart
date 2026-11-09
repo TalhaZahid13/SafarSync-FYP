@@ -82,7 +82,11 @@ class _SmartRoutePageState extends State<SmartRoutePage> {
       ),
       builder: (ctx) => Padding(
         padding: EdgeInsets.fromLTRB(
-            20, 16, 20, MediaQuery.of(ctx).padding.bottom + 20),
+          20,
+          16,
+          20,
+          MediaQuery.of(ctx).padding.bottom + 20,
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -102,9 +106,10 @@ class _SmartRoutePageState extends State<SmartRoutePage> {
             const Text(
               'Choose starting point',
               style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 17,
-                  fontWeight: FontWeight.bold),
+                color: Colors.white,
+                fontSize: 17,
+                fontWeight: FontWeight.bold,
+              ),
             ),
             const SizedBox(height: 16),
             _PickerOption(
@@ -176,17 +181,23 @@ class _SmartRoutePageState extends State<SmartRoutePage> {
         timeLimit: const Duration(seconds: 15),
       );
       final exactCoords = LatLng(pos.latitude, pos.longitude);
-      String label = '${pos.latitude.toStringAsFixed(5)}, ${pos.longitude.toStringAsFixed(5)}';
+      String label =
+          '${pos.latitude.toStringAsFixed(5)}, ${pos.longitude.toStringAsFixed(5)}';
       try {
-        final marks =
-            await placemarkFromCoordinates(pos.latitude, pos.longitude);
+        final marks = await placemarkFromCoordinates(
+          pos.latitude,
+          pos.longitude,
+        );
         if (marks.isNotEmpty) {
           final p = marks.first;
           final city = p.locality?.isNotEmpty == true
               ? p.locality!
               : (p.subAdministrativeArea ?? '');
           final country = p.country ?? '';
-          final readable = [city, country].where((s) => s.isNotEmpty).join(', ');
+          final readable = [
+            city,
+            country,
+          ].where((s) => s.isNotEmpty).join(', ');
           if (readable.isNotEmpty) label = readable;
         }
       } catch (_) {}
@@ -209,13 +220,10 @@ class _SmartRoutePageState extends State<SmartRoutePage> {
     }
   }
 
-  Future<void> _pickFromMap(
-      TextEditingController ctrl, String title) async {
+  Future<void> _pickFromMap(TextEditingController ctrl, String title) async {
     final result = await Navigator.push<MapPickerResult>(
       context,
-      MaterialPageRoute(
-        builder: (_) => MapLocationPickerPage(title: title),
-      ),
+      MaterialPageRoute(builder: (_) => MapLocationPickerPage(title: title)),
     );
     if (result != null && mounted) {
       // Store exact map-picked coords — no re-geocoding needed
@@ -224,8 +232,7 @@ class _SmartRoutePageState extends State<SmartRoutePage> {
       } else {
         _setTo(result.address, result.latlng);
       }
-      if (_fromCtrl.text.trim().isNotEmpty &&
-          _toCtrl.text.trim().isNotEmpty) {
+      if (_fromCtrl.text.trim().isNotEmpty && _toCtrl.text.trim().isNotEmpty) {
         _planRoute();
       }
     }
@@ -247,8 +254,9 @@ class _SmartRoutePageState extends State<SmartRoutePage> {
           content: const Text('Please enter a destination'),
           backgroundColor: Colors.red.shade600,
           behavior: SnackBarBehavior.floating,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
       );
       return;
@@ -310,10 +318,14 @@ class _SmartRoutePageState extends State<SmartRoutePage> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Could not find location — check spelling and try again'),
+          content: const Text(
+            'Could not find location — check spelling and try again',
+          ),
           backgroundColor: Colors.red.shade600,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
       );
     } finally {
@@ -360,19 +372,40 @@ class _SmartRoutePageState extends State<SmartRoutePage> {
                       const SizedBox(height: 16),
                       for (final entry in [
                         ('Islamabad', 'Murree', '60 km', '1h 30m', 'Today'),
-                        ('Lahore', 'Nathiagali', '180 km', '3h 15m', 'Yesterday'),
-                        ('Karachi', 'Hyderabad', '163 km', '2h 45m', '3 days ago'),
+                        (
+                          'Lahore',
+                          'Nathiagali',
+                          '180 km',
+                          '3h 15m',
+                          'Yesterday',
+                        ),
+                        (
+                          'Karachi',
+                          'Hyderabad',
+                          '163 km',
+                          '2h 45m',
+                          '3 days ago',
+                        ),
                       ])
                         ListTile(
                           contentPadding: EdgeInsets.zero,
-                          leading: const Icon(Icons.route, color: Colors.white54),
+                          leading: const Icon(
+                            Icons.route,
+                            color: Colors.white54,
+                          ),
                           title: Text(
                             '${entry.$1} → ${entry.$2}',
-                            style: const TextStyle(color: Colors.white, fontSize: 14),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 14,
+                            ),
                           ),
                           subtitle: Text(
                             '${entry.$3} · ${entry.$4} · ${entry.$5}',
-                            style: const TextStyle(color: Colors.white54, fontSize: 12),
+                            style: const TextStyle(
+                              color: Colors.white54,
+                              fontSize: 12,
+                            ),
                           ),
                         ),
                     ],
@@ -407,7 +440,8 @@ class _SmartRoutePageState extends State<SmartRoutePage> {
                   final startLng = asDouble(r['start_lng']);
                   if (endLat == null || endLng == null) return;
                   final vehicle = VehicleTypeX.fromName(
-                      r['vehicle_type'] as String?);
+                    r['vehicle_type'] as String?,
+                  );
                   await Navigator.push(
                     context,
                     MaterialPageRoute(
@@ -440,7 +474,9 @@ class _SmartRoutePageState extends State<SmartRoutePage> {
               child: Container(
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(
-                    horizontal: 20, vertical: 14),
+                  horizontal: 20,
+                  vertical: 14,
+                ),
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
                     colors: [AppTheme.turquoise, Color(0xFF1B8E99)],
@@ -470,8 +506,11 @@ class _SmartRoutePageState extends State<SmartRoutePage> {
                       ),
                     ),
                     Spacer(),
-                    Icon(Icons.arrow_forward_ios,
-                        color: Colors.white70, size: 14),
+                    Icon(
+                      Icons.arrow_forward_ios,
+                      color: Colors.white70,
+                      size: 14,
+                    ),
                   ],
                 ),
               ),
@@ -565,10 +604,14 @@ class _RecentRouteCard extends StatelessWidget {
         context,
         MaterialPageRoute(
           builder: (_) => LiveMapPage(
-            routeOrigin:
-                LatLng(fromLocs.first.latitude, fromLocs.first.longitude),
-            routeDestination:
-                LatLng(toLocs.first.latitude, toLocs.first.longitude),
+            routeOrigin: LatLng(
+              fromLocs.first.latitude,
+              fromLocs.first.longitude,
+            ),
+            routeDestination: LatLng(
+              toLocs.first.latitude,
+              toLocs.first.longitude,
+            ),
             destinationName: to,
           ),
         ),
@@ -623,8 +666,7 @@ class _RecentRouteCard extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   '$distance • $duration • $date',
-                  style: const TextStyle(
-                      color: Colors.white54, fontSize: 12),
+                  style: const TextStyle(color: Colors.white54, fontSize: 12),
                 ),
               ],
             ),
@@ -685,20 +727,23 @@ class _PickerOption extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title,
-                      style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 14)),
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                    ),
+                  ),
                   const SizedBox(height: 2),
-                  Text(subtitle,
-                      style: const TextStyle(
-                          color: Colors.white54, fontSize: 12)),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(color: Colors.white54, fontSize: 12),
+                  ),
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right,
-                color: Colors.white38, size: 20),
+            const Icon(Icons.chevron_right, color: Colors.white38, size: 20),
           ],
         ),
       ),
@@ -764,8 +809,11 @@ class _ActiveRouteBanner extends StatelessWidget {
                   color: Colors.white.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(Icons.navigation,
-                    color: Colors.white, size: 20),
+                child: const Icon(
+                  Icons.navigation,
+                  color: Colors.white,
+                  size: 20,
+                ),
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -785,14 +833,19 @@ class _ActiveRouteBanner extends StatelessWidget {
                     Text(
                       timeLabel,
                       style: const TextStyle(
-                          color: Colors.white70, fontSize: 11),
+                        color: Colors.white70,
+                        fontSize: 11,
+                      ),
                     ),
                   ],
                 ),
               ),
               IconButton(
-                icon: const Icon(Icons.stop_circle_outlined,
-                    color: Colors.redAccent, size: 22),
+                icon: const Icon(
+                  Icons.stop_circle_outlined,
+                  color: Colors.redAccent,
+                  size: 22,
+                ),
                 tooltip: 'Stop route',
                 onPressed: onStop,
                 padding: EdgeInsets.zero,
@@ -821,16 +874,20 @@ class _ActiveRouteBanner extends StatelessWidget {
                 ),
                 const Padding(
                   padding: EdgeInsets.symmetric(horizontal: 6),
-                  child: Icon(Icons.arrow_forward,
-                      color: Colors.white54, size: 14),
+                  child: Icon(
+                    Icons.arrow_forward,
+                    color: Colors.white54,
+                    size: 14,
+                  ),
                 ),
                 Expanded(
                   child: Text(
                     toName.isNotEmpty ? toName : 'Destination',
                     style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600),
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     textAlign: TextAlign.right,
@@ -847,14 +904,17 @@ class _ActiveRouteBanner extends StatelessWidget {
             child: ElevatedButton.icon(
               onPressed: onResume,
               icon: const Icon(Icons.navigation, size: 16),
-              label: const Text('Resume Navigation',
-                  style: TextStyle(fontWeight: FontWeight.bold)),
+              label: const Text(
+                'Resume Navigation',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.white,
                 foregroundColor: const Color(0xFF1B3A5C),
                 padding: const EdgeInsets.symmetric(vertical: 10),
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 elevation: 0,
               ),
             ),

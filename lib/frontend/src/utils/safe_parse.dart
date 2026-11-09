@@ -1,6 +1,6 @@
 // Backend numeric fields (price, cost, rating, lat/lng, ids, ...) can arrive
 // as String, int, or double depending on the SQL column/expression that
-// produced them (MySQL DECIMAL columns, computed SQL expressions, and
+// produced them (Postgres numeric columns, computed SQL expressions, and
 // legacy string-typed id columns all serialize differently over JSON).
 // Never cast an unknown JSON value directly with `as num`/`as int`/`as
 // double` — a String value makes that throw

@@ -1,3 +1,7 @@
 {
-  "API_BASE_URL": "https://YOUR-BACKEND-HOST/api"
+  "SUPABASE_URL": "https://zjjbnrqtfnewwfxuahga.supabase.co",
+  "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_D05-8RK9AZS9MjEUijotRg_cwAA5dCC",
+  "GOOGLE_WEB_CLIENT_ID": "495483479742-qoqoir127ehif49jln99bihlmnmssi4r.apps.googleusercontent.com",
+  "STRIPE_PUBLISHABLE_KEY": "pk_test_or_pk_live_key",
+  "GOOGLE_MAPS_API_KEY": "optional-restricted-android-key"
 }

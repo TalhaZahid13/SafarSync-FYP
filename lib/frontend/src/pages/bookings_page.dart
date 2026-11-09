@@ -4,30 +4,44 @@ import '../utils/api_service.dart';
 import '../utils/payment_service.dart';
 import '../utils/safe_parse.dart';
 import 'payment_page.dart';
+
 Color _statusColor(String? s) {
   switch (s) {
-    case 'Confirmed': return Colors.green;
-    case 'Active': return Colors.teal;
-    case 'Completed': return Colors.grey;
-    case 'Awaiting Payment': return Colors.orange;
-    case 'Cancelled': return Colors.red;
-    case 'Refunded': return Colors.purple;
-    default: return Colors.blue;
+    case 'Confirmed':
+      return Colors.green;
+    case 'Active':
+      return Colors.teal;
+    case 'Completed':
+      return Colors.grey;
+    case 'Awaiting Payment':
+      return Colors.orange;
+    case 'Cancelled':
+      return Colors.red;
+    case 'Refunded':
+      return Colors.purple;
+    default:
+      return Colors.blue;
   }
 }
 
 IconData _statusIcon(String? s) {
   switch (s) {
-    case 'Confirmed': return Icons.check_circle;
-    case 'Active': return Icons.flight_takeoff;
-    case 'Completed': return Icons.done_all;
-    case 'Awaiting Payment': return Icons.payment;
-    case 'Cancelled': return Icons.cancel;
-    case 'Refunded': return Icons.currency_exchange;
-    default: return Icons.bookmark;
+    case 'Confirmed':
+      return Icons.check_circle;
+    case 'Active':
+      return Icons.flight_takeoff;
+    case 'Completed':
+      return Icons.done_all;
+    case 'Awaiting Payment':
+      return Icons.payment;
+    case 'Cancelled':
+      return Icons.cancel;
+    case 'Refunded':
+      return Icons.currency_exchange;
+    default:
+      return Icons.bookmark;
   }
 }
-
 
 class BookingsPage extends StatefulWidget {
   const BookingsPage({super.key});
@@ -112,9 +126,11 @@ class _BookingsPageState extends State<BookingsPage>
               children: List.generate(_tabs.length, (i) {
                 final list = _filtered(i);
                 if (list.isEmpty) {
-                  return _emptyState(i == 0
-                      ? 'No bookings yet'
-                      : 'No ${_tabs[i].toLowerCase()} bookings');
+                  return _emptyState(
+                    i == 0
+                        ? 'No bookings yet'
+                        : 'No ${_tabs[i].toLowerCase()} bookings',
+                  );
                 }
                 return RefreshIndicator(
                   onRefresh: _load,
@@ -192,11 +208,16 @@ class _BookingCard extends StatelessWidget {
                     child: Text(
                       booking['destination_name'] as String? ?? 'Unknown',
                       style: const TextStyle(
-                          fontSize: 16, fontWeight: FontWeight.bold),
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: color.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(20),
@@ -207,11 +228,14 @@ class _BookingCard extends StatelessWidget {
                       children: [
                         Icon(_statusIcon(status), size: 12, color: color),
                         const SizedBox(width: 4),
-                        Text(status,
-                            style: TextStyle(
-                                color: color,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600)),
+                        Text(
+                          status,
+                          style: TextStyle(
+                            color: color,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -220,7 +244,10 @@ class _BookingCard extends StatelessWidget {
               const SizedBox(height: 10),
               Row(
                 children: [
-                  _infoChip(Icons.people_outline, '$travelers traveler${travelers > 1 ? 's' : ''}'),
+                  _infoChip(
+                    Icons.people_outline,
+                    '$travelers traveler${travelers > 1 ? 's' : ''}',
+                  ),
                   const SizedBox(width: 8),
                   if (travelDate != null)
                     _infoChip(Icons.calendar_today, travelDate),
@@ -228,7 +255,9 @@ class _BookingCard extends StatelessWidget {
                   Text(
                     'PKR ${amount.toStringAsFixed(0)}',
                     style: const TextStyle(
-                        fontWeight: FontWeight.bold, fontSize: 15),
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                    ),
                   ),
                 ],
               ),
@@ -294,7 +323,8 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
   double _pricePerDay = 5000.0;
   double get _total => _pricePerDay * _duration * _travelers;
 
-  bool get _isPreset => widget.initialDestinationId != null || widget.presetType != null;
+  bool get _isPreset =>
+      widget.initialDestinationId != null || widget.presetType != null;
   bool get _isHotel => widget.presetType == 'hotel';
   bool get _isRestaurant => widget.presetType == 'restaurant';
 
@@ -302,11 +332,12 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
   void initState() {
     super.initState();
     if (_isPreset) {
-      _destId   = widget.initialDestinationId;
+      _destId = widget.initialDestinationId;
       _destName = widget.initialDestinationName ?? widget.presetItemName;
       if (widget.initialAvgCost != null && widget.initialAvgCost! > 0) {
         _pricePerDay = widget.initialAvgCost!;
-      } else if (widget.presetPricePerUnit != null && widget.presetPricePerUnit! > 0) {
+      } else if (widget.presetPricePerUnit != null &&
+          widget.presetPricePerUnit! > 0) {
         _pricePerDay = widget.presetPricePerUnit!;
       }
     } else {
@@ -377,13 +408,16 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
 
       if (!mounted) return;
       if (r['success'] == true) {
-        _snack('Booking created! Total: PKR ${_total.toStringAsFixed(0)}',
-            success: true);
+        _snack(
+          'Booking created! Total: PKR ${_total.toStringAsFixed(0)}',
+          success: true,
+        );
         Navigator.pop(context);
       } else {
-        final msg = r['error'] as String?
-            ?? r['message'] as String?
-            ?? 'Failed to create booking';
+        final msg =
+            r['error'] as String? ??
+            r['message'] as String? ??
+            'Failed to create booking';
         _snack(msg);
       }
     } catch (e) {
@@ -396,10 +430,12 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
   String _fmt(DateTime d) => DateFormat('yyyy-MM-dd').format(d);
 
   void _snack(String msg, {bool success = false}) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(msg),
-      backgroundColor: success ? Colors.green : null,
-    ));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg),
+        backgroundColor: success ? Colors.green : null,
+      ),
+    );
   }
 
   @override
@@ -414,9 +450,13 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          _isHotel ? 'Book Hotel — ${widget.presetItemName ?? ''}' :
-          _isRestaurant ? 'Reserve Table — ${widget.presetItemName ?? ''}' :
-          (_isPreset && _destName != null ? 'Book — $_destName' : 'Create Booking'),
+          _isHotel
+              ? 'Book Hotel — ${widget.presetItemName ?? ''}'
+              : _isRestaurant
+              ? 'Reserve Table — ${widget.presetItemName ?? ''}'
+              : (_isPreset && _destName != null
+                    ? 'Book — $_destName'
+                    : 'Create Booking'),
         ),
       ),
       body: Form(
@@ -429,18 +469,27 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
               // Destination — read-only when preset, dropdown otherwise
               if (_isPreset) ...[
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 16,
+                  ),
                   decoration: BoxDecoration(
                     color: const Color(0xFFE8F4F8),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: const Color(0xFF2CAFBC).withValues(alpha: 0.4)),
+                    border: Border.all(
+                      color: const Color(0xFF2CAFBC).withValues(alpha: 0.4),
+                    ),
                   ),
                   child: Row(
                     children: [
                       Icon(
-                        _isHotel ? Icons.hotel :
-                        _isRestaurant ? Icons.restaurant : Icons.place,
-                        color: const Color(0xFF2CAFBC), size: 20,
+                        _isHotel
+                            ? Icons.hotel
+                            : _isRestaurant
+                            ? Icons.restaurant
+                            : Icons.place,
+                        color: const Color(0xFF2CAFBC),
+                        size: 20,
                       ),
                       const SizedBox(width: 10),
                       Expanded(
@@ -448,30 +497,48 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              _isHotel ? 'Hotel' : _isRestaurant ? 'Restaurant' : 'Destination',
-                              style: const TextStyle(fontSize: 11, color: Colors.grey),
+                              _isHotel
+                                  ? 'Hotel'
+                                  : _isRestaurant
+                                  ? 'Restaurant'
+                                  : 'Destination',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: Colors.grey,
+                              ),
                             ),
                             Text(
                               _destName ?? widget.presetItemName ?? 'Selected',
-                              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 15,
+                              ),
                             ),
                           ],
                         ),
                       ),
-                      const Icon(Icons.lock_outline, size: 14, color: Colors.grey),
+                      const Icon(
+                        Icons.lock_outline,
+                        size: 14,
+                        color: Colors.grey,
+                      ),
                     ],
                   ),
                 ),
               ] else ...[
                 DropdownButtonFormField<int>(
-                  value: _destId,
+                  initialValue: _destId,
                   decoration: _dec('Destination', Icons.place),
                   items: _destinations
-                      .where((d) => asInt(d['destination_id'] ?? d['id']) != null)
-                      .map((d) => DropdownMenuItem<int>(
-                            value: asInt(d['destination_id'] ?? d['id'])!,
-                            child: Text(d['name'] as String? ?? ''),
-                          ))
+                      .where(
+                        (d) => asInt(d['destination_id'] ?? d['id']) != null,
+                      )
+                      .map(
+                        (d) => DropdownMenuItem<int>(
+                          value: asInt(d['destination_id'] ?? d['id'])!,
+                          child: Text(d['name'] as String? ?? ''),
+                        ),
+                      )
                       .toList(),
                   onChanged: _onDestinationChange,
                   validator: (v) => v == null ? 'Select a destination' : null,
@@ -522,8 +589,7 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
                       },
                       onChanged: (v) =>
                           setState(() => _travelers = int.tryParse(v) ?? 1),
-                      onSaved: (v) =>
-                          _travelers = int.tryParse(v ?? '1') ?? 1,
+                      onSaved: (v) => _travelers = int.tryParse(v ?? '1') ?? 1,
                     ),
                   ),
                 ],
@@ -544,11 +610,19 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
                 child: Column(
                   children: [
                     _summaryRow(
-                      _isHotel ? 'Rate per night' : _isRestaurant ? 'Rate per person' : 'Rate per day',
+                      _isHotel
+                          ? 'Rate per night'
+                          : _isRestaurant
+                          ? 'Rate per person'
+                          : 'Rate per day',
                       'PKR ${_pricePerDay.toStringAsFixed(0)}',
                     ),
                     _summaryRow(
-                      _isHotel ? 'Nights' : _isRestaurant ? 'Sessions' : 'Duration',
+                      _isHotel
+                          ? 'Nights'
+                          : _isRestaurant
+                          ? 'Sessions'
+                          : 'Duration',
                       '$_duration day${_duration > 1 ? 's' : ''}',
                     ),
                     _summaryRow('Travelers', '$_travelers'),
@@ -567,7 +641,8 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
                 child: _submitting
                     ? const SizedBox(
@@ -575,7 +650,10 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
                         width: 20,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : const Text('Create Booking', style: TextStyle(fontSize: 16)),
+                    : const Text(
+                        'Create Booking',
+                        style: TextStyle(fontSize: 16),
+                      ),
               ),
             ],
           ),
@@ -585,20 +663,24 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
   }
 
   InputDecoration _dec(String label, IconData icon) => InputDecoration(
-        labelText: label,
-        prefixIcon: Icon(icon),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-      );
+    labelText: label,
+    prefixIcon: Icon(icon),
+    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+  );
 
-  Widget _summaryRow(String label, String value, {bool bold = false}) => Padding(
+  Widget _summaryRow(String label, String value, {bool bold = false}) =>
+      Padding(
         padding: const EdgeInsets.symmetric(vertical: 4),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(label, style: const TextStyle(color: Colors.grey)),
-            Text(value,
-                style: TextStyle(
-                    fontWeight: bold ? FontWeight.bold : FontWeight.normal)),
+            Text(
+              value,
+              style: TextStyle(
+                fontWeight: bold ? FontWeight.bold : FontWeight.normal,
+              ),
+            ),
           ],
         ),
       );
@@ -676,8 +758,10 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('Are you sure you want to cancel this booking?',
-                style: TextStyle(color: Colors.grey)),
+            const Text(
+              'Are you sure you want to cancel this booking?',
+              style: TextStyle(color: Colors.grey),
+            ),
             const SizedBox(height: 12),
             TextField(
               controller: controller,
@@ -697,8 +781,10 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             onPressed: () => Navigator.pop(ctx, controller.text.trim()),
-            child: const Text('Cancel Booking',
-                style: TextStyle(color: Colors.white)),
+            child: const Text(
+              'Cancel Booking',
+              style: TextStyle(color: Colors.white),
+            ),
           ),
         ],
       ),
@@ -747,10 +833,12 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
 
   void _snack(String msg, {bool success = false}) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(msg),
-      backgroundColor: success ? Colors.green : null,
-    ));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg),
+        backgroundColor: success ? Colors.green : null,
+      ),
+    );
   }
 
   @override
@@ -772,10 +860,12 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
     final status = b['status'] as String? ?? 'Pending';
     final payStatus = b['payment_status'] as String? ?? 'Unpaid';
     final amount = asDouble(b['total_amount']) ?? 0.0;
-    final canPay = payStatus == 'Unpaid' &&
+    final canPay =
+        payStatus == 'Unpaid' &&
         (status == 'Pending' || status == 'Awaiting Payment');
     final canCancel = !['Completed', 'Cancelled', 'Refunded'].contains(status);
-    final canRequestRefund = payStatus == 'Paid' &&
+    final canRequestRefund =
+        payStatus == 'Paid' &&
         ['Confirmed', 'Active', 'Cancelled', 'Completed'].contains(status);
     final color = _statusColor(status);
 
@@ -807,11 +897,12 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                     height: 200,
                     width: double.infinity,
                     fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Container(
+                    errorBuilder: (_, _, _) => Container(
                       height: 200,
                       decoration: BoxDecoration(
-                          color: Colors.grey[200],
-                          borderRadius: BorderRadius.circular(12)),
+                        color: Colors.grey[200],
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                       child: const Icon(Icons.image, size: 60),
                     ),
                   ),
@@ -820,7 +911,9 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
               Text(
                 b['destination_name'] as String? ?? 'Unknown',
                 style: const TextStyle(
-                    fontSize: 22, fontWeight: FontWeight.bold),
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               const SizedBox(height: 8),
               Row(
@@ -841,12 +934,8 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                     'Duration',
                     '${b['estimated_duration_days'] ?? 1} day(s)',
                   ),
-                  _InfoRow(
-                    'Travelers',
-                    '${b['num_travelers'] ?? 1} person(s)',
-                  ),
-                  if (b['notes'] != null &&
-                      (b['notes'] as String).isNotEmpty)
+                  _InfoRow('Travelers', '${b['num_travelers'] ?? 1} person(s)'),
+                  if (b['notes'] != null && (b['notes'] as String).isNotEmpty)
                     _InfoRow('Notes', b['notes'] as String),
                 ],
               ),
@@ -854,12 +943,10 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
               _Section(
                 title: 'Payment',
                 children: [
-                  _InfoRow('Total Amount',
-                      'PKR ${amount.toStringAsFixed(0)}'),
+                  _InfoRow('Total Amount', 'PKR ${amount.toStringAsFixed(0)}'),
                   _InfoRow('Payment Status', payStatus),
                   if (b['payment_intent_id'] != null)
-                    _InfoRow('Transaction',
-                        b['payment_intent_id'] as String),
+                    _InfoRow('Transaction', b['payment_intent_id'] as String),
                 ],
               ),
               const SizedBox(height: 24),
@@ -875,10 +962,8 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                               b['destination_name'] as String? ?? 'Booking',
                           durationDays:
                               asInt(b['estimated_duration_days']) ?? 1,
-                          numTravelers:
-                              asInt(b['num_travelers']) ?? 1,
-                          pricePerDay:
-                              asDouble(b['average_cost']) ?? 50.0,
+                          numTravelers: asInt(b['num_travelers']) ?? 1,
+                          pricePerDay: asDouble(b['average_cost']) ?? 50.0,
                           totalAmount: amount,
                         ),
                       ),
@@ -890,7 +975,8 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                   style: ElevatedButton.styleFrom(
                     minimumSize: const Size.fromHeight(52),
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                 ),
               if (canCancel && !canPay) const SizedBox(height: 8),
@@ -901,8 +987,8 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                       ? const SizedBox(
                           height: 16,
                           width: 16,
-                          child:
-                              CircularProgressIndicator(strokeWidth: 2))
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
                       : const Icon(Icons.cancel_outlined),
                   label: const Text('Cancel Booking'),
                   style: OutlinedButton.styleFrom(
@@ -910,7 +996,8 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                     side: const BorderSide(color: Colors.red),
                     minimumSize: const Size.fromHeight(52),
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                 ),
               if (canRequestRefund) ...[
@@ -921,7 +1008,8 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                       ? const SizedBox(
                           height: 16,
                           width: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2))
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
                       : const Icon(Icons.currency_exchange),
                   label: const Text('Request Refund'),
                   style: OutlinedButton.styleFrom(
@@ -929,7 +1017,8 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                     side: const BorderSide(color: Colors.purple),
                     minimumSize: const Size.fromHeight(52),
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                 ),
               ],
@@ -951,25 +1040,28 @@ class _StatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.15),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: color.withValues(alpha: 0.4)),
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+    decoration: BoxDecoration(
+      color: color.withValues(alpha: 0.15),
+      borderRadius: BorderRadius.circular(20),
+      border: Border.all(color: color.withValues(alpha: 0.4)),
+    ),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(_statusIcon(status), size: 14, color: color),
+        const SizedBox(width: 4),
+        Text(
+          status,
+          style: TextStyle(
+            color: color,
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+          ),
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(_statusIcon(status), size: 14, color: color),
-            const SizedBox(width: 4),
-            Text(status,
-                style: TextStyle(
-                    color: color,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600)),
-          ],
-        ),
-      );
+      ],
+    ),
+  );
 }
 
 class _PayBadge extends StatelessWidget {
@@ -981,8 +1073,8 @@ class _PayBadge extends StatelessWidget {
     final color = payStatus == 'Paid'
         ? Colors.green
         : payStatus == 'Refunded'
-            ? Colors.purple
-            : Colors.orange;
+        ? Colors.purple
+        : Colors.orange;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
@@ -991,7 +1083,11 @@ class _PayBadge extends StatelessWidget {
       ),
       child: Text(
         payStatus,
-        style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w600),
+        style: TextStyle(
+          color: color,
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+        ),
       ),
     );
   }
@@ -1004,23 +1100,23 @@ class _Section extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(title,
-              style: const TextStyle(
-                  fontSize: 15, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 8),
-          Card(
-            margin: EdgeInsets.zero,
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12)),
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(children: children),
-            ),
-          ),
-        ],
-      );
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(
+        title,
+        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+      ),
+      const SizedBox(height: 8),
+      Card(
+        margin: EdgeInsets.zero,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(children: children),
+        ),
+      ),
+    ],
+  );
 }
 
 class _InfoRow extends StatelessWidget {
@@ -1030,23 +1126,24 @@ class _InfoRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 6),
-        child: Row(
-          children: [
-            Text('$label:',
-                style: const TextStyle(
-                    fontWeight: FontWeight.w500, fontSize: 13)),
-            const Spacer(),
-            Flexible(
-              child: Text(
-                value ?? 'N/A',
-                textAlign: TextAlign.end,
-                style: const TextStyle(fontSize: 13),
-              ),
-            ),
-          ],
+    padding: const EdgeInsets.symmetric(vertical: 6),
+    child: Row(
+      children: [
+        Text(
+          '$label:',
+          style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13),
         ),
-      );
+        const Spacer(),
+        Flexible(
+          child: Text(
+            value ?? 'N/A',
+            textAlign: TextAlign.end,
+            style: const TextStyle(fontSize: 13),
+          ),
+        ),
+      ],
+    ),
+  );
 }
 
 class _DateField extends StatelessWidget {

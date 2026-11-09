@@ -80,7 +80,7 @@ class _SearchBarState extends State<SearchBar> {
           query: trimmed,
         );
       }
-      print('Search error: $e');
+      debugPrint('Search error: $e');
     }
   }
 
@@ -215,7 +215,7 @@ class _SearchBarState extends State<SearchBar> {
                     child: ListView.separated(
                       shrinkWrap: true,
                       itemCount: results.length,
-                      separatorBuilder: (_, __) =>
+                      separatorBuilder: (_, _) =>
                           Divider(color: theme.dividerColor, height: 1),
                       itemBuilder: (context, index) {
                         final item = results[index];
@@ -278,9 +278,9 @@ class _SearchBarState extends State<SearchBar> {
       width: 36,
       height: 36,
       decoration: BoxDecoration(
-        color: color.withValues(alpha:0.15),
+        color: color.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withValues(alpha:0.3)),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Icon(icon, color: color, size: 20),
     );

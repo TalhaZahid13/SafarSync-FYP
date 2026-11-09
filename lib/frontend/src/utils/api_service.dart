@@ -1,62 +1,118 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'dart:io';
+
+import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-import 'local_database_service.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
 import 'auth_storage.dart';
-import 'safe_parse.dart';
 import 'env_config.dart';
 import 'google_auth_service.dart';
+import 'local_database_service.dart';
+import 'safe_parse.dart';
 
+/// Single gateway between the app and the SafarSync cloud backend.
+///
+/// * Authentication — Supabase Auth (email/password, Google, Apple).
+/// * Data — the `api` Supabase Edge Function, which exposes the same REST
+///   endpoints (and JSON shapes) the previous REST server did, so every
+///   screen keeps calling `ApiService.getRequest('/bookings/list')` etc.
+/// * Files — Supabase Storage (`avatars` bucket).
+///
+/// Nothing here depends on a local server, LAN IP or developer machine.
 class ApiService {
-  /// REST API base URL — comes from build-time environment config
-  /// (API_BASE_URL), never from user input. See env_config.dart.
-  static final String baseUrl = EnvConfig.apiBaseUrl;
+  static SupabaseClient get _sb => Supabase.instance.client;
 
-  /// Socket.io server URL (same host, no /api path)
-  static String get socketUrl => EnvConfig.serverOrigin;
+  /// REST base URL — `https://<project>.supabase.co/functions/v1/api`.
+  static String get baseUrl => EnvConfig.apiBaseUrl;
 
-  /// Backend origin (without /api suffix).
-  static String get serverHost => socketUrl;
+  static const Duration _kTimeout = Duration(seconds: 20);
 
-  static final FirebaseAuth _auth = FirebaseAuth.instance;
+  // ============ SESSION / HEADERS ============
 
-  /// Get stored JWT token
+  /// Current Supabase access token (refreshed first if it is about to expire).
   static Future<String?> getToken() async {
-    return AuthStorage.readToken();
+    var session = _sb.auth.currentSession;
+    if (session == null) return null;
+    if (session.isExpired ||
+        (session.expiresAt != null &&
+            DateTime.fromMillisecondsSinceEpoch(
+              session.expiresAt! * 1000,
+            ).isBefore(DateTime.now().add(const Duration(seconds: 30))))) {
+      try {
+        final res = await _sb.auth.refreshSession();
+        session = res.session ?? _sb.auth.currentSession;
+      } catch (e) {
+        debugPrint('[ApiService] session refresh failed: $e');
+      }
+    }
+    return session?.accessToken;
   }
 
-  /// Save JWT token
-  static Future<void> saveToken(String token) async {
-    await AuthStorage.writeToken(token);
-  }
+  /// Kept for API compatibility — the session itself is persisted by
+  /// supabase_flutter, so these are no-ops beyond clearing the legacy key.
+  static Future<void> saveToken(String token) async {}
+  static Future<void> removeToken() async => AuthStorage.clearToken();
 
-  /// Remove JWT token (logout)
-  static Future<void> removeToken() async {
-    await AuthStorage.clearToken();
-  }
-
-  /// Get headers with token
   static Future<Map<String, String>> getHeaders({
     bool needsAuth = false,
   }) async {
-    final headers = <String, String>{'Content-Type': 'application/json'};
-
-    if (needsAuth) {
-      final token = await getToken();
-      if (token != null) {
-        headers['Authorization'] = 'Bearer $token';
-      }
-    }
-
-    return headers;
+    final token = needsAuth ? await getToken() : null;
+    return {
+      'Content-Type': 'application/json',
+      'apikey': EnvConfig.supabasePublishableKey,
+      'Authorization': 'Bearer ${token ?? EnvConfig.supabasePublishableKey}',
+    };
   }
 
-  // ============ AUTH ENDPOINTS ============
+  // ============ AUTH ============
 
-  /// Sign up new user
+  static String _authErrorMessage(Object e) {
+    if (e is AuthException) {
+      final m = e.message.toLowerCase();
+      if (m.contains('invalid login credentials')) {
+        return 'Invalid email or password';
+      }
+      if (m.contains('email not confirmed')) {
+        return 'Please confirm your email first — check your inbox for the verification link.';
+      }
+      if (m.contains('already registered') ||
+          m.contains('already been registered')) {
+        return 'This email is already in use';
+      }
+      if (m.contains('password should be') || m.contains('weak')) {
+        return 'Password is too weak';
+      }
+      if (m.contains('invalid') && m.contains('email')) {
+        return 'Invalid email address';
+      }
+      if (m.contains('rate limit') || e.statusCode == '429') {
+        return 'Too many attempts. Please wait a few minutes and try again.';
+      }
+      if (m.contains('token has expired') || m.contains('otp')) {
+        return 'The code is invalid or has expired. Request a new one.';
+      }
+      return e.message;
+    }
+    if (_isNetworkError(e)) {
+      return 'No internet connection. Please check your network and try again.';
+    }
+    return 'Error: $e';
+  }
+
+  static bool _isNetworkError(Object e) =>
+      e is SocketException ||
+      e is TimeoutException ||
+      e is http.ClientException ||
+      e.toString().contains('SocketException') ||
+      e.toString().contains('Failed host lookup') ||
+      e.toString().contains('Connection refused') ||
+      e.toString().contains('Network is unreachable');
+
+  /// Sign up with email + password. Profile fields are stored as user
+  /// metadata and copied into `public.users` by a database trigger.
   static Future<Map<String, dynamic>> signup({
     required String email,
     required String password,
@@ -65,14 +121,24 @@ class ApiService {
     String? bloodGroup,
   }) async {
     try {
-      final credential = await _auth.createUserWithEmailAndPassword(
-        email: email,
+      final res = await _sb.auth.signUp(
+        email: email.trim(),
         password: password,
+        emailRedirectTo: EnvConfig.authRedirectUrl,
+        data: {
+          'full_name': fullName.trim(),
+          'phone_number': phoneNumber.trim(),
+          if (bloodGroup != null && bloodGroup.isNotEmpty)
+            'blood_group': bloodGroup,
+        },
       );
 
-      await credential.user?.updateDisplayName(fullName);
+      // Supabase returns a user with no identities when the email already exists.
+      if (res.user != null && (res.user!.identities?.isEmpty ?? false)) {
+        return {'success': false, 'message': 'This email is already in use'};
+      }
 
-      final uid = credential.user?.uid;
+      final uid = res.user?.id;
       if (uid != null) {
         await LocalDatabaseService.upsertUserProfile(
           uid: uid,
@@ -83,336 +149,442 @@ class ApiService {
         );
       }
 
-      // Reload so displayName is visible in providerData
-      await credential.user?.reload();
-      final freshUser = _auth.currentUser;
-
-      // Exchange Firebase token — pass phone/blood so MySQL record is complete on first insert
-      if (freshUser != null) {
-        final exchangeResult = await exchangeFirebaseToken(
-          freshUser,
-          phoneNumber: phoneNumber,
-          bloodGroup:  bloodGroup,
-        );
-        if (exchangeResult['success'] != true) {
-          return {'success': false, 'message': exchangeResult['message'] as String? ?? 'Could not connect to server. Please check your connection and try again.'};
-        }
+      if (res.session == null) {
+        // Email confirmation is enabled for the project.
+        return {
+          'success': true,
+          'needsConfirmation': true,
+          'message':
+              'Account created! We sent a confirmation link to $email. '
+              'Verify your email, then log in.',
+        };
       }
 
+      final sync = await syncSession(
+        phoneNumber: phoneNumber,
+        bloodGroup: bloodGroup,
+      );
+      if (sync['success'] != true) return sync;
       return {'success': true, 'message': 'User registered successfully'};
-    } on FirebaseAuthException catch (e) {
-      String message;
-      switch (e.code) {
-        case 'email-already-in-use':
-          message = 'This email is already in use';
-          break;
-        case 'invalid-email':
-          message = 'Invalid email address';
-          break;
-        case 'weak-password':
-          message = 'Password is too weak';
-          break;
-        default:
-          message = 'Signup failed: ${e.code}';
-      }
-
-      return {'success': false, 'message': message};
     } catch (e) {
-      return {'success': false, 'message': 'Error: $e'};
+      return {'success': false, 'message': _authErrorMessage(e)};
     }
   }
 
-  /// Login user
   static Future<Map<String, dynamic>> login({
     required String email,
     required String password,
   }) async {
     try {
-      final credential = await _auth.signInWithEmailAndPassword(
-        email: email,
+      final res = await _sb.auth.signInWithPassword(
+        email: email.trim(),
         password: password,
       );
+      final user = res.user;
+      if (user == null) return {'success': false, 'message': 'Login failed'};
 
-      final user = credential.user;
-      if (user == null) {
-        return {'success': false, 'message': 'Login failed'};
+      final sync = await syncSession();
+      if (sync['success'] != true) {
+        await _sb.auth.signOut();
+        return sync;
       }
 
-      // Exchange Firebase token for real MySQL-backed JWT
-      final exchangeResult = await exchangeFirebaseToken(user);
-      if (exchangeResult['success'] != true) {
-        await _auth.signOut();
-        return {'success': false, 'message': exchangeResult['message'] as String? ?? 'Could not connect to server. Please check your connection and try again.'};
-      }
-
-      final existingProfile = await LocalDatabaseService.getUserProfile(user.uid);
-      if (existingProfile == null) {
+      final existing = await LocalDatabaseService.getUserProfile(user.id);
+      if (existing == null) {
         await LocalDatabaseService.upsertUserProfile(
-          uid: user.uid,
+          uid: user.id,
           email: user.email ?? email,
-          fullName: user.displayName,
+          fullName: displayName(user),
         );
       }
-
-      return {'success': true, 'uid': user.uid};
-    } on FirebaseAuthException catch (e) {
-      String message;
-      switch (e.code) {
-        case 'invalid-credential':
-        case 'wrong-password':
-        case 'user-not-found':
-          message = 'Invalid email or password';
-          break;
-        case 'invalid-email':
-          message = 'Invalid email address';
-          break;
-        case 'user-disabled':
-          message = 'This account has been disabled';
-          break;
-        default:
-          message = 'Login failed: ${e.code}';
-      }
-
-      return {'success': false, 'message': message};
+      return {'success': true, 'uid': user.id};
     } catch (e) {
-      return {'success': false, 'message': 'Error: $e'};
+      return {'success': false, 'message': _authErrorMessage(e)};
     }
   }
 
-  /// Logout user
+  /// Registers the sign-in with the API (last login, provider, optional
+  /// profile fields) and caches the integer user id the UI relies on.
+  /// Records the sign-in and caches the integer SafarSync user id.
+  static Future<Map<String, dynamic>> syncSession({
+    String? phoneNumber,
+    String? bloodGroup,
+  }) async {
+    final user = _sb.auth.currentUser;
+    if (user == null) return {'success': false, 'message': 'Not signed in'};
+    final r = await postRequest('/auth/session', {
+      'full_name': displayName(user),
+      'profile_picture_url':
+          user.userMetadata?['avatar_url'] ?? user.userMetadata?['picture'],
+      if (phoneNumber != null) 'phone_number': phoneNumber,
+      if (bloodGroup != null) 'blood_group': bloodGroup,
+    });
+    if (r['success'] == true && r['user'] is Map) {
+      await _saveUserData(Map<String, dynamic>.from(r['user'] as Map));
+      return {'success': true, 'user': r['user']};
+    }
+    return {
+      'success': false,
+      'message':
+          r['message'] ??
+          r['error'] ??
+          'Could not reach SafarSync. Please try again.',
+    };
+  }
+
   static Future<void> logout() async {
-    await _auth.signOut();
+    try {
+      await _sb.auth.signOut();
+    } catch (_) {}
     await GoogleAuthService.signOut();
     await removeToken();
     await AuthStorage.clearLastActiveAt();
     await _clearUserData();
+    await _clearAdminData();
+    await AuthStorage.clearAdminToken();
   }
 
-  // ============ ADMIN AUTH ENDPOINTS ============
+  /// Sends a password-reset email. The email contains both a link (opens the
+  /// app via deep link) and a 6-digit code usable with [resetPasswordWithCode].
+  static Future<Map<String, dynamic>> sendPasswordReset(String email) async {
+    try {
+      await _sb.auth.resetPasswordForEmail(
+        email.trim(),
+        redirectTo: EnvConfig.authRedirectUrl,
+      );
+      return {
+        'success': true,
+        'message': 'Reset instructions sent if the email is registered',
+      };
+    } catch (e) {
+      return {'success': false, 'message': _authErrorMessage(e)};
+    }
+  }
 
-  /// Login as admin (direct email/password — no Firebase).
+  /// Completes a password reset with the 6-digit code from the email.
+  static Future<Map<String, dynamic>> resetPasswordWithCode({
+    required String email,
+    required String code,
+    required String newPassword,
+  }) async {
+    try {
+      await _sb.auth.verifyOTP(
+        email: email.trim(),
+        token: code.trim(),
+        type: OtpType.recovery,
+      );
+      await _sb.auth.updateUser(UserAttributes(password: newPassword));
+      await _sb.auth.signOut();
+      return {
+        'success': true,
+        'message': 'Password updated. Please log in with your new password.',
+      };
+    } catch (e) {
+      return {'success': false, 'message': _authErrorMessage(e)};
+    }
+  }
+
+  /// Sets a new password for the currently signed-in user (used after
+  /// opening a password-recovery deep link).
+  static Future<Map<String, dynamic>> updatePassword(String newPassword) async {
+    try {
+      await _sb.auth.updateUser(UserAttributes(password: newPassword));
+      return {'success': true, 'message': 'Password updated'};
+    } catch (e) {
+      return {'success': false, 'message': _authErrorMessage(e)};
+    }
+  }
+
+  // ============ ADMIN AUTH ============
+
+  /// Admin panel login: Supabase email/password sign-in, then the API
+  /// confirms the account holds an admin role.
   static Future<Map<String, dynamic>> adminLogin({
     required String email,
     required String password,
   }) async {
     try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/admin/auth/login'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'email': email, 'password': password}),
+      await _sb.auth.signInWithPassword(
+        email: email.trim(),
+        password: password,
       );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        final token = data['token'] as String?;
-        if (token != null) {
-          await AuthStorage.writeAdminToken(token);
-          final adminData = data['admin'] as Map<String, dynamic>?;
-          if (adminData != null) await _saveAdminData(adminData);
-        }
-        return {'success': true, ...data};
-      } else {
-        final body = jsonDecode(response.body) as Map<String, dynamic>;
-        return {'success': false, 'message': body['error'] ?? 'Login failed'};
-      }
     } catch (e) {
-      return {'success': false, 'message': 'Error: $e'};
+      return {'success': false, 'message': _authErrorMessage(e)};
     }
+    final r = await getRequest('/admin/auth/me');
+    if (r['success'] == true && r['admin'] is Map) {
+      final admin = Map<String, dynamic>.from(r['admin'] as Map);
+      await AuthStorage.writeAdminToken('supabase-session');
+      await _saveAdminData(admin);
+      await syncSession();
+      return {'success': true, 'admin': admin};
+    }
+    await _sb.auth.signOut();
+    return {
+      'success': false,
+      'message': r['message'] ?? 'This account does not have admin access.',
+    };
   }
 
-  /// Request admin password reset OTP.
-  static Future<Map<String, dynamic>> adminForgotPassword(String email) async {
-    try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/admin/auth/forgot-password'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'email': email}),
-      );
-      if (response.statusCode == 200) {
-        return {'success': true, 'message': 'Reset code sent if email is registered'};
-      }
-      return {'success': false, 'message': 'Request failed'};
-    } catch (e) {
-      return {'success': false, 'message': 'Error: $e'};
-    }
-  }
+  static Future<Map<String, dynamic>> adminForgotPassword(String email) =>
+      sendPasswordReset(email);
 
-  /// Verify OTP and set new admin password.
   static Future<Map<String, dynamic>> adminResetPassword({
     required String email,
     required String otp,
     required String newPassword,
-  }) async {
-    try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/admin/auth/reset-password'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'email': email, 'otp': otp, 'new_password': newPassword}),
-      );
-      final data = jsonDecode(response.body) as Map<String, dynamic>;
-      return {'success': response.statusCode == 200, ...data};
-    } catch (e) {
-      return {'success': false, 'message': 'Error: $e'};
-    }
-  }
+  }) =>
+      resetPasswordWithCode(email: email, code: otp, newPassword: newPassword);
 
-  /// Logout admin — clears admin token and SharedPreferences admin data.
   static Future<void> adminLogout() async {
     await AuthStorage.clearAdminToken();
     await _clearAdminData();
+    await logout();
   }
 
-  /// Returns stored admin token.
   static Future<String?> getAdminToken() => AuthStorage.readAdminToken();
 
-  /// Headers with admin JWT for protected admin API calls.
-  static Future<Map<String, String>> getAdminHeaders() async {
-    final token = await getAdminToken();
-    final headers = <String, String>{'Content-Type': 'application/json'};
-    if (token != null) headers['Authorization'] = 'Bearer $token';
-    return headers;
-  }
+  static Future<Map<String, String>> getAdminHeaders() =>
+      getHeaders(needsAuth: true);
 
   static Future<void> _saveAdminData(Map<String, dynamic> adminData) async {
     final prefs = await SharedPreferences.getInstance();
-    if (adminData['admin_id'] != null) {
-      await prefs.setInt('admin_id', (adminData['admin_id'] as num).toInt());
-    }
+    final id = asInt(adminData['admin_id']);
+    if (id != null) await prefs.setInt('admin_id', id);
     if (adminData['email'] != null) {
-      await prefs.setString('admin_email', adminData['email'] as String);
+      await prefs.setString('admin_email', '${adminData['email']}');
     }
     if (adminData['full_name'] != null) {
-      await prefs.setString('admin_full_name', adminData['full_name'] as String);
+      await prefs.setString('admin_full_name', '${adminData['full_name']}');
     }
     if (adminData['role'] != null) {
-      await prefs.setString('admin_role', adminData['role'] as String);
+      await prefs.setString('admin_role', '${adminData['role']}');
     }
   }
 
   static Future<void> _clearAdminData() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('admin_id');
-    await prefs.remove('admin_email');
-    await prefs.remove('admin_full_name');
-    await prefs.remove('admin_role');
+    for (final k in [
+      'admin_id',
+      'admin_email',
+      'admin_full_name',
+      'admin_role',
+    ]) {
+      await prefs.remove(k);
+    }
   }
 
   static Future<void> _clearUserData() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('is_admin');
-    await prefs.remove('user_id');
-    await prefs.remove('user_email');
-    await prefs.remove('user_full_name');
+    for (final k in [
+      'is_admin',
+      'user_id',
+      'user_email',
+      'user_full_name',
+      'firebase_uid',
+      'auth_provider',
+      'user_role',
+    ]) {
+      await prefs.remove(k);
+    }
   }
 
-  // ============ USER ENDPOINTS ============
+  static Future<void> _saveUserData(Map<String, dynamic> userData) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('is_admin', userData['is_admin'] == true);
+    final id = asInt(userData['user_id']);
+    if (id != null) await prefs.setInt('user_id', id);
+    if (userData['email'] != null) {
+      await prefs.setString('user_email', '${userData['email']}');
+    }
+    if (userData['full_name'] != null) {
+      await prefs.setString('user_full_name', '${userData['full_name']}');
+    }
+    if (userData['firebase_uid'] != null) {
+      await prefs.setString('firebase_uid', '${userData['firebase_uid']}');
+    }
+    if (userData['auth_provider'] != null) {
+      await prefs.setString('auth_provider', '${userData['auth_provider']}');
+    }
+    if (userData['role'] != null) {
+      await prefs.setString('user_role', '${userData['role']}');
+    }
+  }
 
-  /// Get current user profile
+  // ============ CURRENT USER ============
+
+  /// Display name of a Supabase user (signup metadata, OAuth profile or email).
+  static String? displayName(User? user) {
+    if (user == null) return null;
+    final meta = user.userMetadata ?? const {};
+    final name = (meta['full_name'] ?? meta['name'])?.toString().trim();
+    if (name != null && name.isNotEmpty) return name;
+    return user.email?.split('@').first;
+  }
+
+  static String? photoUrl(User? user) {
+    final meta = user?.userMetadata ?? const {};
+    return (meta['avatar_url'] ?? meta['picture'])?.toString();
+  }
+
+  /// Supabase Auth user id (uuid).
+  static String? get userId => _sb.auth.currentUser?.id;
+
+  static User? get currentAuthUser => _sb.auth.currentUser;
+
   static Future<Map<String, dynamic>> getCurrentUser() async {
     try {
-      final user = _auth.currentUser;
+      final user = _sb.auth.currentUser;
       if (user == null) {
         return {'success': false, 'message': 'No authenticated user'};
       }
-
-      final profile = await LocalDatabaseService.getUserProfile(user.uid);
-      final localUser = {
-        'uid': user.uid,
-        'email': user.email,
-        'name': profile?['full_name'] ?? user.displayName,
-        'phoneNumber': profile?['phone_number'],
-        'bloodGroup': profile?['blood_group'],
-        'city': profile?['city'],
+      final profile = await LocalDatabaseService.getUserProfile(user.id);
+      return {
+        'success': true,
+        'user': {
+          'uid': user.id,
+          'email': user.email,
+          'name': profile?['full_name'] ?? displayName(user),
+          'phoneNumber': profile?['phone_number'],
+          'bloodGroup': profile?['blood_group'],
+          'city': profile?['city'],
+        },
       };
-
-      return {'success': true, 'user': localUser};
     } catch (e) {
       return {'success': false, 'message': 'Error: $e'};
     }
   }
 
-  // ============ DESTINATION ENDPOINTS ============
+  static Future<String> getAuthProvider() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('auth_provider') ?? 'EMAIL';
+  }
 
-  /// Get all destinations — tries backend first, falls back to local SQLite.
-  /// Always normalises the result so both `id` and `destination_id` are present.
+  static Future<bool> getIsAdmin() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (prefs.getBool('is_admin') == true) return true;
+    final adminToken = await AuthStorage.readAdminToken();
+    return adminToken != null && adminToken.isNotEmpty;
+  }
+
+  static Future<String?> getAdminRole() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('admin_role');
+  }
+
+  static Future<String> getAdminName() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('admin_full_name') ??
+        prefs.getString('user_full_name') ??
+        'Admin';
+  }
+
+  /// Integer SafarSync user id (public.users.user_id).
+  static Future<int?> getCurrentUserId() async {
+    final prefs = await SharedPreferences.getInstance();
+    final cached = prefs.getInt('user_id');
+    if (cached != null || _sb.auth.currentUser == null) return cached;
+    final sync = await syncSession();
+    return sync['success'] == true ? prefs.getInt('user_id') : null;
+  }
+
+  /// True when there is no usable Supabase session.
+  static Future<bool> isJwtExpired() async {
+    final session = _sb.auth.currentSession;
+    return session == null || session.isExpired;
+  }
+
+  /// Called on app start: refresh an expired session and make sure the
+  /// integer user id is cached.
+  static Future<void> refreshSessionIfNeeded() async {
+    if (_sb.auth.currentSession == null) return;
+    try {
+      if (await isJwtExpired()) await _sb.auth.refreshSession();
+      final prefs = await SharedPreferences.getInstance();
+      if (prefs.getInt('user_id') == null) await syncSession();
+    } catch (e) {
+      debugPrint('[ApiService] refreshSessionIfNeeded: $e');
+    }
+  }
+
+  // ============ DESTINATIONS ============
+
+  static List<dynamic> _normalizeDestinations(List<dynamic> raw) =>
+      raw.map((d) {
+        final m = Map<String, dynamic>.from(d as Map);
+        final resolved = asInt(m['destination_id'] ?? m['id']);
+        m['destination_id'] = resolved;
+        m['id'] = resolved;
+        return m;
+      }).toList();
+
+  /// Destinations from Supabase; falls back to the bundled offline catalogue
+  /// only when the network is unavailable.
   static Future<Map<String, dynamic>> getDestinations({
     int page = 1,
     int limit = 50,
     String? category,
   }) async {
-    List<dynamic> normalize(List<dynamic> raw) => raw.map((d) {
-      final m = Map<String, dynamic>.from(d as Map);
-      // destination_id/id can arrive as a String (legacy `destination` table
-      // uses a char(36) id column) or a num (modern `destinations` table) —
-      // never cast blindly, that throws on the String case.
-      final resolved = asInt(m['destination_id'] ?? m['id']);
-      m['destination_id'] = resolved;
-      m['id'] = resolved;
-      return m;
-    }).toList();
-
-    // 1. Try backend endpoint
-    try {
-      final queryParams = 'page=$page&limit=$limit${category != null ? '&category=$category' : ''}';
-      final response = await http.get(
-        Uri.parse('$baseUrl/destinations?$queryParams'),
-        headers: await getHeaders(),
-      ).timeout(_kTimeout);
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final list = (data['destinations'] as List?) ?? [];
-        return {'success': true, 'destinations': normalize(list)};
-      }
-    } catch (_) {}
-
-    // 2. Fall back to local SQLite seed data
+    final qs =
+        'page=$page&limit=$limit'
+        '${category != null ? '&category=${Uri.encodeQueryComponent(category)}' : ''}';
+    final r = await getRequest('/destinations?$qs', auth: false);
+    if (r['destinations'] is List) {
+      return {
+        'success': true,
+        'destinations': _normalizeDestinations(r['destinations'] as List),
+      };
+    }
     try {
       await LocalDatabaseService.ensureInitialized();
-      final destinations = await LocalDatabaseService.getDestinations(
+      final local = await LocalDatabaseService.getDestinations(
         page: page,
         limit: limit,
         category: category,
       );
-      return {'success': true, 'destinations': normalize(destinations)};
+      return {
+        'success': true,
+        'offline': true,
+        'destinations': _normalizeDestinations(local),
+      };
     } catch (e) {
       return {'success': false, 'message': 'Error: $e'};
     }
   }
 
-  /// Search destinations from local SQLite
   static Future<Map<String, dynamic>> searchDestinations(String query) async {
+    final r = await getRequest(
+      '/destinations/search?query=${Uri.encodeQueryComponent(query)}',
+      auth: false,
+    );
+    if (r['results'] is List) {
+      return {
+        'success': true,
+        'results': _normalizeDestinations(r['results'] as List),
+      };
+    }
     try {
       await LocalDatabaseService.ensureInitialized();
       final results = await LocalDatabaseService.searchDestinations(query);
-
-      return {'success': true, 'results': results};
+      return {'success': true, 'offline': true, 'results': results};
     } catch (e) {
       return {'success': false, 'message': 'Error: $e'};
     }
   }
 
-  /// Get destination by ID
   static Future<Map<String, dynamic>> getDestinationById(int id) async {
-    try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/destinations/$id'),
-        headers: await getHeaders(),
-      );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        return {'success': true, 'destination': data['destination']};
-      } else {
-        return {'success': false, 'message': 'Destination not found'};
-      }
-    } catch (e) {
-      return {'success': false, 'message': 'Error: $e'};
+    final r = await getRequest('/destinations/$id', auth: false);
+    if (r['destination'] != null) {
+      return {'success': true, 'destination': r['destination']};
     }
+    return {
+      'success': false,
+      'message': r['message'] ?? 'Destination not found',
+    };
   }
 
-  // ============ ROUTE ENDPOINTS ============
+  // ============ ROUTES ============
 
-  /// Create route
   static Future<Map<String, dynamic>> createRoute({
     required String routeName,
     String? description,
@@ -425,759 +597,381 @@ class ApiService {
     String difficultyLevel = 'Easy',
     bool isPublic = false,
   }) async {
-    try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/routes'),
-        headers: await getHeaders(needsAuth: true),
-        body: jsonEncode({
-          'route_name': routeName,
-          'description': description,
-          'start_location': startLocation,
-          'end_location': endLocation,
-          'start_lat': startLat,
-          'start_lng': startLng,
-          'end_lat': endLat,
-          'end_lng': endLng,
-          'difficulty_level': difficultyLevel,
-          'is_public': isPublic,
-        }),
-      );
-
-      if (response.statusCode == 201) {
-        final data = jsonDecode(response.body);
-        return {'success': true, 'route_id': data['route_id']};
-      } else {
-        return {'success': false, 'message': 'Failed to create route'};
-      }
-    } catch (e) {
-      return {'success': false, 'message': 'Error: $e'};
+    final r = await postRequest('/routes', {
+      'route_name': routeName,
+      'description': description,
+      'start_location': startLocation,
+      'end_location': endLocation,
+      'start_lat': startLat,
+      'start_lng': startLng,
+      'end_lat': endLat,
+      'end_lng': endLng,
+      'difficulty_level': difficultyLevel,
+      'is_public': isPublic,
+    });
+    if (r['route_id'] != null) {
+      return {'success': true, 'route_id': r['route_id']};
     }
+    return {
+      'success': false,
+      'message': r['message'] ?? 'Failed to create route',
+    };
   }
 
-  /// Get user's routes
-  ///
   static Future<Map<String, dynamic>> getUserRoutes({
     int page = 1,
     int limit = 10,
   }) async {
-    try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/routes?page=$page&limit=$limit'),
-        headers: await getHeaders(needsAuth: true),
-      );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        return {'success': true, 'routes': data['routes']};
-      } else {
-        return {'success': false, 'message': 'Failed to fetch routes'};
-      }
-    } catch (e) {
-      return {'success': false, 'message': 'Error: $e'};
-    }
+    final r = await getRequest('/routes?page=$page&limit=$limit');
+    if (r['routes'] is List) return {'success': true, 'routes': r['routes']};
+    return {
+      'success': false,
+      'message': r['message'] ?? 'Failed to fetch routes',
+    };
   }
 
-  // ============ WISHLIST ENDPOINTS ============
+  // ============ WISHLIST ============
 
-  /// Get user's wishlist
   static Future<Map<String, dynamic>> getWishlist({
     int page = 1,
     int limit = 10,
   }) async {
-    try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/wishlist?page=$page&limit=$limit'),
-        headers: await getHeaders(needsAuth: true),
-      ).timeout(_kTimeout);
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        return {'success': true, 'wishlist': data['wishlist']};
-      } else {
-        return {'success': false, 'message': 'Failed to fetch wishlist'};
-      }
-    } on TimeoutException {
-      return {'success': false, 'wishlist': [], 'message': 'Request timed out'};
-    } catch (e) {
-      return {'success': false, 'wishlist': [], 'message': 'Error: $e'};
+    final r = await getRequest('/wishlist?page=$page&limit=$limit');
+    if (r['wishlist'] is List) {
+      return {'success': true, 'wishlist': r['wishlist']};
     }
+    return {
+      'success': false,
+      'wishlist': [],
+      'message': r['message'] ?? 'Failed to fetch wishlist',
+    };
   }
 
-  /// Add to wishlist
   static Future<Map<String, dynamic>> addToWishlist({
     required int destinationId,
     String? notes,
     String? priority,
     String? plannedVisitDate,
   }) async {
-    try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/wishlist'),
-        headers: await getHeaders(needsAuth: true),
-        body: jsonEncode({
-          'destination_id': destinationId,
-          'notes': notes,
-          'priority': priority,
-          'planned_visit_date': plannedVisitDate,
-        }),
-      );
-
-      if (response.statusCode == 201) {
-        return {'success': true, 'message': 'Added to wishlist'};
-      } else if (response.statusCode == 409) {
-        return {'success': false, 'message': 'Already in wishlist'};
-      } else {
-        return {'success': false, 'message': 'Failed to add to wishlist'};
-      }
-    } catch (e) {
-      return {'success': false, 'message': 'Error: $e'};
+    final r = await postRequest('/wishlist', {
+      'destination_id': destinationId,
+      'notes': notes,
+      'priority': priority,
+      'planned_visit_date': plannedVisitDate,
+    });
+    if (r['wishlist_id'] != null) {
+      return {'success': true, 'message': 'Added to wishlist'};
     }
+    if (r['status'] == 409) {
+      return {'success': false, 'message': 'Already in wishlist'};
+    }
+    return {
+      'success': false,
+      'message': r['message'] ?? 'Failed to add to wishlist',
+    };
   }
 
-  /// Check if destination in wishlist
   static Future<Map<String, dynamic>> checkInWishlist(int destinationId) async {
-    try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/wishlist/check/$destinationId'),
-        headers: await getHeaders(needsAuth: true),
-      );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        return {'success': true, 'inWishlist': data['inWishlist']};
-      } else {
-        return {'success': false, 'inWishlist': false};
-      }
-    } catch (e) {
-      return {'success': false, 'inWishlist': false};
-    }
+    final r = await getRequest('/wishlist/check/$destinationId');
+    return {
+      'success': r.containsKey('inWishlist'),
+      'inWishlist': r['inWishlist'] == true,
+    };
   }
 
-  /// Remove from wishlist
   static Future<Map<String, dynamic>> removeFromWishlist(
     int destinationId,
   ) async {
-    try {
-      final response = await http.delete(
-        Uri.parse('$baseUrl/wishlist/$destinationId'),
-        headers: await getHeaders(needsAuth: true),
-      );
-
-      if (response.statusCode == 200) {
-        return {'success': true, 'message': 'Removed from wishlist'};
-      } else {
-        return {'success': false, 'message': 'Failed to remove'};
-      }
-    } catch (e) {
-      return {'success': false, 'message': 'Error: $e'};
+    final r = await deleteRequest('/wishlist/$destinationId');
+    if (r['success'] == false) {
+      return {'success': false, 'message': r['message'] ?? 'Failed to remove'};
     }
+    return {'success': true, 'message': 'Removed from wishlist'};
   }
 
-  // ============ WEATHER ENDPOINTS ============
+  // ============ LOCATION / WEATHER ============
 
-  /// Get latest stored user location
+  /// Latest stored location of the signed-in user.
   static Future<Map<String, dynamic>> getLatestLocation({
-    required String userIdentifier,
+    String? userIdentifier,
   }) async {
-    try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/location/latest?user_identifier=$userIdentifier'),
-        headers: await getHeaders(),
-      ).timeout(_kTimeout);
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        return {'success': true, 'location': data['location']};
-      }
-
-      return {'success': false, 'message': 'No location found'};
-    } catch (e) {
-      return {'success': false, 'message': 'Error: $e'};
+    final r = await getRequest('/location/latest');
+    if (r['location'] != null) {
+      return {'success': true, 'location': r['location']};
     }
+    return {'success': false, 'message': r['message'] ?? 'No location found'};
   }
 
-  /// Get current weather
   static Future<Map<String, dynamic>> getWeather(double lat, double lng) async {
-    try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/weather/$lat/$lng'),
-        headers: await getHeaders(),
-      ).timeout(_kTimeout);
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        return {'success': true, 'weather': data['weather']};
-      } else {
-        return {'success': false, 'message': 'Failed to fetch weather'};
-      }
-    } on TimeoutException {
-      return {'success': false, 'message': 'Weather request timed out'};
-    } catch (e) {
-      return {'success': false, 'message': 'Error: $e'};
-    }
+    final r = await getRequest('/weather/$lat/$lng', auth: false);
+    if (r['weather'] != null) return {'success': true, 'weather': r['weather']};
+    return {
+      'success': false,
+      'message': r['message'] ?? 'Failed to fetch weather',
+    };
   }
 
-  /// Get weather forecast
   static Future<Map<String, dynamic>> getWeatherForecast(
     double lat,
     double lng, {
     int days = 4,
   }) async {
-    try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/weather/$lat/$lng/forecast?days=$days'),
-        headers: await getHeaders(),
-      ).timeout(_kTimeout);
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        return {'success': true, 'forecast': data['forecast']};
-      }
-
-      return {'success': false, 'message': 'Failed to fetch forecast'};
-    } on TimeoutException {
-      return {'success': false, 'message': 'Forecast request timed out'};
-    } catch (e) {
-      return {'success': false, 'message': 'Error: $e'};
+    final r = await getRequest(
+      '/weather/$lat/$lng/forecast?days=$days',
+      auth: false,
+    );
+    if (r['forecast'] is List) {
+      return {'success': true, 'forecast': r['forecast'], 'city': r['city']};
     }
+    return {
+      'success': false,
+      'message': r['message'] ?? 'Failed to fetch forecast',
+    };
   }
 
-  /// Push live GPS position to backend (fire-and-forget)
+  /// Push a GPS position (fire-and-forget).
   static Future<void> updateLocation({
     required double latitude,
     required double longitude,
     double? accuracy,
     String? city,
     String? country,
+    int? groupBookingId,
   }) async {
-    try {
-      await http.post(
-        Uri.parse('$baseUrl/location/update'),
-        headers: await getHeaders(needsAuth: true),
-        body: jsonEncode({
-          'latitude': latitude,
-          'longitude': longitude,
-          if (accuracy != null) 'accuracy': accuracy,
-          if (city != null) 'city': city,
-          if (country != null) 'country': country,
-          'captured_at': DateTime.now().toIso8601String(),
-        }),
-      );
-    } catch (_) {}
+    if (_sb.auth.currentSession == null) return;
+    await postRequest('/location/update', {
+      'latitude': latitude,
+      'longitude': longitude,
+      if (accuracy != null) 'accuracy': accuracy,
+      if (city != null) 'city': city,
+      if (country != null) 'country': country,
+      if (groupBookingId != null) 'group_booking_id': groupBookingId,
+      'captured_at': DateTime.now().toUtc().toIso8601String(),
+    });
   }
 
-  // ============ AI ENDPOINTS ============
+  // ============ AI / EMERGENCY / NOTIFICATIONS ============
 
-  /// Send message to AI
   static Future<Map<String, dynamic>> sendAiMessage(String message) async {
-    try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/ai/chat'),
-        headers: await getHeaders(needsAuth: true),
-        body: jsonEncode({'message': message}),
-      ).timeout(const Duration(seconds: 30));
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        return {'success': true, 'response': data['ai_response']};
-      } else {
-        return {'success': false, 'message': 'AI request failed'};
-      }
-    } on TimeoutException {
-      return {'success': false, 'message': 'AI response timed out. Try again.'};
-    } catch (e) {
-      return {'success': false, 'message': 'Error: $e'};
+    final r = await postRequest('/ai/chat', {
+      'message': message,
+    }, timeout: const Duration(seconds: 40));
+    if (r['ai_response'] != null) {
+      return {'success': true, 'response': r['ai_response']};
     }
+    return {'success': false, 'message': r['message'] ?? 'AI request failed'};
   }
 
-  // ============ EMERGENCY ENDPOINTS ============
-
-  /// Trigger SOS
   static Future<Map<String, dynamic>> triggerSOS({
     required double latitude,
     required double longitude,
     String? locationDescription,
     String severity = 'High',
   }) async {
-    try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/emergency/trigger'),
-        headers: await getHeaders(needsAuth: true),
-        body: jsonEncode({
-          'latitude': latitude,
-          'longitude': longitude,
-          'location_description': locationDescription,
-          'severity': severity,
-        }),
-      ).timeout(_kTimeout);
-
-      if (response.statusCode == 200) {
-        return {'success': true, 'message': 'SOS activated'};
-      } else {
-        return {'success': false, 'message': 'Failed to activate SOS'};
-      }
-    } on TimeoutException {
-      return {'success': false, 'message': 'SOS request timed out. Check server connection.'};
-    } catch (e) {
-      return {'success': false, 'message': 'Error: $e'};
+    final r = await postRequest('/emergency/trigger', {
+      'latitude': latitude,
+      'longitude': longitude,
+      'message': locationDescription,
+      'severity': severity,
+    });
+    if (r['success'] == true) {
+      return {
+        'success': true,
+        'message': 'SOS activated',
+        'alert_id': r['alert_id'],
+      };
     }
+    return {
+      'success': false,
+      'message': r['message'] ?? 'Failed to activate SOS',
+    };
   }
 
-  // ============ NOTIFICATIONS ENDPOINTS ============
-
-  /// Get notifications
   static Future<Map<String, dynamic>> getNotifications({int limit = 20}) async {
-    try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/notifications?limit=$limit'),
-        headers: await getHeaders(needsAuth: true),
-      ).timeout(_kTimeout);
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        return {'success': true, 'notifications': data['notifications']};
-      } else {
-        return {'success': false, 'message': 'Failed to fetch notifications'};
-      }
-    } on TimeoutException {
-      return {'success': false, 'notifications': [], 'message': 'Request timed out'};
-    } catch (e) {
-      return {'success': false, 'notifications': [], 'message': 'Error: $e'};
+    final r = await getRequest('/notifications?limit=$limit');
+    if (r['notifications'] is List) {
+      return {'success': true, 'notifications': r['notifications']};
     }
+    return {
+      'success': false,
+      'notifications': [],
+      'message': r['message'] ?? 'Failed to fetch notifications',
+    };
   }
 
-  // ============ GENERIC HTTP METHODS ============
+  // ============ STORAGE ============
 
-  static const Duration _kTimeout = Duration(seconds: 15);
-
-  static Map<String, dynamic> _errorBody(http.Response response) {
-    try {
-      final decoded = jsonDecode(response.body) as Map<String, dynamic>;
-      final msg = decoded['error'] ?? decoded['message'] ?? 'Request failed: ${response.statusCode}';
-      return {'success': false, 'message': msg.toString(), ...decoded};
-    } catch (_) {
-      return {'success': false, 'message': 'Request failed: ${response.statusCode}'};
-    }
-  }
-
-  /// Generic GET request
-  static Future<Map<String, dynamic>> getRequest(String endpoint) async {
-    try {
-      final response = await http.get(
-        Uri.parse('$baseUrl$endpoint'),
-        headers: await getHeaders(needsAuth: true),
-      ).timeout(_kTimeout);
-
-      if (response.statusCode == 200) {
-        return jsonDecode(response.body);
-      } else {
-        return _errorBody(response);
-      }
-    } on TimeoutException {
-      return {'success': false, 'message': 'Cannot reach the SafarSync server. Check your internet connection and try again.'};
-    } catch (e) {
-      if (e.toString().contains('SocketException') || e.toString().contains('Connection refused')) {
-        return {'success': false, 'message': 'Cannot connect to the SafarSync server. Check your internet connection and try again.'};
-      }
-      return {'success': false, 'message': 'Error: $e'};
-    }
-  }
-
-  /// Generic POST request
-  static Future<Map<String, dynamic>> postRequest(
-    String endpoint,
-    Map<String, dynamic> body, {
-    Duration? timeout,
-  }) async {
-    try {
-      final response = await http.post(
-        Uri.parse('$baseUrl$endpoint'),
-        headers: await getHeaders(needsAuth: true),
-        body: jsonEncode(body),
-      ).timeout(timeout ?? _kTimeout);
-
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        return jsonDecode(response.body);
-      } else {
-        return _errorBody(response);
-      }
-    } on TimeoutException {
-      return {'success': false, 'message': 'Cannot reach the SafarSync server. Check your internet connection and try again.'};
-    } catch (e) {
-      if (e.toString().contains('SocketException') || e.toString().contains('Connection refused')) {
-        return {'success': false, 'message': 'Cannot connect to the SafarSync server. Check your internet connection and try again.'};
-      }
-      return {'success': false, 'message': 'Error: $e'};
-    }
-  }
-
-  /// Generic PUT request
-  static Future<Map<String, dynamic>> putRequest(String endpoint, Map<String, dynamic> body) async {
-    try {
-      final response = await http.put(
-        Uri.parse('$baseUrl$endpoint'),
-        headers: await getHeaders(needsAuth: true),
-        body: jsonEncode(body),
-      ).timeout(_kTimeout);
-
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        return jsonDecode(response.body);
-      } else {
-        return _errorBody(response);
-      }
-    } on TimeoutException {
-      return {'success': false, 'message': 'Cannot reach the SafarSync server. Check your internet connection and try again.'};
-    } catch (e) {
-      if (e.toString().contains('SocketException') || e.toString().contains('Connection refused')) {
-        return {'success': false, 'message': 'Cannot connect to the SafarSync server. Check your internet connection and try again.'};
-      }
-      return {'success': false, 'message': 'Error: $e'};
-    }
-  }
-
-  /// Generic DELETE request
-  static Future<Map<String, dynamic>> deleteRequest(String endpoint) async {
-    try {
-      final response = await http.delete(
-        Uri.parse('$baseUrl$endpoint'),
-        headers: await getHeaders(needsAuth: true),
-      ).timeout(_kTimeout);
-
-      if (response.statusCode == 200 || response.statusCode == 204) {
-        if (response.body.isEmpty) return {'success': true};
-        return jsonDecode(response.body);
-      } else {
-        return _errorBody(response);
-      }
-    } on TimeoutException {
-      return {'success': false, 'message': 'Cannot reach the SafarSync server. Check your internet connection and try again.'};
-    } catch (e) {
-      if (e.toString().contains('SocketException') || e.toString().contains('Connection refused')) {
-        return {'success': false, 'message': 'Cannot connect to the SafarSync server. Check your internet connection and try again.'};
-      }
-      return {'success': false, 'message': 'Error: $e'};
-    }
-  }
-
-  // ============ CURRENT USER ============
-
-  /// Decode the stored JWT to extract the current user's DB id.
-  static Future<int?> getCurrentUserId() async {
-    try {
-      final token = await AuthStorage.readToken();
-      if (token == null) return null;
-      final parts = token.split('.');
-      if (parts.length < 2) return null;
-      // Pad base64 to a multiple of 4
-      String payload = parts[1];
-      payload = payload.padRight(
-          payload.length + (4 - payload.length % 4) % 4, '=');
-      final decoded = utf8.decode(base64Url.decode(payload));
-      final map = jsonDecode(decoded) as Map<String, dynamic>;
-      final id = map['userId'];
-      if (id is int) return id;
-      if (id is String) return int.tryParse(id);
-      return null;
-    } catch (_) {
-      return null;
-    }
-  }
-
-  // ============ PROFILE PHOTO UPLOAD ============
-
-  /// Upload profile photo bytes to backend. Returns {success, url}.
+  /// Upload a profile photo to Supabase Storage (`avatars/<auth uid>/...`)
+  /// and save its public URL on the profile. Returns `{success, url}`.
   static Future<Map<String, dynamic>> uploadProfilePhoto(
     List<int> bytes,
     String filename,
   ) async {
-    try {
-      final token = await AuthStorage.readToken();
-      final request = http.MultipartRequest(
-        'POST',
-        Uri.parse('$baseUrl/users/profile/photo'),
-      );
-      if (token != null) request.headers['Authorization'] = 'Bearer $token';
-      request.files.add(http.MultipartFile.fromBytes(
-        'photo', bytes, filename: filename,
-      ));
-      final streamed = await request.send().timeout(_kTimeout);
-      final body = await streamed.stream.bytesToString();
-      final data = jsonDecode(body) as Map<String, dynamic>;
-      return data;
-    } on TimeoutException {
-      return {'success': false, 'message': 'Upload timed out'};
-    } catch (e) {
-      return {'success': false, 'message': 'Upload error: $e'};
+    final user = _sb.auth.currentUser;
+    if (user == null) {
+      return {'success': false, 'message': 'Please sign in again'};
     }
-  }
-
-  // ============ FIREBASE TOKEN EXCHANGE ============
-
-  /// Call after every Firebase sign-in (email, Google, Apple).
-  /// Exchanges the Firebase ID token for a MySQL-backed JWT and stores it.
-  /// Detects the auth provider from user.providerData and sends it to the backend
-  /// so MySQL records the correct auth method.
-  static Future<Map<String, dynamic>> exchangeFirebaseToken(
-    User user, {
-    String? phoneNumber,
-    String? bloodGroup,
-  }) async {
-    final configError = EnvConfig.configurationError;
-    if (configError != null) {
-      debugPrint('[ApiService] $configError');
-      return {
-        'success': false,
-        'message': 'This build of SafarSync has no server configured. Please contact support.',
-      };
+    if (bytes.length > 5 * 1024 * 1024) {
+      return {'success': false, 'message': 'Image is too large (max 5 MB)'};
     }
-
+    final ext = filename.contains('.')
+        ? filename.split('.').last.toLowerCase()
+        : 'jpg';
+    final contentType = switch (ext) {
+      'png' => 'image/png',
+      'webp' => 'image/webp',
+      'gif' => 'image/gif',
+      'heic' => 'image/heic',
+      _ => 'image/jpeg',
+    };
+    final path =
+        '${user.id}/avatar_${DateTime.now().millisecondsSinceEpoch}.${ext == 'jpeg' ? 'jpg' : ext}';
     try {
-      final idToken = await user.getIdToken()
-          .timeout(const Duration(seconds: 15));
-
-      // Detect provider from Firebase user's linked provider data
-      final provider = _detectAuthProvider(user);
-
-      final response = await http.post(
-        Uri.parse('$baseUrl/auth/firebase-exchange'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'firebase_id_token':    idToken,
-          'auth_provider':        provider,
-          'full_name':            user.displayName,
-          'profile_picture_url':  user.photoURL,
-          if (phoneNumber != null) 'phone_number': phoneNumber,
-          if (bloodGroup  != null) 'blood_group':  bloodGroup,
-        }),
-      ).timeout(const Duration(seconds: 30));
-
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        final token = data['token'] as String?;
-        if (token == null || token.isEmpty) {
-          return {'success': false, 'message': 'Server did not return a session. Please try again.'};
-        }
-        await saveToken(token);
-        final userData = data['user'] as Map<String, dynamic>?;
-        if (userData != null) await _saveUserData(userData);
-        return {'success': true, ...data};
-      }
-      if (response.statusCode == 401) {
-        return {'success': false, 'message': 'Your sign-in could not be verified. Please try again.'};
-      }
-      if (response.statusCode == 429) {
-        return {'success': false, 'message': 'Too many sign-in attempts. Please wait a few minutes and try again.'};
-      }
-      return _errorBody(response);
-    } on TimeoutException {
-      debugPrint('[ApiService] exchangeFirebaseToken timed out — backend unreachable at $baseUrl');
-      return {
-        'success': false,
-        'message': 'The SafarSync server is taking too long to respond. Please try again.',
-      };
-    } catch (e) {
-      debugPrint('[ApiService] exchangeFirebaseToken error: $e');
-      if (e.toString().contains('SocketException') ||
-          e.toString().contains('Connection refused') ||
-          e.toString().contains('HandshakeException')) {
+      await _sb.storage
+          .from('avatars')
+          .uploadBinary(
+            path,
+            Uint8List.fromList(bytes),
+            fileOptions: FileOptions(contentType: contentType, upsert: true),
+          );
+      final url = _sb.storage.from('avatars').getPublicUrl(path);
+      final r = await putRequest('/users/profile', {
+        'profile_picture_url': url,
+      });
+      if (r['success'] != true) {
         return {
           'success': false,
-          'message': 'Cannot connect to the SafarSync server. Check your internet connection and try again.',
+          'message': r['message'] ?? 'Could not save photo',
         };
       }
-      return {'success': false, 'message': 'Sign-in error: $e'};
-    }
-  }
-
-  /// Resolves the auth provider string from a Firebase [User]'s providerData.
-  static String _detectAuthProvider(User user) {
-    for (final info in user.providerData) {
-      switch (info.providerId) {
-        case 'google.com':   return 'GOOGLE';
-        case 'apple.com':    return 'APPLE';
-        case 'facebook.com': return 'FACEBOOK';
-        case 'password':     return 'EMAIL';
-      }
-    }
-    return 'EMAIL';
-  }
-
-  /// Save user data from firebase-exchange response to SharedPreferences
-  static Future<void> _saveUserData(Map<String, dynamic> userData) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('is_admin', userData['is_admin'] == true);
-    if (userData['user_id'] != null) {
-      await prefs.setInt('user_id', (userData['user_id'] as num).toInt());
-    }
-    if (userData['email'] != null) {
-      await prefs.setString('user_email', userData['email'] as String);
-    }
-    if (userData['full_name'] != null) {
-      await prefs.setString('user_full_name', userData['full_name'] as String);
-    }
-    if (userData['firebase_uid'] != null) {
-      await prefs.setString('firebase_uid', userData['firebase_uid'] as String);
-    }
-    if (userData['auth_provider'] != null) {
-      await prefs.setString('auth_provider', userData['auth_provider'] as String);
-    }
-    if (userData['role'] != null) {
-      await prefs.setString('user_role', userData['role'] as String);
-    }
-  }
-
-  /// Returns the stored auth provider (EMAIL / GOOGLE / APPLE)
-  static Future<String> getAuthProvider() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('auth_provider') ?? 'EMAIL';
-  }
-
-  /// Returns true if the logged-in user has admin privileges.
-  /// Checks both user JWT admin flag and presence of a dedicated admin JWT.
-  static Future<bool> getIsAdmin() async {
-    final prefs = await SharedPreferences.getInstance();
-    if (prefs.getBool('is_admin') == true) return true;
-    final adminToken = await AuthStorage.readAdminToken();
-    return adminToken != null && adminToken.isNotEmpty;
-  }
-
-  /// Returns the stored admin role ('super_admin' or 'moderator'), or null.
-  static Future<String?> getAdminRole() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('admin_role');
-  }
-
-  /// Returns the stored admin display name.
-  static Future<String> getAdminName() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('admin_full_name')
-        ?? prefs.getString('user_full_name')
-        ?? 'Admin';
-  }
-
-  /// Returns stored MySQL user_id (not Firebase UID)
-  static Future<int?> getMySqlUserId() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getInt('user_id');
-  }
-
-  /// Get current user ID (from Firebase)
-  static String? get userId {
-    return _auth.currentUser?.uid;
-  }
-
-  // ============ ADMIN-AUTHENTICATED HTTP METHODS ============
-  // Use these for all /api/admin/* routes — they send the admin JWT, not the
-  // user JWT, so pure-admin accounts (from AdminLoginPage) work correctly.
-
-  static Future<Map<String, dynamic>> adminGetRequest(String endpoint) async {
-    try {
-      final response = await http.get(
-        Uri.parse('$baseUrl$endpoint'),
-        headers: await getAdminHeaders(),
-      );
-      if (response.statusCode == 200) return jsonDecode(response.body);
-      return {'success': false, 'message': 'Request failed: ${response.statusCode}'};
-    } catch (e) {
-      return {'success': false, 'message': 'Error: $e'};
-    }
-  }
-
-  static Future<Map<String, dynamic>> adminPostRequest(
-      String endpoint, Map<String, dynamic> body) async {
-    try {
-      final response = await http.post(
-        Uri.parse('$baseUrl$endpoint'),
-        headers: await getAdminHeaders(),
-        body: jsonEncode(body),
-      );
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        return jsonDecode(response.body);
-      }
-      final decoded = response.body.isNotEmpty
-          ? jsonDecode(response.body) as Map<String, dynamic>
-          : <String, dynamic>{};
-      return {'success': false, 'message': decoded['error'] ?? 'Request failed: ${response.statusCode}'};
-    } catch (e) {
-      return {'success': false, 'message': 'Error: $e'};
-    }
-  }
-
-  static Future<Map<String, dynamic>> adminPutRequest(
-      String endpoint, Map<String, dynamic> body) async {
-    try {
-      final response = await http.put(
-        Uri.parse('$baseUrl$endpoint'),
-        headers: await getAdminHeaders(),
-        body: jsonEncode(body),
-      );
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        return jsonDecode(response.body);
-      }
-      final decoded = response.body.isNotEmpty
-          ? jsonDecode(response.body) as Map<String, dynamic>
-          : <String, dynamic>{};
-      return {'success': false, 'message': decoded['error'] ?? 'Request failed: ${response.statusCode}'};
-    } catch (e) {
-      return {'success': false, 'message': 'Error: $e'};
-    }
-  }
-
-  static Future<Map<String, dynamic>> adminDeleteRequest(String endpoint) async {
-    try {
-      final response = await http.delete(
-        Uri.parse('$baseUrl$endpoint'),
-        headers: await getAdminHeaders(),
-      );
-      if (response.statusCode == 200 || response.statusCode == 204) {
-        if (response.body.isEmpty) return {'success': true};
-        return jsonDecode(response.body);
-      }
-      final decoded = response.body.isNotEmpty
-          ? jsonDecode(response.body) as Map<String, dynamic>
-          : <String, dynamic>{};
-      return {'success': false, 'message': decoded['error'] ?? 'Request failed: ${response.statusCode}'};
-    } catch (e) {
-      return {'success': false, 'message': 'Error: $e'};
-    }
-  }
-
-  // ============ JWT HELPERS ============
-
-  /// Returns true if the stored JWT is missing or its exp claim is in the past.
-  static Future<bool> isJwtExpired() async {
-    final token = await getToken();
-    if (token == null || token.isEmpty) return true;
-    return _isTokenExpired(token);
-  }
-
-  /// Silently re-exchanges the Firebase token for a fresh JWT if the current
-  /// one is missing or expired. Call this on app startup.
-  static Future<void> refreshTokenIfNeeded(User user) async {
-    if (await isJwtExpired()) {
       try {
-        await exchangeFirebaseToken(user);
-      } catch (_) {
-        // Backend may be offline — proceed without token; API calls will fail
-        // gracefully with 401 which is handled per-screen.
-      }
+        await _sb.auth.updateUser(UserAttributes(data: {'avatar_url': url}));
+      } catch (_) {}
+      return {'success': true, 'url': url};
+    } on StorageException catch (e) {
+      return {'success': false, 'message': 'Upload failed: ${e.message}'};
+    } catch (e) {
+      return {
+        'success': false,
+        'message': _isNetworkError(e)
+            ? 'No internet connection'
+            : 'Upload error: $e',
+      };
     }
   }
 
-  /// Decodes a JWT (without verifying signature) and checks the exp claim.
-  static bool _isTokenExpired(String token) {
-    try {
-      final parts = token.split('.');
-      if (parts.length != 3) return true;
-      final normalized = base64Url.normalize(parts[1]);
-      final payload = utf8.decode(base64Url.decode(normalized));
-      final data = jsonDecode(payload) as Map<String, dynamic>;
-      final exp = data['exp'] as int?;
-      if (exp == null) return false;
-      return DateTime.fromMillisecondsSinceEpoch(exp * 1000)
-          .isBefore(DateTime.now());
-    } catch (_) {
-      return true;
+  // ============ GENERIC HTTP (Edge Function) ============
+
+  static const _offlineMessage =
+      'No internet connection. Please check your network and try again.';
+
+  static Map<String, dynamic> _decode(http.Response res) {
+    Map<String, dynamic> body = {};
+    if (res.body.isNotEmpty) {
+      try {
+        final d = jsonDecode(res.body);
+        body = d is Map<String, dynamic> ? d : {'data': d};
+      } catch (_) {}
     }
+    if (res.statusCode >= 200 && res.statusCode < 300) {
+      return body.isEmpty ? {'success': true} : body;
+    }
+    if (res.statusCode == 401) {
+      return {
+        'success': false,
+        'status': 401,
+        'message': 'Your session has expired. Please log in again.',
+        ...body,
+      };
+    }
+    final msg =
+        body['error'] ?? body['message'] ?? 'Request failed: ${res.statusCode}';
+    return {
+      ...body,
+      'success': false,
+      'status': res.statusCode,
+      'message': '$msg',
+      'error': '$msg',
+    };
   }
+
+  /// Executes a request with one automatic retry on transient network errors.
+  static Future<Map<String, dynamic>> _send(
+    String method,
+    String endpoint, {
+    Map<String, dynamic>? body,
+    bool auth = true,
+    Duration? timeout,
+  }) async {
+    final uri = Uri.parse('$baseUrl$endpoint');
+    for (var attempt = 0; attempt < 2; attempt++) {
+      try {
+        final headers = await getHeaders(needsAuth: auth);
+        final encoded = body == null ? null : jsonEncode(body);
+        final Future<http.Response> fut = switch (method) {
+          'GET' => http.get(uri, headers: headers),
+          'POST' => http.post(uri, headers: headers, body: encoded),
+          'PUT' => http.put(uri, headers: headers, body: encoded),
+          'DELETE' => http.delete(uri, headers: headers, body: encoded),
+          _ => throw ArgumentError('Unsupported method $method'),
+        };
+        final res = await fut.timeout(timeout ?? _kTimeout);
+        return _decode(res);
+      } on TimeoutException {
+        if (attempt == 1 || method != 'GET') {
+          return {
+            'success': false,
+            'message': 'The request timed out. Please try again.',
+          };
+        }
+      } catch (e) {
+        if (!_isNetworkError(e)) {
+          return {'success': false, 'message': 'Error: $e'};
+        }
+        if (attempt == 1) {
+          return {
+            'success': false,
+            'offline': true,
+            'message': _offlineMessage,
+          };
+        }
+      }
+      await Future.delayed(const Duration(milliseconds: 700));
+    }
+    return {'success': false, 'message': _offlineMessage};
+  }
+
+  static Future<Map<String, dynamic>> getRequest(
+    String endpoint, {
+    bool auth = true,
+  }) => _send('GET', endpoint, auth: auth);
+
+  static Future<Map<String, dynamic>> postRequest(
+    String endpoint,
+    Map<String, dynamic> body, {
+    Duration? timeout,
+  }) => _send('POST', endpoint, body: body, timeout: timeout);
+
+  static Future<Map<String, dynamic>> putRequest(
+    String endpoint,
+    Map<String, dynamic> body,
+  ) => _send('PUT', endpoint, body: body);
+
+  static Future<Map<String, dynamic>> deleteRequest(String endpoint) =>
+      _send('DELETE', endpoint);
+
+  // Admin routes use the same Supabase session; admin rights are checked
+  // server-side on every /admin/* call.
+  static Future<Map<String, dynamic>> adminGetRequest(String endpoint) =>
+      getRequest(endpoint);
+  static Future<Map<String, dynamic>> adminPostRequest(
+    String endpoint,
+    Map<String, dynamic> body,
+  ) => postRequest(endpoint, body);
+  static Future<Map<String, dynamic>> adminPutRequest(
+    String endpoint,
+    Map<String, dynamic> body,
+  ) => putRequest(endpoint, body);
+  static Future<Map<String, dynamic>> adminDeleteRequest(String endpoint) =>
+      deleteRequest(endpoint);
 }

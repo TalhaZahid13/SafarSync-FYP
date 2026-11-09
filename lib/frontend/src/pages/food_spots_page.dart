@@ -250,8 +250,9 @@ class _RestaurantCard extends StatelessWidget {
           Stack(
             children: [
               ClipRRect(
-                borderRadius:
-                    const BorderRadius.vertical(top: Radius.circular(20)),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(20),
+                ),
                 child: Image.network(
                   restaurant['image'] as String,
                   height: 160,
@@ -260,8 +261,11 @@ class _RestaurantCard extends StatelessWidget {
                   errorBuilder: (_, _, e) => Container(
                     height: 160,
                     color: AppTheme.lightGray,
-                    child: const Icon(Icons.restaurant,
-                        size: 48, color: AppTheme.mediumGray),
+                    child: const Icon(
+                      Icons.restaurant,
+                      size: 48,
+                      color: AppTheme.mediumGray,
+                    ),
                   ),
                 ),
               ),
@@ -269,8 +273,10 @@ class _RestaurantCard extends StatelessWidget {
                 top: 12,
                 left: 12,
                 child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: const Color(0xFFFF8F00),
                     borderRadius: BorderRadius.circular(20),
@@ -278,9 +284,10 @@ class _RestaurantCard extends StatelessWidget {
                   child: Text(
                     restaurant['cuisineTag'] as String,
                     style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600),
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               ),
@@ -293,8 +300,11 @@ class _RestaurantCard extends StatelessWidget {
                     color: Colors.white.withValues(alpha: 0.9),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.favorite_border,
-                      size: 18, color: Color(0xFFFF8F00)),
+                  child: const Icon(
+                    Icons.favorite_border,
+                    size: 18,
+                    color: Color(0xFFFF8F00),
+                  ),
                 ),
               ),
             ],
@@ -335,14 +345,19 @@ class _RestaurantCard extends StatelessWidget {
                 const SizedBox(height: 4),
                 Row(
                   children: [
-                    const Icon(Icons.location_on,
-                        size: 14, color: AppTheme.mediumGray),
+                    const Icon(
+                      Icons.location_on,
+                      size: 14,
+                      color: AppTheme.mediumGray,
+                    ),
                     const SizedBox(width: 2),
                     Expanded(
                       child: Text(
                         restaurant['location'] as String,
                         style: const TextStyle(
-                            fontSize: 12, color: AppTheme.mediumGray),
+                          fontSize: 12,
+                          color: AppTheme.mediumGray,
+                        ),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
@@ -352,7 +367,9 @@ class _RestaurantCard extends StatelessWidget {
                 Text(
                   restaurant['cuisine'] as String,
                   style: const TextStyle(
-                      fontSize: 12, color: AppTheme.mediumGray),
+                    fontSize: 12,
+                    color: AppTheme.mediumGray,
+                  ),
                 ),
                 const SizedBox(height: 10),
                 Wrap(
@@ -362,15 +379,21 @@ class _RestaurantCard extends StatelessWidget {
                       .map(
                         (t) => Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 3),
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFFF8F00).withValues(alpha: 0.1),
+                            color: const Color(
+                              0xFFFF8F00,
+                            ).withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
                             t,
                             style: const TextStyle(
-                                fontSize: 11, color: Color(0xFFFF8F00)),
+                              fontSize: 11,
+                              color: Color(0xFFFF8F00),
+                            ),
                           ),
                         ),
                       )
@@ -390,7 +413,9 @@ class _RestaurantCard extends StatelessWidget {
                     const Text(
                       ' / person',
                       style: TextStyle(
-                          fontSize: 12, color: AppTheme.mediumGray),
+                        fontSize: 12,
+                        color: AppTheme.mediumGray,
+                      ),
                     ),
                   ],
                 ),
@@ -406,15 +431,17 @@ class _RestaurantCard extends StatelessWidget {
                           lng: restaurant['lng'] as double?,
                         ),
                         icon: const Icon(Icons.navigation, size: 14),
-                        label: const Text('Navigate',
-                            style: TextStyle(fontSize: 12)),
+                        label: const Text(
+                          'Navigate',
+                          style: TextStyle(fontSize: 12),
+                        ),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: const Color(0xFFFF8F00),
                           side: const BorderSide(color: Color(0xFFFF8F00)),
-                          padding:
-                              const EdgeInsets.symmetric(vertical: 10),
+                          padding: const EdgeInsets.symmetric(vertical: 10),
                           shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12)),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                         ),
                       ),
                     ),
@@ -426,8 +453,7 @@ class _RestaurantCard extends StatelessWidget {
                           MaterialPageRoute(
                             builder: (_) => CreateBookingScreen(
                               presetType: 'restaurant',
-                              presetItemName:
-                                  restaurant['name'] as String,
+                              presetItemName: restaurant['name'] as String,
                               presetPricePerUnit:
                                   restaurant['priceNum'] as double,
                             ),
@@ -436,17 +462,19 @@ class _RestaurantCard extends StatelessWidget {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFFFF8F00),
                           foregroundColor: Colors.white,
-                          padding:
-                              const EdgeInsets.symmetric(vertical: 10),
+                          padding: const EdgeInsets.symmetric(vertical: 10),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
                           elevation: 0,
                         ),
-                        child: const Text('Reserve Table',
-                            style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600)),
+                        child: const Text(
+                          'Reserve Table',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                       ),
                     ),
                   ],

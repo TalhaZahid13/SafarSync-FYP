@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'dart:async';
+
 import 'package:flutter/services.dart';
 import 'package:flutter_stripe/flutter_stripe.dart';
 import 'package:provider/provider.dart';
-import 'firebase_options.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'src/utils/app_config.dart';
 import 'src/auth/login.dart';
 import 'src/auth/signup.dart';
@@ -27,17 +27,78 @@ import 'src/utils/env_config.dart';
 import 'src/utils/auth_storage.dart';
 import 'src/ui/destination_theme.dart';
 
+/// Root navigator, used for app-wide dialogs (e.g. password recovery).
+final GlobalKey<NavigatorState> appNavigatorKey = GlobalKey<NavigatorState>();
+
+/// Opening a Supabase "reset password" link lands the user here with a
+/// short-lived recovery session; ask for the new password.
+void _listenForPasswordRecovery() {
+  try {
+    Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+      if (data.event != AuthChangeEvent.passwordRecovery) return;
+      final ctx = appNavigatorKey.currentContext;
+      if (ctx == null || !ctx.mounted) return;
+      final ctrl = TextEditingController();
+      showDialog<void>(
+        context: ctx,
+        barrierDismissible: false,
+        builder: (dCtx) => AlertDialog(
+          title: const Text('Set a new password'),
+          content: TextField(
+            controller: ctrl,
+            obscureText: true,
+            decoration: const InputDecoration(
+              labelText: 'New password (min 6 characters)',
+            ),
+          ),
+          actions: [
+            ElevatedButton(
+              onPressed: () async {
+                if (ctrl.text.length < 6) return;
+                final messenger = ScaffoldMessenger.maybeOf(dCtx);
+                final navigator = Navigator.of(dCtx);
+                final r = await ApiService.updatePassword(ctrl.text);
+                navigator.pop();
+                messenger?.showSnackBar(
+                  SnackBar(content: Text(r['message'] as String? ?? 'Done')),
+                );
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        ),
+      );
+    }, onError: (Object e) => debugPrint('[Auth] state stream error: $e'));
+  } catch (e) {
+    debugPrint('[Auth] recovery listener not started: $e');
+  }
+}
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   debugPrint('[SafarSync] ▶ App starting');
 
-  // Backend URL is fixed at build time (API_BASE_URL dart-define) — no
-  // manual server setup or LAN discovery.
+  // Backend = Supabase Cloud. URL + publishable key are fixed at build time
+  // (env_config.dart) — no local server or IP address is involved.
   final envError = EnvConfig.configurationError;
   if (envError == null) {
-    debugPrint('[SafarSync] ✓ API: ${ApiService.baseUrl}');
+    debugPrint('[SafarSync] ✓ Supabase: ${EnvConfig.supabaseUrl}');
   } else {
     debugPrint('[SafarSync] ✗ $envError');
+  }
+
+  try {
+    await Supabase.initialize(
+      url: EnvConfig.supabaseUrl,
+      publishableKey: EnvConfig.supabasePublishableKey,
+      authOptions: const FlutterAuthClientOptions(
+        authFlowType: AuthFlowType.pkce,
+        autoRefreshToken: true,
+      ),
+    ).timeout(const Duration(seconds: 10));
+    debugPrint('[SafarSync] ✓ Supabase ready');
+  } catch (e) {
+    debugPrint('[SafarSync] ✗ Supabase init error: $e');
   }
 
   try {
@@ -48,17 +109,9 @@ void main() async {
     debugPrint('[SafarSync] ✗ Stripe init skipped: $e');
   }
   try {
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    ).timeout(const Duration(seconds: 10));
-    debugPrint('[SafarSync] ✓ Firebase ready');
-  } catch (e) {
-    debugPrint('[SafarSync] ✗ Firebase init error: $e');
-  }
-
-  try {
-    await LocalDatabaseService.ensureInitialized()
-        .timeout(const Duration(seconds: 5));
+    await LocalDatabaseService.ensureInitialized().timeout(
+      const Duration(seconds: 5),
+    );
     debugPrint('[SafarSync] ✓ Local DB ready');
   } catch (e) {
     debugPrint('[SafarSync] ✗ Local DB init failed (non-fatal): $e');
@@ -80,11 +133,15 @@ void main() async {
     debugPrint('[SafarSync] ✗ Destination theme init (non-fatal): $e');
   }
 
+  _listenForPasswordRecovery();
+
   debugPrint('[SafarSync] ▶ Calling runApp');
-  runApp(SafarSyncApp(
-    themeController: themeController,
-    destinationThemeProvider: destinationThemeProvider,
-  ));
+  runApp(
+    SafarSyncApp(
+      themeController: themeController,
+      destinationThemeProvider: destinationThemeProvider,
+    ),
+  );
 
   NotificationService.instance.initialize().ignore();
   debugPrint('[SafarSync] ✓ Notification init started in background');
@@ -110,6 +167,7 @@ class SafarSyncApp extends StatelessWidget {
       child: Consumer<ThemeController>(
         builder: (context, controller, _) {
           return MaterialApp(
+            navigatorKey: appNavigatorKey,
             title: 'SafarSync',
             debugShowCheckedModeBanner: false,
             theme: AppTheme.lightTheme(),
@@ -154,21 +212,24 @@ class _AuthGateState extends State<AuthGate> {
         _doAuthCheck().timeout(
           const Duration(seconds: 8),
           onTimeout: () {
-            debugPrint('[AuthGate] ⚠ TIMEOUT — falling back to local Firebase state');
-            _resolveWithFirebaseState();
+            debugPrint(
+              '[AuthGate] ⚠ TIMEOUT — falling back to local session state',
+            );
+            _resolveWithLocalSession();
           },
         ),
         Future.delayed(const Duration(milliseconds: 800)),
       ]);
     } catch (e) {
       debugPrint('[AuthGate] ✗ Unexpected error: $e');
-      _resolveWithFirebaseState();
+      _resolveWithLocalSession();
     }
   }
-  void _resolveWithFirebaseState() {
+
+  void _resolveWithLocalSession() {
     if (!mounted || !_isChecking) return;
-    final user = FirebaseAuth.instance.currentUser;
-    debugPrint('[AuthGate] Fallback: user=${user?.uid ?? 'null'}');
+    final user = Supabase.instance.client.auth.currentUser;
+    debugPrint('[AuthGate] Fallback: user=${user?.id ?? 'null'}');
     setState(() {
       _isLoggedIn = user != null;
       _isChecking = false;
@@ -177,8 +238,8 @@ class _AuthGateState extends State<AuthGate> {
 
   Future<void> _doAuthCheck() async {
     _setStatus('Checking session…');
-    final user = FirebaseAuth.instance.currentUser;
-    debugPrint('[AuthGate] Firebase user: ${user?.uid ?? 'none'}');
+    final user = Supabase.instance.client.auth.currentUser;
+    debugPrint('[AuthGate] Supabase user: ${user?.id ?? 'none'}');
 
     bool expired = false;
     try {
@@ -195,8 +256,9 @@ class _AuthGateState extends State<AuthGate> {
       debugPrint('[AuthGate] Session expired — redirecting to login');
       if (user != null) {
         try {
-          await FirebaseAuth.instance.signOut()
-              .timeout(const Duration(seconds: 3));
+          await Supabase.instance.client.auth.signOut().timeout(
+            const Duration(seconds: 3),
+          );
         } catch (_) {}
         await ApiService.removeToken();
       }
@@ -213,8 +275,9 @@ class _AuthGateState extends State<AuthGate> {
       _setStatus('Restoring session…');
       bool rememberMe = false;
       try {
-        rememberMe = await AuthStorage.isRememberMeEnabled()
-            .timeout(const Duration(seconds: 2));
+        rememberMe = await AuthStorage.isRememberMeEnabled().timeout(
+          const Duration(seconds: 2),
+        );
       } catch (e) {
         debugPrint('[AuthGate] RememberMe check error (defaulting false): $e');
       }
@@ -224,8 +287,9 @@ class _AuthGateState extends State<AuthGate> {
       if (!rememberMe) {
         debugPrint('[AuthGate] RememberMe=false — signing out');
         try {
-          await FirebaseAuth.instance.signOut()
-              .timeout(const Duration(seconds: 3));
+          await Supabase.instance.client.auth.signOut().timeout(
+            const Duration(seconds: 3),
+          );
         } catch (_) {}
         await ApiService.removeToken();
         if (!mounted) return;
@@ -238,8 +302,10 @@ class _AuthGateState extends State<AuthGate> {
 
       SessionManager.recordActivity().ignore();
       _setStatus('Preparing your experience…');
-      ApiService.refreshTokenIfNeeded(user).ignore();
-      debugPrint('[AuthGate] ✓ Token refresh started in background (non-blocking)');
+      ApiService.refreshSessionIfNeeded().ignore();
+      debugPrint(
+        '[AuthGate] ✓ Token refresh started in background (non-blocking)',
+      );
     }
 
     if (!mounted) return;
@@ -264,9 +330,9 @@ class _AuthGateState extends State<AuthGate> {
     if (_sessionMessage != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(_sessionMessage!)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(_sessionMessage!)));
         setState(() => _sessionMessage = null);
       });
     }
@@ -274,6 +340,7 @@ class _AuthGateState extends State<AuthGate> {
     return _isLoggedIn ? const App() : const LoginPage();
   }
 }
+
 class _SplashScreen extends StatefulWidget {
   final String statusText;
   const _SplashScreen({required this.statusText});
@@ -296,12 +363,14 @@ class _SplashScreenState extends State<_SplashScreen>
       duration: const Duration(milliseconds: 1400),
     )..repeat(reverse: true);
 
-    _scale = Tween<double>(begin: 0.93, end: 1.0).animate(
-      CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut),
-    );
-    _fade = Tween<double>(begin: 0.65, end: 1.0).animate(
-      CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut),
-    );
+    _scale = Tween<double>(
+      begin: 0.93,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
+    _fade = Tween<double>(
+      begin: 0.65,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
   }
 
   @override
@@ -457,9 +526,7 @@ class _AppState extends State<App> with WidgetsBindingObserver {
           ),
         );
       }
-    } catch (_) {
-
-    }
+    } catch (_) {}
   }
 
   @override

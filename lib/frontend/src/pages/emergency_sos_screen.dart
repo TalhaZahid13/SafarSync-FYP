@@ -62,9 +62,10 @@ class _EmergencySOSScreenState extends State<EmergencySOSScreen>
       vsync: this,
       duration: const Duration(milliseconds: 1200),
     )..repeat(reverse: true);
-    _pulseAnim = Tween<double>(begin: 0.92, end: 1.08).animate(
-      CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut),
-    );
+    _pulseAnim = Tween<double>(
+      begin: 0.92,
+      end: 1.08,
+    ).animate(CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut));
 
     _countdownCtrl = AnimationController(
       vsync: this,
@@ -136,7 +137,8 @@ class _EmergencySOSScreenState extends State<EmergencySOSScreen>
       final resp = await ApiService.getRequest('/emergency/my-alerts');
       if (mounted && resp['success'] == true) {
         final list = List<Map<String, dynamic>>.from(
-          (resp['alerts'] as List?)?.map((e) => Map<String, dynamic>.from(e)) ?? [],
+          (resp['alerts'] as List?)?.map((e) => Map<String, dynamic>.from(e)) ??
+              [],
         );
         setState(() => _alertHistory = list);
       }
@@ -263,8 +265,10 @@ class _EmergencySOSScreenState extends State<EmergencySOSScreen>
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Yes, Resolved',
-                style: TextStyle(color: Colors.white)),
+            child: const Text(
+              'Yes, Resolved',
+              style: TextStyle(color: Colors.white),
+            ),
           ),
         ],
       ),
@@ -272,12 +276,12 @@ class _EmergencySOSScreenState extends State<EmergencySOSScreen>
 
     if (confirmed != true) return;
 
-    final resp =
-        await ApiService.putRequest('/emergency/$alertId/resolve', {});
+    final resp = await ApiService.putRequest('/emergency/$alertId/resolve', {});
     if (!mounted) return;
     if (resp['success'] == true) {
       NotificationService.instance.showSOSResolved();
       await Future.wait([_loadActiveAlert(), _loadAlertHistory()]);
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Emergency marked as resolved'),
@@ -291,8 +295,7 @@ class _EmergencySOSScreenState extends State<EmergencySOSScreen>
   Future<void> _cancelAlert() async {
     if (_activeAlert == null) return;
     final alertId = _activeAlert!['id'];
-    final resp =
-        await ApiService.putRequest('/emergency/$alertId/cancel', {});
+    final resp = await ApiService.putRequest('/emergency/$alertId/cancel', {});
     if (!mounted) return;
     if (resp['success'] == true) {
       await Future.wait([_loadActiveAlert(), _loadAlertHistory()]);
@@ -313,7 +316,9 @@ class _EmergencySOSScreenState extends State<EmergencySOSScreen>
               child: Text(
                 'SOS ACTIVATED — Emergency contacts notified',
                 style: TextStyle(
-                    color: Colors.white, fontWeight: FontWeight.bold),
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           ],
@@ -334,8 +339,10 @@ class _EmergencySOSScreenState extends State<EmergencySOSScreen>
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
-        title: const Text('Emergency SOS',
-            style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text(
+          'Emergency SOS',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
         backgroundColor: _kRedMid,
         foregroundColor: Colors.white,
         elevation: 0,
@@ -351,19 +358,30 @@ class _EmergencySOSScreenState extends State<EmergencySOSScreen>
                     Container(
                       width: double.infinity,
                       margin: const EdgeInsets.only(bottom: 12),
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 10,
+                      ),
                       decoration: BoxDecoration(
                         color: _kRedMid,
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: const Row(
                         children: [
-                          Icon(Icons.quick_contacts_dialer, color: Colors.white, size: 16),
+                          Icon(
+                            Icons.quick_contacts_dialer,
+                            color: Colors.white,
+                            size: 16,
+                          ),
                           SizedBox(width: 10),
                           Expanded(
                             child: Text(
                               'Launched from Quick Settings — SOS countdown starting automatically. Tap anywhere to cancel.',
-                              style: TextStyle(color: Colors.white, fontSize: 12, height: 1.4),
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                height: 1.4,
+                              ),
                             ),
                           ),
                         ],
@@ -371,11 +389,12 @@ class _EmergencySOSScreenState extends State<EmergencySOSScreen>
                     ),
 
                   // ── Active alert banner ────────────────────────────────
-                  if (_activeAlert != null) _ActiveAlertCard(
-                    alert: _activeAlert!,
-                    onResolve: _resolveAlert,
-                    onCancel: _cancelAlert,
-                  ),
+                  if (_activeAlert != null)
+                    _ActiveAlertCard(
+                      alert: _activeAlert!,
+                      onResolve: _resolveAlert,
+                      onCancel: _cancelAlert,
+                    ),
 
                   if (_activeAlert != null) const SizedBox(height: 16),
 
@@ -399,22 +418,26 @@ class _EmergencySOSScreenState extends State<EmergencySOSScreen>
                   if (_activeAlert == null)
                     Card(
                       shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                       child: Padding(
                         padding: const EdgeInsets.all(16),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text('Optional Details',
-                                style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 15)),
+                            const Text(
+                              'Optional Details',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 15,
+                              ),
+                            ),
                             const SizedBox(height: 12),
 
                             // Trip selector
                             if (_activeGroups.isNotEmpty) ...[
                               DropdownButtonFormField<int?>(
-                                value: _selectedTripId,
+                                initialValue: _selectedTripId,
                                 decoration: InputDecoration(
                                   labelText: 'Attach to active trip',
                                   prefixIcon: const Icon(Icons.directions_bus),
@@ -422,26 +445,31 @@ class _EmergencySOSScreenState extends State<EmergencySOSScreen>
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                   contentPadding: const EdgeInsets.symmetric(
-                                      horizontal: 12, vertical: 10),
+                                    horizontal: 12,
+                                    vertical: 10,
+                                  ),
                                 ),
                                 items: [
                                   const DropdownMenuItem<int?>(
                                     value: null,
                                     child: Text('No trip'),
                                   ),
-                                  ..._activeGroups.map((g) =>
-                                      DropdownMenuItem<int?>(
-                                        value: g['group_booking_id'] as int?,
-                                        child: Text(
-                                          g['trip_name'] as String? ??
-                                              'Trip #${g['group_booking_id']}',
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      )),
+                                  ..._activeGroups.map(
+                                    (g) => DropdownMenuItem<int?>(
+                                      value: g['group_booking_id'] as int?,
+                                      child: Text(
+                                        g['trip_name'] as String? ??
+                                            'Trip #${g['group_booking_id']}',
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ),
                                 ],
                                 onChanged: (v) => setState(() {
                                   _selectedTripId = v;
-                                  _selectedTripType = v != null ? 'group' : null;
+                                  _selectedTripType = v != null
+                                      ? 'group'
+                                      : null;
                                 }),
                               ),
                               const SizedBox(height: 12),
@@ -456,7 +484,8 @@ class _EmergencySOSScreenState extends State<EmergencySOSScreen>
                                 hintText: 'e.g. "Injured near waterfall"',
                                 prefixIcon: const Icon(Icons.message),
                                 border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(8)),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
                               ),
                             ),
                           ],
@@ -543,14 +572,13 @@ class _SOSButtonCard extends StatelessWidget {
               hasActiveAlert
                   ? 'You have an active emergency alert'
                   : isHolding
-                      ? 'Hold for $countdownRemaining…'
-                      : 'Hold the button for 3 seconds to activate SOS',
+                  ? 'Hold for $countdownRemaining…'
+                  : 'Hold the button for 3 seconds to activate SOS',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 14,
                 color: isHolding ? _kRedBright : Colors.grey.shade600,
-                fontWeight:
-                    isHolding ? FontWeight.bold : FontWeight.normal,
+                fontWeight: isHolding ? FontWeight.bold : FontWeight.normal,
               ),
             ),
             const SizedBox(height: 28),
@@ -565,8 +593,9 @@ class _SOSButtonCard extends StatelessWidget {
               child: AnimatedBuilder(
                 animation: pulseAnim,
                 builder: (_, child) {
-                  final scale =
-                      hasActiveAlert ? 1.0 : (isHolding ? 1.0 : pulseAnim.value);
+                  final scale = hasActiveAlert
+                      ? 1.0
+                      : (isHolding ? 1.0 : pulseAnim.value);
                   return Transform.scale(scale: scale, child: child);
                 },
                 child: Stack(
@@ -648,14 +677,19 @@ class _SOSButtonCard extends StatelessWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.location_on,
-                      size: 14, color: Colors.grey.shade500),
+                  Icon(
+                    Icons.location_on,
+                    size: 14,
+                    color: Colors.grey.shade500,
+                  ),
                   const SizedBox(width: 4),
                   Flexible(
                     child: Text(
                       locationLabel,
                       style: TextStyle(
-                          fontSize: 12, color: Colors.grey.shade500),
+                        fontSize: 12,
+                        color: Colors.grey.shade500,
+                      ),
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
@@ -744,8 +778,10 @@ class _ActiveAlertCard extends StatelessWidget {
           Row(
             children: [
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: _kRedMid,
                   borderRadius: BorderRadius.circular(6),
@@ -753,14 +789,20 @@ class _ActiveAlertCard extends StatelessWidget {
                 child: const Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.warning_amber_rounded,
-                        color: Colors.white, size: 14),
+                    Icon(
+                      Icons.warning_amber_rounded,
+                      color: Colors.white,
+                      size: 14,
+                    ),
                     SizedBox(width: 4),
-                    Text('ACTIVE EMERGENCY',
-                        style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12)),
+                    Text(
+                      'ACTIVE EMERGENCY',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -768,13 +810,13 @@ class _ActiveAlertCard extends StatelessWidget {
               if (createdAt != null)
                 Text(
                   _formatTime(createdAt),
-                  style: TextStyle(
-                      fontSize: 11, color: Colors.red.shade700),
+                  style: TextStyle(fontSize: 11, color: Colors.red.shade700),
                 ),
             ],
           ),
           const SizedBox(height: 10),
-          if (alert['message'] != null && alert['message'].toString().isNotEmpty)
+          if (alert['message'] != null &&
+              alert['message'].toString().isNotEmpty)
             Text(
               alert['message'].toString(),
               style: const TextStyle(fontSize: 14),
@@ -784,10 +826,16 @@ class _ActiveAlertCard extends StatelessWidget {
               padding: const EdgeInsets.only(top: 4),
               child: Row(
                 children: [
-                  const Icon(Icons.directions_bus, size: 13, color: Colors.grey),
+                  const Icon(
+                    Icons.directions_bus,
+                    size: 13,
+                    color: Colors.grey,
+                  ),
                   const SizedBox(width: 4),
-                  Text(alert['trip_name'].toString(),
-                      style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                  Text(
+                    alert['trip_name'].toString(),
+                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
                 ],
               ),
             ),
@@ -826,7 +874,11 @@ class _ActiveAlertCard extends StatelessWidget {
 
   static DateTime? _parseTime(dynamic v) {
     if (v == null) return null;
-    try { return DateTime.parse(v.toString()).toLocal(); } catch (_) { return null; }
+    try {
+      return DateTime.parse(v.toString()).toLocal();
+    } catch (_) {
+      return null;
+    }
   }
 
   static String _formatTime(DateTime t) {
@@ -854,32 +906,43 @@ class _HowToUseCard extends StatelessWidget {
               children: [
                 Icon(Icons.info_outline, color: Colors.blue.shade700, size: 18),
                 const SizedBox(width: 8),
-                Text('How to use SOS',
-                    style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.blue.shade800)),
+                Text(
+                  'How to use SOS',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.blue.shade800,
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 10),
-            ..._steps.map((s) => Padding(
-                  padding: const EdgeInsets.only(bottom: 6),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('${_steps.indexOf(s) + 1}. ',
-                          style: TextStyle(
-                              color: Colors.blue.shade700,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 13)),
-                      Expanded(
-                        child: Text(s,
-                            style: TextStyle(
-                                fontSize: 13,
-                                color: Colors.blue.shade900)),
+            ..._steps.map(
+              (s) => Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${_steps.indexOf(s) + 1}. ',
+                      style: TextStyle(
+                        color: Colors.blue.shade700,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
                       ),
-                    ],
-                  ),
-                )),
+                    ),
+                    Expanded(
+                      child: Text(
+                        s,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Colors.blue.shade900,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ],
         ),
       ),
@@ -907,8 +970,8 @@ class _AlertHistoryTile extends StatelessWidget {
     final statusColor = status == 'Active'
         ? Colors.red
         : status == 'Resolved'
-            ? Colors.green
-            : Colors.grey;
+        ? Colors.green
+        : Colors.grey;
 
     DateTime? created;
     try {
@@ -925,8 +988,8 @@ class _AlertHistoryTile extends StatelessWidget {
             status == 'Active'
                 ? Icons.sos
                 : status == 'Resolved'
-                    ? Icons.check_circle
-                    : Icons.cancel,
+                ? Icons.check_circle
+                : Icons.cancel,
             color: statusColor,
             size: 20,
           ),
@@ -942,9 +1005,10 @@ class _AlertHistoryTile extends StatelessWidget {
               child: Text(
                 status.toUpperCase(),
                 style: TextStyle(
-                    fontSize: 10,
-                    color: statusColor,
-                    fontWeight: FontWeight.bold),
+                  fontSize: 10,
+                  color: statusColor,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
             if (alert['trip_name'] != null) ...[
@@ -973,8 +1037,8 @@ class _AlertHistoryTile extends StatelessWidget {
             Text(
               created != null
                   ? '${created.day}/${created.month}/${created.year}  '
-                      '${created.hour.toString().padLeft(2, '0')}:'
-                      '${created.minute.toString().padLeft(2, '0')}'
+                        '${created.hour.toString().padLeft(2, '0')}:'
+                        '${created.minute.toString().padLeft(2, '0')}'
                   : '—',
               style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
             ),

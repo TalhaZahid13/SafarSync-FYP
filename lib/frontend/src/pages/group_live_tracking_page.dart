@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:socket_io_client/socket_io_client.dart' as io;
-import 'package:firebase_auth/firebase_auth.dart';
+import '../utils/realtime_service.dart';
+import '../utils/app_auth.dart';
 import '../utils/api_service.dart';
 import '../utils/safe_parse.dart';
 
@@ -67,7 +67,7 @@ class GroupLiveTrackingPage extends StatefulWidget {
 
 class _GroupLiveTrackingPageState extends State<GroupLiveTrackingPage> {
   final MapController _mapController = MapController();
-  io.Socket? _socket;
+  RealtimeRoom? _room;
 
   // Keyed by userId string
   final Map<String, _Member> _members = {};
@@ -91,19 +91,20 @@ class _GroupLiveTrackingPageState extends State<GroupLiveTrackingPage> {
     _resolveCurrentUser();
     _initialize();
     // Refresh "X min ago" labels every 30 s without hitting the network
-    _uiRefreshTimer = Timer.periodic(
-      const Duration(seconds: 30),
-      (_) { if (mounted) setState(() {}); },
-    );
+    _uiRefreshTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (mounted) setState(() {});
+    });
   }
 
   void _resolveCurrentUser() {
-    final user = FirebaseAuth.instance.currentUser;
-    _myUserId = user?.uid ?? ApiService.userId ?? 'unknown';
+    final user = AppAuth.currentUser;
     _myName = user?.displayName ?? user?.email?.split('@').first ?? 'Me';
   }
 
   Future<void> _initialize() async {
+    // Members are keyed by the integer SafarSync user id (same id the API
+    // returns in member_locations), so our own pings match our marker.
+    _myUserId = '${await ApiService.getCurrentUserId() ?? 'unknown'}';
     await _requestLocationPermission();
     await _fetchCurrentPosition();
     await _loadMembersFromApi();
@@ -147,7 +148,7 @@ class _GroupLiveTrackingPageState extends State<GroupLiveTrackingPage> {
           final uid = raw['user_id'].toString();
           final existing = _members[uid];
           LatLng? pos;
-          DateTime? updated_at;
+          DateTime? updatedAt;
 
           if (raw['latitude'] != null && raw['longitude'] != null) {
             pos = LatLng(
@@ -157,7 +158,9 @@ class _GroupLiveTrackingPageState extends State<GroupLiveTrackingPage> {
           }
           if (raw['captured_at'] != null) {
             try {
-              updated_at = DateTime.parse(raw['captured_at'].toString()).toLocal();
+              updatedAt = DateTime.parse(
+                raw['captured_at'].toString(),
+              ).toLocal();
             } catch (_) {}
           }
 
@@ -166,7 +169,7 @@ class _GroupLiveTrackingPageState extends State<GroupLiveTrackingPage> {
             name: raw['full_name'] as String? ?? 'Unknown',
             email: raw['email'] as String?,
             position: pos ?? existing?.position,
-            lastUpdated: updated_at ?? existing?.lastUpdated,
+            lastUpdated: updatedAt ?? existing?.lastUpdated,
             city: raw['city'] as String?,
             colorIndex: existing?.colorIndex ?? colorIdx,
           );
@@ -187,30 +190,21 @@ class _GroupLiveTrackingPageState extends State<GroupLiveTrackingPage> {
     }
   }
 
-  // ── Socket.io setup ──────────────────────────────────────────────────────
+  // ── Realtime (private channel `group-tracking:<id>`) ────────────────────
   void _connectSocket() {
     try {
-      _socket = io.io(
-        ApiService.socketUrl,
-        io.OptionBuilder()
-            .setTransports(['websocket'])
-            .disableAutoConnect()
-            .build(),
-      );
-
-      _socket!.onConnect((_) {
-        if (mounted) setState(() => _socketConnected = true);
-        _socket!.emit('join:group-tracking', widget.groupBookingId);
-      });
-
-      _socket!.onDisconnect((_) {
-        if (mounted) setState(() => _socketConnected = false);
+      _room = RealtimeService.room('group-tracking:${widget.groupBookingId}');
+      _room!.connected.addListener(() {
+        if (mounted) {
+          setState(() => _socketConnected = _room?.connected.value ?? false);
+        }
       });
 
       // Real-time location update from another member
-      _socket!.on('location:group-updated', (data) {
+      _room!.on('location:group-updated', (data) {
         if (!mounted) return;
         final uid = data['user_id'].toString();
+        if (uid == _myUserId) return;
         final lat = asDouble(data['latitude']);
         final lng = asDouble(data['longitude']);
         if (lat == null || lng == null) return;
@@ -230,14 +224,14 @@ class _GroupLiveTrackingPageState extends State<GroupLiveTrackingPage> {
       });
 
       // New member accepted invitation → refresh from API
-      _socket!.on('member:joined', (data) {
+      _room!.on('member:joined', (data) {
         if (data['group_booking_id']?.toString() ==
             widget.groupBookingId.toString()) {
           _loadMembersFromApi();
         }
       });
 
-      _socket!.connect();
+      _room!.join();
     } catch (_) {}
   }
 
@@ -252,23 +246,23 @@ class _GroupLiveTrackingPageState extends State<GroupLiveTrackingPage> {
 
         setState(() => _myPosition = LatLng(pos.latitude, pos.longitude));
 
-        // Broadcast to group via socket
-        _socket?.emit('location:update-group', {
+        // Broadcast live to the other group members
+        _room?.emit('location:group-updated', {
           'group_booking_id': widget.groupBookingId,
           'user_id': _myUserId,
           'latitude': pos.latitude,
           'longitude': pos.longitude,
           'user_name': _myName,
+          'timestamp': DateTime.now().toUtc().toIso8601String(),
         });
 
-        // Persist to DB via REST so fresh page loads show location
-        ApiService.postRequest('/location/update', {
-          'latitude': pos.latitude,
-          'longitude': pos.longitude,
-          'accuracy': pos.accuracy,
-          'user_identifier': 'user_${_myUserId}',
-          'captured_at': DateTime.now().toUtc().toIso8601String(),
-        });
+        // Persist via the API (also forwards to the admin emergency map)
+        ApiService.updateLocation(
+          latitude: pos.latitude,
+          longitude: pos.longitude,
+          accuracy: pos.accuracy,
+          groupBookingId: widget.groupBookingId,
+        );
       } catch (_) {}
     });
   }
@@ -326,7 +320,9 @@ class _GroupLiveTrackingPageState extends State<GroupLiveTrackingPage> {
                 // ── Name + timestamp bubble ──────────────────────────────
                 Container(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 8, vertical: 4),
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: member.color,
                     borderRadius: BorderRadius.circular(8),
@@ -432,22 +428,31 @@ class _GroupLiveTrackingPageState extends State<GroupLiveTrackingPage> {
                   child: Text(
                     member.name[0].toUpperCase(),
                     style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold),
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 12),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(member.name,
-                        style: const TextStyle(
-                            fontSize: 18, fontWeight: FontWeight.bold)),
+                    Text(
+                      member.name,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                     if (member.email != null)
-                      Text(member.email!,
-                          style: const TextStyle(
-                              fontSize: 13, color: Colors.grey)),
+                      Text(
+                        member.email!,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: Colors.grey,
+                        ),
+                      ),
                   ],
                 ),
               ],
@@ -492,13 +497,17 @@ class _GroupLiveTrackingPageState extends State<GroupLiveTrackingPage> {
         children: [
           Icon(icon, size: 16, color: Colors.grey),
           const SizedBox(width: 8),
-          Text('$label: ',
-              style: const TextStyle(
-                  fontWeight: FontWeight.w500, fontSize: 13)),
+          Text(
+            '$label: ',
+            style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13),
+          ),
           Expanded(
-              child: Text(value,
-                  style: const TextStyle(fontSize: 13, color: Colors.grey),
-                  overflow: TextOverflow.ellipsis)),
+            child: Text(
+              value,
+              style: const TextStyle(fontSize: 13, color: Colors.grey),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
         ],
       ),
     );
@@ -507,8 +516,9 @@ class _GroupLiveTrackingPageState extends State<GroupLiveTrackingPage> {
   // ── Build ─────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
-    final membersWithLocation =
-        _members.values.where((m) => m.hasLocation).length;
+    final membersWithLocation = _members.values
+        .where((m) => m.hasLocation)
+        .length;
     final totalMembers = _members.length;
 
     return Scaffold(
@@ -516,14 +526,18 @@ class _GroupLiveTrackingPageState extends State<GroupLiveTrackingPage> {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Live Tracking',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            const Text(
+              'Live Tracking',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
             Row(
               children: [
                 // LIVE / OFFLINE badge
                 Container(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 6, vertical: 1),
+                    horizontal: 6,
+                    vertical: 1,
+                  ),
                   decoration: BoxDecoration(
                     color: _socketConnected ? Colors.green : Colors.grey,
                     borderRadius: BorderRadius.circular(4),
@@ -531,16 +545,16 @@ class _GroupLiveTrackingPageState extends State<GroupLiveTrackingPage> {
                   child: Text(
                     _socketConnected ? 'LIVE' : 'OFFLINE',
                     style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 9,
-                        fontWeight: FontWeight.bold),
+                      color: Colors.white,
+                      fontSize: 9,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 6),
                 Text(
                   '$membersWithLocation/$totalMembers on map',
-                  style: const TextStyle(
-                      fontSize: 11, color: Colors.white70),
+                  style: const TextStyle(fontSize: 11, color: Colors.white70),
                 ),
               ],
             ),
@@ -642,7 +656,7 @@ class _GroupLiveTrackingPageState extends State<GroupLiveTrackingPage> {
   void dispose() {
     _locationTimer?.cancel();
     _uiRefreshTimer?.cancel();
-    _socket?.disconnect();
+    _room?.leave();
     super.dispose();
   }
 }
@@ -666,8 +680,7 @@ class _MemberPanel extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius:
-            const BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.12),
@@ -700,13 +713,14 @@ class _MemberPanel extends StatelessWidget {
                 Text(
                   'Group Members (${members.length})',
                   style: const TextStyle(
-                      fontSize: 14, fontWeight: FontWeight.bold),
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 if (lastRefresh != null)
                   Text(
                     'Refreshed ${_ago(lastRefresh!)}',
-                    style: const TextStyle(
-                        fontSize: 11, color: Colors.grey),
+                    style: const TextStyle(fontSize: 11, color: Colors.grey),
                   ),
               ],
             ),
@@ -718,12 +732,14 @@ class _MemberPanel extends StatelessWidget {
             height: 96,
             child: members.isEmpty
                 ? const Center(
-                    child: Text('No members',
-                        style: TextStyle(color: Colors.grey)))
+                    child: Text(
+                      'No members',
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                  )
                 : ListView.builder(
                     scrollDirection: Axis.horizontal,
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16),
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
                     itemCount: members.length,
                     itemBuilder: (_, i) {
                       final m = members[i];
@@ -746,8 +762,7 @@ class _MemberPanel extends StatelessWidget {
                             ),
                           ),
                           child: Column(
-                            mainAxisAlignment:
-                                MainAxisAlignment.center,
+                            mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Stack(
                                 children: [
@@ -757,10 +772,10 @@ class _MemberPanel extends StatelessWidget {
                                     child: Text(
                                       m.name[0].toUpperCase(),
                                       style: const TextStyle(
-                                          color: Colors.white,
-                                          fontWeight:
-                                              FontWeight.bold,
-                                          fontSize: 13),
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 13,
+                                      ),
                                     ),
                                   ),
                                   if (m.hasLocation)
@@ -774,8 +789,9 @@ class _MemberPanel extends StatelessWidget {
                                           color: Colors.green,
                                           shape: BoxShape.circle,
                                           border: Border.all(
-                                              color: Colors.white,
-                                              width: 1),
+                                            color: Colors.white,
+                                            width: 1,
+                                          ),
                                         ),
                                       ),
                                     ),
@@ -785,21 +801,21 @@ class _MemberPanel extends StatelessWidget {
                               Text(
                                 isMe ? 'You' : m.name.split(' ').first,
                                 style: const TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w600),
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 textAlign: TextAlign.center,
                               ),
                               Text(
-                                m.hasLocation
-                                    ? m.timeAgo
-                                    : 'offline',
+                                m.hasLocation ? m.timeAgo : 'offline',
                                 style: TextStyle(
-                                    fontSize: 8,
-                                    color: m.hasLocation
-                                        ? Colors.green[700]
-                                        : Colors.grey),
+                                  fontSize: 8,
+                                  color: m.hasLocation
+                                      ? Colors.green[700]
+                                      : Colors.grey,
+                                ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 textAlign: TextAlign.center,

@@ -148,7 +148,10 @@ class _HotelFinderPageState extends State<HotelFinderPage> {
                   onChanged: (v) => setState(() => _query = v),
                   decoration: InputDecoration(
                     hintText: 'Search hotels...',
-                    prefixIcon: const Icon(Icons.search, color: AppTheme.turquoise),
+                    prefixIcon: const Icon(
+                      Icons.search,
+                      color: AppTheme.turquoise,
+                    ),
                     filled: true,
                     fillColor: AppTheme.offWhite,
                     border: OutlineInputBorder(
@@ -174,9 +177,7 @@ class _HotelFinderPageState extends State<HotelFinderPage> {
                               setState(() => _selectedCategory = cat),
                           selectedColor: AppTheme.turquoise,
                           labelStyle: TextStyle(
-                            color: selected
-                                ? Colors.white
-                                : AppTheme.darkSlate,
+                            color: selected ? Colors.white : AppTheme.darkSlate,
                             fontWeight: selected
                                 ? FontWeight.w600
                                 : FontWeight.normal,
@@ -240,18 +241,22 @@ class _HotelCard extends StatelessWidget {
           Stack(
             children: [
               ClipRRect(
-                borderRadius:
-                    const BorderRadius.vertical(top: Radius.circular(20)),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(20),
+                ),
                 child: Image.network(
                   hotel['image'] as String,
                   height: 160,
                   width: double.infinity,
                   fit: BoxFit.cover,
-                  errorBuilder: (_, __, e) => Container(
+                  errorBuilder: (_, _, e) => Container(
                     height: 160,
                     color: AppTheme.lightGray,
-                    child: const Icon(Icons.hotel,
-                        size: 48, color: AppTheme.mediumGray),
+                    child: const Icon(
+                      Icons.hotel,
+                      size: 48,
+                      color: AppTheme.mediumGray,
+                    ),
                   ),
                 ),
               ),
@@ -259,8 +264,10 @@ class _HotelCard extends StatelessWidget {
                 top: 12,
                 left: 12,
                 child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: AppTheme.turquoise,
                     borderRadius: BorderRadius.circular(20),
@@ -268,9 +275,10 @@ class _HotelCard extends StatelessWidget {
                   child: Text(
                     hotel['category'] as String,
                     style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600),
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               ),
@@ -283,8 +291,11 @@ class _HotelCard extends StatelessWidget {
                     color: Colors.white.withValues(alpha: 0.9),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.favorite_border,
-                      size: 18, color: AppTheme.turquoise),
+                  child: const Icon(
+                    Icons.favorite_border,
+                    size: 18,
+                    color: AppTheme.turquoise,
+                  ),
                 ),
               ),
             ],
@@ -309,8 +320,7 @@ class _HotelCard extends StatelessWidget {
                     ),
                     Row(
                       children: [
-                        const Icon(Icons.star,
-                            color: Colors.amber, size: 16),
+                        const Icon(Icons.star, color: Colors.amber, size: 16),
                         const SizedBox(width: 2),
                         Text(
                           hotel['rating'].toString(),
@@ -327,14 +337,19 @@ class _HotelCard extends StatelessWidget {
                 const SizedBox(height: 4),
                 Row(
                   children: [
-                    const Icon(Icons.location_on,
-                        size: 14, color: AppTheme.mediumGray),
+                    const Icon(
+                      Icons.location_on,
+                      size: 14,
+                      color: AppTheme.mediumGray,
+                    ),
                     const SizedBox(width: 2),
                     Expanded(
                       child: Text(
                         hotel['location'] as String,
                         style: const TextStyle(
-                            fontSize: 12, color: AppTheme.mediumGray),
+                          fontSize: 12,
+                          color: AppTheme.mediumGray,
+                        ),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
@@ -349,7 +364,9 @@ class _HotelCard extends StatelessWidget {
                       .map(
                         (a) => Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 3),
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
                           decoration: BoxDecoration(
                             color: AppTheme.lightGray,
                             borderRadius: BorderRadius.circular(8),
@@ -357,7 +374,9 @@ class _HotelCard extends StatelessWidget {
                           child: Text(
                             a,
                             style: const TextStyle(
-                                fontSize: 11, color: AppTheme.darkSlate),
+                              fontSize: 11,
+                              color: AppTheme.darkSlate,
+                            ),
                           ),
                         ),
                       )
@@ -377,7 +396,9 @@ class _HotelCard extends StatelessWidget {
                     const Text(
                       ' / night',
                       style: TextStyle(
-                          fontSize: 12, color: AppTheme.mediumGray),
+                        fontSize: 12,
+                        color: AppTheme.mediumGray,
+                      ),
                     ),
                   ],
                 ),
@@ -393,15 +414,17 @@ class _HotelCard extends StatelessWidget {
                           lng: hotel['lng'] as double?,
                         ),
                         icon: const Icon(Icons.navigation, size: 14),
-                        label: const Text('Navigate',
-                            style: TextStyle(fontSize: 12)),
+                        label: const Text(
+                          'Navigate',
+                          style: TextStyle(fontSize: 12),
+                        ),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: AppTheme.turquoise,
                           side: const BorderSide(color: AppTheme.turquoise),
-                          padding:
-                              const EdgeInsets.symmetric(vertical: 10),
+                          padding: const EdgeInsets.symmetric(vertical: 10),
                           shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12)),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                         ),
                       ),
                     ),
@@ -414,25 +437,26 @@ class _HotelCard extends StatelessWidget {
                             builder: (_) => CreateBookingScreen(
                               presetType: 'hotel',
                               presetItemName: hotel['name'] as String,
-                              presetPricePerUnit:
-                                  hotel['priceNum'] as double,
+                              presetPricePerUnit: hotel['priceNum'] as double,
                             ),
                           ),
                         ),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppTheme.turquoise,
                           foregroundColor: Colors.white,
-                          padding:
-                              const EdgeInsets.symmetric(vertical: 10),
+                          padding: const EdgeInsets.symmetric(vertical: 10),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
                           elevation: 0,
                         ),
-                        child: const Text('Book Now',
-                            style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600)),
+                        child: const Text(
+                          'Book Now',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                       ),
                     ),
                   ],

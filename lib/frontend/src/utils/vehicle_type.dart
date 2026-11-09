@@ -5,8 +5,7 @@ enum VehicleType { car, bike }
 extension VehicleTypeX on VehicleType {
   String get label => this == VehicleType.car ? 'Car' : 'Bike / Motorbike';
 
-  String get osrmProfile =>
-      this == VehicleType.car ? 'driving' : 'cycling';
+  String get osrmProfile => this == VehicleType.car ? 'driving' : 'cycling';
 
   String get routeTag => this == VehicleType.car
       ? 'Motorway route  ·  M-1, M-2…'
@@ -48,7 +47,11 @@ class _VehiclePickerSheetState extends State<_VehiclePickerSheet> {
   Widget build(BuildContext context) {
     return Padding(
       padding: EdgeInsets.fromLTRB(
-          20, 16, 20, MediaQuery.of(context).padding.bottom + 20),
+        20,
+        16,
+        20,
+        MediaQuery.of(context).padding.bottom + 20,
+      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -103,13 +106,13 @@ class _VehiclePickerSheetState extends State<_VehiclePickerSheet> {
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14)),
+                  borderRadius: BorderRadius.circular(14),
+                ),
                 elevation: 0,
               ),
               child: const Text(
                 'Start Navigation',
-                style:
-                    TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
               ),
             ),
           ),
@@ -132,8 +135,9 @@ class _VehicleCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent =
-        type == VehicleType.car ? const Color(0xFF3B82F6) : const Color(0xFF10B981);
+    final Color accent = type == VehicleType.car
+        ? const Color(0xFF3B82F6)
+        : const Color(0xFF10B981);
 
     return GestureDetector(
       onTap: onTap,
@@ -161,8 +165,11 @@ class _VehicleCard extends StatelessWidget {
                 color: accent.withValues(alpha: selected ? 0.2 : 0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(type.icon,
-                  color: selected ? accent : Colors.white54, size: 26),
+              child: Icon(
+                type.icon,
+                color: selected ? accent : Colors.white54,
+                size: 26,
+              ),
             ),
             const SizedBox(width: 14),
             Expanded(

@@ -7,11 +7,6 @@ allprojects {
     }
 }
 
-// Yahan se VERSION hata diya hai
-plugins {
-    id("com.google.gms.google-services") apply false
-}
-
 val newBuildDir: Directory =
     rootProject.layout.buildDirectory
         .dir("../../build")

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import '../utils/api_service.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 class ForgotPasswordPage extends StatefulWidget {
@@ -12,7 +12,6 @@ class ForgotPasswordPage extends StatefulWidget {
 class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
   final _emailController = TextEditingController();
   bool _isLoading = false;
-  final _auth = FirebaseAuth.instance;
 
   @override
   void dispose() {
@@ -33,40 +32,127 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
     setState(() => _isLoading = true);
 
     try {
-      await _auth.sendPasswordResetEmail(email: email);
-
-      if (mounted) {
+      final result = await ApiService.sendPasswordReset(email);
+      if (!mounted) return;
+      if (result['success'] != true) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Password reset link sent to $email')),
+          SnackBar(
+            content: Text(
+              result['message'] as String? ?? 'Failed to send reset email',
+            ),
+          ),
         );
-        Navigator.pop(context);
+        return;
       }
-    } on FirebaseAuthException catch (e) {
-      String message = 'Failed to send reset email';
-
-      switch (e.code) {
-        case 'user-not-found':
-          message = 'No user found with this email';
-          break;
-        case 'invalid-email':
-          message = 'Invalid email address';
-          break;
-        default:
-          message = 'Error: ${e.code}';
-      }
-
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(message)));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Password reset instructions sent to $email')),
+      );
+      // The email contains a link (opens the app) and a 6-digit code.
+      final done = await _showResetCodeDialog(email);
+      if (mounted && done == true) Navigator.pop(context);
     } catch (_) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Something went wrong')));
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Something went wrong')));
+      }
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
       }
     }
+  }
+
+  /// Lets the user finish the reset with the code from the email.
+  Future<bool?> _showResetCodeDialog(String email) {
+    final codeCtrl = TextEditingController();
+    final passCtrl = TextEditingController();
+    var busy = false;
+    String? error;
+    return showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setLocal) => AlertDialog(
+          title: const Text('Enter reset code'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Enter the 6-digit code from the email (or tap the link in it), '
+                'then choose a new password.',
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: codeCtrl,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'Reset code'),
+              ),
+              TextField(
+                controller: passCtrl,
+                obscureText: true,
+                decoration: const InputDecoration(
+                  labelText: 'New password (min 6 characters)',
+                ),
+              ),
+              if (error != null) ...[
+                const SizedBox(height: 8),
+                Text(error!, style: const TextStyle(color: Colors.red)),
+              ],
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: busy ? null : () => Navigator.pop(ctx, true),
+              child: const Text('Later'),
+            ),
+            ElevatedButton(
+              onPressed: busy
+                  ? null
+                  : () async {
+                      if (codeCtrl.text.trim().length < 6 ||
+                          passCtrl.text.length < 6) {
+                        setLocal(
+                          () => error =
+                              'Enter the code and a password of at least 6 characters',
+                        );
+                        return;
+                      }
+                      setLocal(() {
+                        busy = true;
+                        error = null;
+                      });
+                      final r = await ApiService.resetPasswordWithCode(
+                        email: email,
+                        code: codeCtrl.text,
+                        newPassword: passCtrl.text,
+                      );
+                      if (r['success'] == true) {
+                        if (ctx.mounted) Navigator.pop(ctx, true);
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text(r['message'] as String)),
+                          );
+                        }
+                      } else {
+                        setLocal(() {
+                          busy = false;
+                          error = r['message'] as String?;
+                        });
+                      }
+                    },
+              child: busy
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Text('Reset password'),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override

@@ -1,12 +1,12 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:socket_io_client/socket_io_client.dart' as io;
 import 'api_service.dart';
+import 'realtime_service.dart';
 
 /// Singleton service that:
 ///  1. Manages flutter_local_notifications (emergency + general channels)
-///  2. Connects a dedicated socket for receiving push-style events
+///  2. Subscribes to private Supabase Realtime channels for push-style events
 ///  3. Exposes helpers used by EmergencySOSScreen and the App shell
 class NotificationService {
   NotificationService._();
@@ -15,7 +15,7 @@ class NotificationService {
   final FlutterLocalNotificationsPlugin _plugin =
       FlutterLocalNotificationsPlugin();
 
-  io.Socket? _socket;
+  final List<RealtimeRoom> _rooms = [];
   bool _initialized = false;
   int _unreadCount = 0;
 
@@ -30,8 +30,9 @@ class NotificationService {
   Future<void> initialize() async {
     if (_initialized) return;
 
-    const androidSettings =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
+    const androidSettings = AndroidInitializationSettings(
+      '@mipmap/ic_launcher',
+    );
     await _plugin.initialize(
       settings: const InitializationSettings(android: androidSettings),
     );
@@ -57,7 +58,8 @@ class NotificationService {
 
     final androidImpl = _plugin
         .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>();
+          AndroidFlutterLocalNotificationsPlugin
+        >();
     await androidImpl?.createNotificationChannel(emergencyChannel);
     await androidImpl?.createNotificationChannel(generalChannel);
     await androidImpl?.requestNotificationsPermission();
@@ -65,26 +67,23 @@ class NotificationService {
     _initialized = true;
   }
 
-  // ── Socket listener ───────────────────────────────────────────────────────
+  // ── Realtime listeners ────────────────────────────────────────────────────
   /// Call once after the user is authenticated.
+  ///  * `user:<id>`        — this user's own notifications
+  ///  * `broadcast:all`    — admin broadcast announcements
+  ///  * `emergency:admin`  — live SOS feed (admins only; enforced by RLS)
   void startListening() {
-    _socket?.disconnect();
-    _socket = io.io(
-      ApiService.socketUrl,
-      io.OptionBuilder()
-          .setTransports(['websocket'])
-          .disableAutoConnect()
-          .build(),
-    );
+    _startListening().ignore();
+  }
 
-    _socket!.onConnect((_) {
-      // Join emergency admin room so device receives all SOS events
-      _socket!.emit('join:emergency-admin');
-      debugPrint('[NotificationService] Socket connected, joined emergency:admin');
-    });
+  Future<void> _startListening() async {
+    stopListening();
+    if (!RealtimeService.canConnect) return;
 
-    // In-app notification pushed from server (invitation, trip updates, etc.)
-    _socket!.on('notification:new', (data) {
+    final userId = await ApiService.getCurrentUserId();
+    if (userId == null) return;
+
+    void onNotification(Map<String, dynamic> data) {
       final title = data['title']?.toString() ?? 'SafarSync';
       final body = data['message']?.toString() ?? '';
       final type = data['type']?.toString() ?? '';
@@ -104,50 +103,65 @@ class NotificationService {
           body: body,
         );
       }
-    });
+    }
 
-    // Admin-room emergency SOS broadcast
-    _socket!.on('emergency:sos', (data) {
-      final userName = data['user_name']?.toString() ?? 'A user';
-      final phone = data['user_phone']?.toString() ?? 'N/A';
-      final trip = data['trip_name']?.toString();
-      final lat = data['latitude'];
-      final lng = data['longitude'];
-      final alertId = data['alert_id']?.toString() ?? '';
-      final locationLabel = (lat != null && lng != null)
-          ? '${double.tryParse(lat.toString())?.toStringAsFixed(4) ?? lat}, '
-              '${double.tryParse(lng.toString())?.toStringAsFixed(4) ?? lng}'
-          : 'Unknown location';
+    _rooms.add(
+      RealtimeService.room('user:$userId')
+        ..on('notification:new', onNotification)
+        ..join(),
+    );
+    _rooms.add(
+      RealtimeService.room('broadcast:all')
+        ..on('notification:new', onNotification)
+        ..join(),
+    );
 
-      final body = '$userName needs help!\n'
-          'Phone: $phone'
-          '${trip != null ? "\nTrip: $trip" : ""}'
-          '\nLocation: $locationLabel';
+    if (!await ApiService.getIsAdmin()) return;
 
-      _incrementUnread();
-      _showEmergencyNotification(
-        id: alertId.hashCode,
-        title: '🚨 Emergency SOS — $userName',
-        body: body,
-      );
-    });
+    final adminRoom = RealtimeService.room('emergency:admin')
+      ..on('emergency:sos', (data) {
+        final userName = data['user_name']?.toString() ?? 'A user';
+        final phone = data['user_phone']?.toString() ?? 'N/A';
+        final trip = data['trip_name']?.toString();
+        final lat = data['latitude'];
+        final lng = data['longitude'];
+        final alertId = data['alert_id']?.toString() ?? '';
+        final locationLabel = (lat != null && lng != null)
+            ? '${double.tryParse(lat.toString())?.toStringAsFixed(4) ?? lat}, '
+                  '${double.tryParse(lng.toString())?.toStringAsFixed(4) ?? lng}'
+            : 'Unknown location';
 
-    // Alert resolved
-    _socket!.on('emergency:resolved', (data) {
-      final alertId = data['alert_id']?.toString() ?? '';
-      _showGeneralNotification(
-        id: ('resolved_$alertId').hashCode,
-        title: '✅ Emergency Resolved',
-        body: 'An emergency alert has been marked as resolved.',
-      );
-    });
+        final body =
+            '$userName needs help!\n'
+            'Phone: $phone'
+            '${trip != null ? "\nTrip: $trip" : ""}'
+            '\nLocation: $locationLabel';
 
-    _socket!.connect();
+        _incrementUnread();
+        _showEmergencyNotification(
+          id: alertId.hashCode,
+          title: '🚨 Emergency SOS — $userName',
+          body: body,
+        );
+      })
+      ..on('emergency:resolved', (data) {
+        final alertId = data['alert_id']?.toString() ?? '';
+        _showGeneralNotification(
+          id: ('resolved_$alertId').hashCode,
+          title: '✅ Emergency Resolved',
+          body: 'An emergency alert has been marked as resolved.',
+        );
+      })
+      ..join();
+    _rooms.add(adminRoom);
+    debugPrint('[NotificationService] Listening on admin emergency channel');
   }
 
   void stopListening() {
-    _socket?.disconnect();
-    _socket = null;
+    for (final r in _rooms) {
+      r.leave();
+    }
+    _rooms.clear();
   }
 
   // ── Public helpers called by EmergencySOSScreen ───────────────────────────
@@ -219,8 +233,7 @@ class NotificationService {
           priority: Priority.max,
           color: const Color(0xFFB71C1C),
           enableVibration: true,
-          vibrationPattern:
-              Int64List.fromList([0, 500, 200, 500, 200, 500]),
+          vibrationPattern: Int64List.fromList([0, 500, 200, 500, 200, 500]),
           playSound: true,
           fullScreenIntent: true,
           icon: '@mipmap/ic_launcher',

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import '../../utils/app_auth.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -80,7 +80,7 @@ class _EmergencyICEState extends State<EmergencyICE> {
   }
 
   Future<void> _loadLocationFromBackend() async {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
+    final uid = AppAuth.currentUser?.uid;
     if (uid == null) {
       if (!mounted) return;
       setState(() {
@@ -90,7 +90,7 @@ class _EmergencyICEState extends State<EmergencyICE> {
       return;
     }
 
-    final result = await ApiService.getLatestLocation(userIdentifier: uid);
+    final result = await ApiService.getLatestLocation();
     if (!mounted) return;
 
     if (result['success'] != true || result['location'] == null) {
@@ -187,8 +187,10 @@ class _EmergencyICEState extends State<EmergencyICE> {
                 child: ElevatedButton(
                   onPressed: () async {
                     final uri = Uri(scheme: 'tel', path: '15');
-                    if (!await launchUrl(uri,
-                        mode: LaunchMode.externalApplication)) {
+                    if (!await launchUrl(
+                      uri,
+                      mode: LaunchMode.externalApplication,
+                    )) {
                       await launchUrl(uri);
                     }
                   },

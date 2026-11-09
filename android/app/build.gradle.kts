@@ -2,15 +2,12 @@ import java.util.Properties
 
 plugins {
     id("com.android.application")
-    id("com.google.gms.google-services")
     id("kotlin-android")
     id("dev.flutter.flutter-gradle-plugin")
 }
 
 
 dependencies {
-    implementation(platform("com.google.firebase:firebase-bom:34.8.0"))
-    implementation("com.google.firebase:firebase-analytics")
     // MaterialComponents themes (styles.xml) — required by flutter_stripe's PaymentSheet
     implementation("com.google.android.material:material:1.12.0")
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
@@ -29,8 +26,11 @@ val hasReleaseKeystore = keystoreProperties.getProperty("storeFile") != null
 
 android {
     namespace = "com.example.safarsync_mobileapp"
-    compileSdk = flutter.compileSdkVersion
-    ndkVersion = flutter.ndkVersion
+    // compileSdk 36 is required by current plugins (androidx.browser 1.9 etc.).
+    // targetSdk stays at 35, which satisfies Google Play's target-API rule.
+    // NDK pinned to the version installed on the build machine.
+    compileSdk = 36
+    ndkVersion = "30.0.16248370"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -43,15 +43,17 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.example.safarsync_mobileapp"
+        // Play Store package name. Google Play rejects "com.example.*" ids.
+        // NOTE: Google Sign-In's Android OAuth client must be registered for
+        // this package name + the release signing SHA-1.
+        applicationId = "com.safarsync.app"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
-        targetSdk = flutter.targetSdkVersion
+        targetSdk = 35
         versionCode = flutter.versionCode
         versionName = flutter.versionName
-        // Release talks to the hosted HTTPS backend only.
+        // All traffic goes to Supabase Cloud over HTTPS — cleartext is never needed.
         manifestPlaceholders["usesCleartextTraffic"] = "false"
     }
 
@@ -67,10 +69,6 @@ android {
     }
 
     buildTypes {
-        debug {
-            // Allows http:// to a local dev server in debug builds only.
-            manifestPlaceholders["usesCleartextTraffic"] = "true"
-        }
         release {
             signingConfig = if (hasReleaseKeystore) {
                 signingConfigs.getByName("release")

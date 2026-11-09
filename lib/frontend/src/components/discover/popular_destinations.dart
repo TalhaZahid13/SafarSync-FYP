@@ -45,11 +45,9 @@ class Destination {
       reviews: _parseInt(
         json['reviews'] ?? json['numberOfReviews'] ?? json['review_count'],
       ),
-      price: rawPrice != null ? rawPrice.toString() : null,
-      description: json['description'] != null
-          ? json['description'].toString()
-          : null,
-      category: json['category'] != null ? json['category'].toString() : null,
+      price: rawPrice?.toString(),
+      description: json['description']?.toString(),
+      category: json['category']?.toString(),
     );
   }
 
@@ -71,7 +69,7 @@ class Destination {
 class PopularDestinations extends StatefulWidget {
   final List<String> activeFilters;
 
-  const PopularDestinations({Key? key, this.activeFilters = const []}) : super(key: key);
+  const PopularDestinations({super.key, this.activeFilters = const []});
 
   @override
   State<PopularDestinations> createState() => _PopularDestinationsState();
@@ -129,11 +127,11 @@ class _PopularDestinationsState extends State<PopularDestinations> {
 
       debugPrint('Error fetching destinations: $e');
     } finally {
-      if (!mounted) return;
-
-      setState(() {
-        isLoadingDestinations = false;
-      });
+      if (mounted) {
+        setState(() {
+          isLoadingDestinations = false;
+        });
+      }
     }
   }
 
@@ -161,7 +159,9 @@ class _PopularDestinationsState extends State<PopularDestinations> {
     width: double.infinity,
     child: ColoredBox(
       color: Color(0xFF1B3A4C),
-      child: Center(child: Icon(Icons.image_not_supported, color: Colors.white54)),
+      child: Center(
+        child: Icon(Icons.image_not_supported, color: Colors.white54),
+      ),
     ),
   );
 
@@ -173,14 +173,23 @@ class _PopularDestinationsState extends State<PopularDestinations> {
         height: height,
         width: double.infinity,
         fit: BoxFit.cover,
-        placeholder: (_, __) => SizedBox(
+        placeholder: (_, _) => SizedBox(
           height: height,
           child: const ColoredBox(
             color: Color(0xFF1B3A4C),
-            child: Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white38))),
+            child: Center(
+              child: SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.white38,
+                ),
+              ),
+            ),
           ),
         ),
-        errorWidget: (_, __, ___) => _kFallback,
+        errorWidget: (_, _, _) => _kFallback,
       );
     }
     return Image.asset(
@@ -188,7 +197,7 @@ class _PopularDestinationsState extends State<PopularDestinations> {
       height: height,
       width: double.infinity,
       fit: BoxFit.cover,
-      errorBuilder: (_, __, ___) => _kFallback,
+      errorBuilder: (_, _, _) => _kFallback,
     );
   }
 
@@ -453,10 +462,14 @@ class _PopularDestinationsState extends State<PopularDestinations> {
                                     vertical: 4,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: AppTheme.turquoise.withValues(alpha: 0.20),
+                                    color: AppTheme.turquoise.withValues(
+                                      alpha: 0.20,
+                                    ),
                                     borderRadius: BorderRadius.circular(10),
                                     border: Border.all(
-                                      color: AppTheme.turquoise.withValues(alpha: 0.45),
+                                      color: AppTheme.turquoise.withValues(
+                                        alpha: 0.45,
+                                      ),
                                     ),
                                   ),
                                   child: FittedBox(

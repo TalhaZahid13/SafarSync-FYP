@@ -1,23 +1,22 @@
-import 'api_service.dart';
-
-/// App-level configuration constants.
+/// App-level configuration constants for third-party client SDKs.
 ///
-/// HOW TO GET YOUR GOOGLE MAPS KEY:
-/// 1. Go to https://console.cloud.google.com
-/// 2. Select your Firebase project (same project as google-services.json)
-/// 3. APIs & Services → Library → enable "Directions API"
-/// 4. APIs & Services → Credentials → Create API Key
-/// 5. Paste the key below.
-///
-/// Free monthly quota: $200 credit ≈ 40,000 Directions requests — more than enough.
+/// Only *publishable* keys belong here — they are designed to ship inside
+/// the app. Secret keys (Stripe secret, Groq, SMTP, Supabase service role)
+/// live exclusively in Supabase Edge Function secrets.
 class AppConfig {
-  static const String googleMapsApiKey = 'YOUR_GOOGLE_MAPS_API_KEY_HERE';
+  /// Google Maps Directions API key (optional — the live map falls back to
+  /// straight-line routing without it). Provide at build time with
+  /// `--dart-define=GOOGLE_MAPS_API_KEY=...` and restrict it to this app's
+  /// package name + SHA-1 in Google Cloud Console.
+  static const String googleMapsApiKey = String.fromEnvironment(
+    'GOOGLE_MAPS_API_KEY',
+    defaultValue: 'YOUR_GOOGLE_MAPS_API_KEY_HERE',
+  );
 
-  // Stripe — get from https://dashboard.stripe.com/apikeys
-  // Use pk_test_... for development, pk_live_... for production
-  static const String stripePublishableKey =
-      'pk_test_51TkPj29sYqO35RjxFYPqslL4gXqkdm6tzOdMBfsLBNlg6l5e3FVPvYuSQTrMXjmjiGHvLU9S1dqmB2uF2x9tpjI100UsVOCCBB';
-
-  // Socket.io server URL — always derived from ApiService so there is one source of truth.
-  static String get baseUrl => ApiService.socketUrl;
+  /// Stripe publishable key (pk_test_… for testing, pk_live_… for production).
+  static const String stripePublishableKey = String.fromEnvironment(
+    'STRIPE_PUBLISHABLE_KEY',
+    defaultValue:
+        'pk_test_51TkPj29sYqO35RjxFYPqslL4gXqkdm6tzOdMBfsLBNlg6l5e3FVPvYuSQTrMXjmjiGHvLU9S1dqmB2uF2x9tpjI100UsVOCCBB',
+  );
 }

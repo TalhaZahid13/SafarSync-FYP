@@ -5,11 +5,11 @@ import '../../ui/destination_theme.dart';
 
 // Static — allocated once for the lifetime of the app
 const _kNavItems = [
-  _NavItem(id: 'home',    icon: Icons.home,      label: 'Home'),
-  _NavItem(id: 'explore', icon: Icons.explore,   label: 'Explore'),
-  _NavItem(id: 'trips',   icon: Icons.bookmark,  label: 'Trips'),
-  _NavItem(id: 'routes',  icon: Icons.alt_route, label: 'Routes'),
-  _NavItem(id: 'profile', icon: Icons.person,    label: 'Profile'),
+  _NavItem(id: 'home', icon: Icons.home, label: 'Home'),
+  _NavItem(id: 'explore', icon: Icons.explore, label: 'Explore'),
+  _NavItem(id: 'trips', icon: Icons.bookmark, label: 'Trips'),
+  _NavItem(id: 'routes', icon: Icons.alt_route, label: 'Routes'),
+  _NavItem(id: 'profile', icon: Icons.person, label: 'Profile'),
 ];
 
 class _NavItem {
@@ -58,16 +58,18 @@ class BottomNavigation extends StatelessWidget {
             padding: EdgeInsets.symmetric(vertical: padding * 0.5),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: _kNavItems.map((item) {
-                final isActive = activeTab == item.id;
-                return _NavButton(
-                  item: item,
-                  isActive: isActive,
-                  isMobile: isMobile,
-                  padding: padding,
-                  onTap: () => onTabChange(item.id),
-                );
-              }).toList(growable: false),
+              children: _kNavItems
+                  .map((item) {
+                    final isActive = activeTab == item.id;
+                    return _NavButton(
+                      item: item,
+                      isActive: isActive,
+                      isMobile: isMobile,
+                      padding: padding,
+                      onTap: () => onTabChange(item.id),
+                    );
+                  })
+                  .toList(growable: false),
             ),
           ),
         ),

@@ -74,8 +74,31 @@ class _SignupPageState extends State<SignupPage> {
 
       if (result['success']) {
         if (mounted) {
+          if (result['needsConfirmation'] == true) {
+            // Email confirmation is required before the first login.
+            await showDialog<void>(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                title: const Text('Verify your email'),
+                content: Text(
+                  result['message'] as String? ??
+                      'We sent you a confirmation link. Verify your email, then log in.',
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: const Text('OK'),
+                  ),
+                ],
+              ),
+            );
+            if (mounted) Navigator.pushReplacementNamed(context, '/login');
+            return;
+          }
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Account created! Welcome to SafarSync.')),
+            const SnackBar(
+              content: Text('Account created! Welcome to SafarSync.'),
+            ),
           );
           Navigator.pushReplacementNamed(context, '/home');
         }

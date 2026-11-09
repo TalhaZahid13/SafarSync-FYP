@@ -2,7 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart' show compute;
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import '../../utils/app_auth.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
@@ -31,11 +31,16 @@ class _WeatherCache {
   final List<Map<String, dynamic>> forecast;
 
   const _WeatherCache({
-    required this.locationText, required this.city,
-    required this.latitude, required this.longitude,
-    required this.temperature, required this.humidity,
-    required this.windSpeed, required this.feelsLike,
-    required this.condition, required this.weatherCode,
+    required this.locationText,
+    required this.city,
+    required this.latitude,
+    required this.longitude,
+    required this.temperature,
+    required this.humidity,
+    required this.windSpeed,
+    required this.feelsLike,
+    required this.condition,
+    required this.weatherCode,
     required this.forecast,
   });
 
@@ -73,16 +78,16 @@ class _WeatherWidgetState extends State<WeatherWidget> {
     // Serve from cache immediately if data is fresh (< 15 min old)
     final cached = _WeatherCache.cached;
     if (cached != null) {
-      _locationText     = cached.locationText;
-      _latitude         = cached.latitude;
-      _longitude        = cached.longitude;
-      _temperature      = cached.temperature;
-      _humidity         = cached.humidity;
-      _windSpeed        = cached.windSpeed;
-      _feelsLike        = cached.feelsLike;
-      _condition        = cached.condition;
-      _weatherCode      = cached.weatherCode;
-      _forecast         = cached.forecast;
+      _locationText = cached.locationText;
+      _latitude = cached.latitude;
+      _longitude = cached.longitude;
+      _temperature = cached.temperature;
+      _humidity = cached.humidity;
+      _windSpeed = cached.windSpeed;
+      _feelsLike = cached.feelsLike;
+      _condition = cached.condition;
+      _weatherCode = cached.weatherCode;
+      _forecast = cached.forecast;
       return; // Skip GPS + HTTP
     }
 
@@ -94,13 +99,13 @@ class _WeatherWidgetState extends State<WeatherWidget> {
   }
 
   Future<void> _tryLoadLocationFromBackend() async {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
+    final uid = AppAuth.currentUser?.uid;
     if (uid == null) {
       _setLocationFallback('Unable to fetch location');
       return;
     }
 
-    final result = await ApiService.getLatestLocation(userIdentifier: uid);
+    final result = await ApiService.getLatestLocation();
     if (result['success'] != true || result['location'] == null) {
       _setLocationFallback('Unable to fetch location');
       return;
@@ -322,25 +327,13 @@ class _WeatherWidgetState extends State<WeatherWidget> {
     required String country,
     required double accuracy,
   }) async {
-    final uri = Uri.parse('${ApiService.baseUrl}/location/update');
-    final headers = await ApiService.getHeaders();
-    final currentUser = FirebaseAuth.instance.currentUser;
-    final userIdentifier = currentUser?.uid;
-    final userEmail = currentUser?.email;
-
-    await http.post(
-      uri,
-      headers: headers,
-      body: jsonEncode({
-        'user_identifier': userIdentifier,
-        'user_email': userEmail,
-        'latitude': latitude,
-        'longitude': longitude,
-        'city': city,
-        'country': country,
-        'accuracy': accuracy,
-        'captured_at': DateTime.now().toUtc().toIso8601String(),
-      }),
+    // Authenticated: the API stores this under the signed-in user only.
+    await ApiService.updateLocation(
+      latitude: latitude,
+      longitude: longitude,
+      accuracy: accuracy,
+      city: city,
+      country: country,
     );
   }
 
@@ -436,8 +429,7 @@ class _WeatherWidgetState extends State<WeatherWidget> {
                                     style: TextStyle(
                                       fontSize: 24,
                                       fontWeight: FontWeight.w800,
-                                      color:
-                                          theme.textTheme.bodyMedium?.color,
+                                      color: theme.textTheme.bodyMedium?.color,
                                     ),
                                   ),
                                 ),
@@ -460,8 +452,7 @@ class _WeatherWidgetState extends State<WeatherWidget> {
                             '${_humidity ?? '--'}%',
                           ),
                           const SizedBox(height: 8),
-                          _metricChip(
-                              Icons.air, '${_windSpeed ?? '--'} km/h'),
+                          _metricChip(Icons.air, '${_windSpeed ?? '--'} km/h'),
                           const SizedBox(height: 8),
                           _metricChip(
                             Icons.thermostat,
@@ -487,8 +478,7 @@ class _WeatherWidgetState extends State<WeatherWidget> {
                           const SizedBox(height: 6),
                           Icon(
                             _iconFromWeatherCode(
-                              (item['weather_code'] as num?)?.toInt() ??
-                                  -1,
+                              (item['weather_code'] as num?)?.toInt() ?? -1,
                             ),
                             size: 18,
                             color: theme.colorScheme.primary,
@@ -512,17 +502,21 @@ class _WeatherWidgetState extends State<WeatherWidget> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.open_in_full_rounded,
-                            size: 11,
-                            color:
-                                theme.colorScheme.primary.withValues(alpha: 0.6)),
+                        Icon(
+                          Icons.open_in_full_rounded,
+                          size: 11,
+                          color: theme.colorScheme.primary.withValues(
+                            alpha: 0.6,
+                          ),
+                        ),
                         const SizedBox(width: 4),
                         Text(
                           'Tap for full forecast',
                           style: TextStyle(
                             fontSize: 11,
-                            color: theme.colorScheme.primary
-                                .withValues(alpha: 0.6),
+                            color: theme.colorScheme.primary.withValues(
+                              alpha: 0.6,
+                            ),
                             fontWeight: FontWeight.w500,
                           ),
                         ),

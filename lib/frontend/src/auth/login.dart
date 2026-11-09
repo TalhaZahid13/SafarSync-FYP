@@ -1,5 +1,9 @@
-﻿import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'dart:math';
+
+import 'package:crypto/crypto.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/foundation.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
@@ -22,7 +26,6 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _auth = FirebaseAuth.instance;
   bool _isLoading = false;
   bool _googleLoading = false;
   bool _obscurePassword = true;
@@ -74,9 +77,9 @@ class _LoginPageState extends State<LoginPage> {
       } else {
         if (mounted) {
           final message = result['message'] as String? ?? 'Login failed';
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(message)),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(message)));
         }
       }
     } catch (e) {
@@ -94,10 +97,21 @@ class _LoginPageState extends State<LoginPage> {
 
   Future<void> _persistLocalUser(User user) async {
     await LocalDatabaseService.upsertUserProfile(
-      uid: user.uid,
+      uid: user.id,
       email: user.email ?? '',
-      fullName: user.displayName,
+      fullName: ApiService.displayName(user),
     );
+  }
+
+  /// Random nonce for Sign in with Apple (Supabase verifies its SHA-256).
+  String _generateNonce([int length = 32]) {
+    const chars =
+        '0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._';
+    final random = Random.secure();
+    return List.generate(
+      length,
+      (_) => chars[random.nextInt(chars.length)],
+    ).join();
   }
 
   Future<void> _loginWithGoogle() async {
@@ -158,48 +172,55 @@ class _LoginPageState extends State<LoginPage> {
     setState(() => _isLoading = true);
 
     try {
+      final rawNonce = _generateNonce();
+      final hashedNonce = sha256.convert(utf8.encode(rawNonce)).toString();
       final appleCredential = await SignInWithApple.getAppleIDCredential(
         scopes: [
           AppleIDAuthorizationScopes.email,
           AppleIDAuthorizationScopes.fullName,
         ],
+        nonce: hashedNonce,
       );
 
       final idToken = appleCredential.identityToken;
       if (idToken == null) {
-        throw FirebaseAuthException(
-          code: 'missing-apple-id-token',
-          message: 'Apple returned no identity token.',
-        );
+        throw const AuthException('Apple returned no identity token.');
       }
 
-      final oauthCredential = OAuthProvider('apple.com').credential(
-        idToken: idToken,
-        accessToken: appleCredential.authorizationCode,
-      );
+      final displayName = [
+        appleCredential.givenName,
+        appleCredential.familyName,
+      ].whereType<String>().join(' ').trim();
 
-      final userCredential = await _auth.signInWithCredential(oauthCredential);
-      final user = userCredential.user;
+      final res = await Supabase.instance.client.auth.signInWithIdToken(
+        provider: OAuthProvider.apple,
+        idToken: idToken,
+        nonce: rawNonce,
+      );
+      final user = res.user;
 
       if (user != null) {
-        final displayName = [
-          appleCredential.givenName,
-          appleCredential.familyName,
-        ].whereType<String>().join(' ').trim();
-
+        // Apple only shares the name on the very first authorization.
         if (displayName.isNotEmpty &&
-            (user.displayName == null || user.displayName!.isEmpty)) {
-          await user.updateDisplayName(displayName);
+            (user.userMetadata?['full_name'] == null)) {
+          try {
+            await Supabase.instance.client.auth.updateUser(
+              UserAttributes(data: {'full_name': displayName}),
+            );
+          } catch (_) {}
         }
 
         await _persistLocalUser(user);
-        final exchangeResult = await ApiService.exchangeFirebaseToken(user);
-        if (exchangeResult['success'] != true) {
-          await _auth.signOut();
+        final syncResult = await ApiService.syncSession();
+        if (syncResult['success'] != true) {
+          await Supabase.instance.client.auth.signOut();
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text(exchangeResult['message'] as String? ?? 'Could not connect to server.'),
+                content: Text(
+                  syncResult['message'] as String? ??
+                      'Could not connect to server.',
+                ),
               ),
             );
           }
@@ -217,12 +238,10 @@ class _LoginPageState extends State<LoginPage> {
           SnackBar(content: Text('Apple sign-in failed: ${e.message}')),
         );
       }
-    } on FirebaseAuthException catch (e) {
+    } on AuthException catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Apple sign-in failed: ${e.message ?? e.code}'),
-          ),
+          SnackBar(content: Text('Apple sign-in failed: ${e.message}')),
         );
       }
     } catch (e) {

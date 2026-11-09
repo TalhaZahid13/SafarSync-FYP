@@ -66,10 +66,10 @@ class _RoutesPageState extends State<RoutesPage> {
     BuildContext context,
     Map<String, dynamic> route,
   ) async {
-    final fromName =
-        (route['from'] ?? route['start_location'] ?? '') as String;
+    final fromName = (route['from'] ?? route['start_location'] ?? '') as String;
     final toName = (route['to'] ?? route['end_location'] ?? '') as String;
-    final routeName = (route['name'] ?? route['route_name'] ?? 'Route') as String;
+    final routeName =
+        (route['name'] ?? route['route_name'] ?? 'Route') as String;
 
     // Use stored coordinates if available (backend routes have them).
     final startLat = asDouble(route['start_lat']);
@@ -116,8 +116,7 @@ class _RoutesPageState extends State<RoutesPage> {
       ),
     );
     try {
-      final fromQ =
-          fromName.contains(',') ? fromName : '$fromName, Pakistan';
+      final fromQ = fromName.contains(',') ? fromName : '$fromName, Pakistan';
       final toQ = toName.contains(',') ? toName : '$toName, Pakistan';
       final fromLocs = await locationFromAddress(fromQ);
       final toLocs = await locationFromAddress(toQ);
@@ -140,9 +139,13 @@ class _RoutesPageState extends State<RoutesPage> {
         MaterialPageRoute(
           builder: (_) => LiveMapPage(
             routeOrigin: LatLng(
-                fromLocs.first.latitude, fromLocs.first.longitude),
+              fromLocs.first.latitude,
+              fromLocs.first.longitude,
+            ),
             routeDestination: LatLng(
-                toLocs.first.latitude, toLocs.first.longitude),
+              toLocs.first.latitude,
+              toLocs.first.longitude,
+            ),
             destinationName: toName,
             vehicleType: vehicle,
           ),
@@ -154,8 +157,7 @@ class _RoutesPageState extends State<RoutesPage> {
       if (!context.mounted) return;
       scaffold.showSnackBar(
         SnackBar(
-          content: const Text(
-              'Could not resolve locations — check spelling'),
+          content: const Text('Could not resolve locations — check spelling'),
           backgroundColor: Colors.red.shade600,
           behavior: SnackBarBehavior.floating,
         ),
@@ -436,9 +438,7 @@ class _RoutesPageState extends State<RoutesPage> {
           borderRadius: BorderRadius.circular(20),
           border: Border.all(color: _cyan.withValues(alpha: 0.3), width: 1.2),
         ),
-        child: const Center(
-          child: CircularProgressIndicator(color: _teal),
-        ),
+        child: const Center(child: CircularProgressIndicator(color: _teal)),
       );
     }
 
@@ -459,8 +459,11 @@ class _RoutesPageState extends State<RoutesPage> {
                 color: AppTheme.offWhite,
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Icon(Icons.navigation_outlined,
-                  color: _secondaryText, size: 22),
+              child: const Icon(
+                Icons.navigation_outlined,
+                color: _secondaryText,
+                size: 22,
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -470,7 +473,9 @@ class _RoutesPageState extends State<RoutesPage> {
                   Text(
                     'No active route',
                     style: TextStyle(
-                        fontWeight: FontWeight.w600, color: _primaryText),
+                      fontWeight: FontWeight.w600,
+                      color: _primaryText,
+                    ),
                   ),
                   SizedBox(height: 2),
                   Text(
@@ -496,8 +501,7 @@ class _RoutesPageState extends State<RoutesPage> {
     if (activatedAt != null) {
       try {
         final dt = DateTime.parse(activatedAt).toLocal();
-        activatedLabel =
-            'Started ${DateFormat('d MMM, h:mm a').format(dt)}';
+        activatedLabel = 'Started ${DateFormat('d MMM, h:mm a').format(dt)}';
       } catch (_) {}
     }
 
@@ -547,20 +551,24 @@ class _RoutesPageState extends State<RoutesPage> {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                          fontWeight: FontWeight.w600, color: _primaryText),
+                        fontWeight: FontWeight.w600,
+                        color: _primaryText,
+                      ),
                     ),
                     Text(
                       activatedLabel,
-                      style:
-                          const TextStyle(color: _teal, fontSize: 11),
+                      style: const TextStyle(color: _teal, fontSize: 11),
                     ),
                   ],
                 ),
               ),
               // Stop button
               IconButton(
-                icon: const Icon(Icons.stop_circle_outlined,
-                    color: Colors.redAccent, size: 22),
+                icon: const Icon(
+                  Icons.stop_circle_outlined,
+                  color: Colors.redAccent,
+                  size: 22,
+                ),
                 tooltip: 'Stop route',
                 onPressed: () async {
                   await RouteSession.clear();
@@ -592,19 +600,24 @@ class _RoutesPageState extends State<RoutesPage> {
                       width: 28,
                       height: 28,
                       decoration: const BoxDecoration(
-                          color: Color(0xFF22C55E),
-                          shape: BoxShape.circle),
-                      child: const Icon(Icons.location_on,
-                          color: Colors.white, size: 14),
+                        color: Color(0xFF22C55E),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.location_on,
+                        color: Colors.white,
+                        size: 14,
+                      ),
                     ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         fromName.isNotEmpty ? fromName : 'Starting point',
                         style: const TextStyle(
-                            color: _primaryText,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 13),
+                          color: _primaryText,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13,
+                        ),
                       ),
                     ),
                   ],
@@ -620,19 +633,24 @@ class _RoutesPageState extends State<RoutesPage> {
                       width: 28,
                       height: 28,
                       decoration: const BoxDecoration(
-                          color: Color(0xFFF43F5E),
-                          shape: BoxShape.circle),
-                      child: const Icon(Icons.location_on,
-                          color: Colors.white, size: 14),
+                        color: Color(0xFFF43F5E),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.location_on,
+                        color: Colors.white,
+                        size: 14,
+                      ),
                     ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         toName.isNotEmpty ? toName : 'Destination',
                         style: const TextStyle(
-                            color: _primaryText,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 13),
+                          color: _primaryText,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13,
+                        ),
                       ),
                     ),
                   ],
@@ -645,12 +663,16 @@ class _RoutesPageState extends State<RoutesPage> {
             const SizedBox(height: 8),
             Row(
               children: [
-                const Icon(Icons.calendar_today_outlined,
-                    size: 13, color: _secondaryText),
+                const Icon(
+                  Icons.calendar_today_outlined,
+                  size: 13,
+                  color: _secondaryText,
+                ),
                 const SizedBox(width: 6),
-                Text(travelLabel,
-                    style: const TextStyle(
-                        fontSize: 11, color: _secondaryText)),
+                Text(
+                  travelLabel,
+                  style: const TextStyle(fontSize: 11, color: _secondaryText),
+                ),
               ],
             ),
           ],
@@ -662,15 +684,17 @@ class _RoutesPageState extends State<RoutesPage> {
             child: ElevatedButton.icon(
               onPressed: () => _resumeActiveRoute(context),
               icon: const Icon(Icons.navigation, size: 18),
-              label: const Text('Resume Navigation',
-                  style: TextStyle(fontWeight: FontWeight.bold)),
+              label: const Text(
+                'Resume Navigation',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: _teal,
                 foregroundColor: Colors.white,
-                padding:
-                    const EdgeInsets.symmetric(vertical: 12),
+                padding: const EdgeInsets.symmetric(vertical: 12),
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 elevation: 0,
               ),
             ),
@@ -792,8 +816,11 @@ class _RoutesPageState extends State<RoutesPage> {
                               builder: (_) => const NewRoutePage(),
                             ),
                           ),
-                          icon: const Icon(Icons.add,
-                              size: 16, color: Colors.white),
+                          icon: const Icon(
+                            Icons.add,
+                            size: 16,
+                            color: Colors.white,
+                          ),
                           label: const Text(
                             'New Route',
                             style: TextStyle(
@@ -825,9 +852,7 @@ class _RoutesPageState extends State<RoutesPage> {
               if (_loadingRoutes)
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: 12),
-                  child: Center(
-                    child: CircularProgressIndicator(color: _teal),
-                  ),
+                  child: Center(child: CircularProgressIndicator(color: _teal)),
                 )
               else if (_backendRoutes.isNotEmpty) ...[
                 const Text(

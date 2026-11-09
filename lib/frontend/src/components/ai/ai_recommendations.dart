@@ -51,7 +51,10 @@ class AIRecommendations extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xFF1B3A4C),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppTheme.turquoise.withValues(alpha: 0.3), width: 1),
+        border: Border.all(
+          color: AppTheme.turquoise.withValues(alpha: 0.3),
+          width: 1,
+        ),
         boxShadow: [
           BoxShadow(
             color: AppTheme.turquoise.withValues(alpha: 0.12),

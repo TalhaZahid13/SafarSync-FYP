@@ -7,7 +7,7 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:socket_io_client/socket_io_client.dart' as io;
+import '../utils/realtime_service.dart';
 import '../utils/api_service.dart';
 import '../utils/safe_parse.dart';
 
@@ -70,16 +70,19 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
     if (!isAdmin) {
       Navigator.of(context).pop();
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Access denied: Admin privileges required')),
+        const SnackBar(
+          content: Text('Access denied: Admin privileges required'),
+        ),
       );
       return;
     }
 
     final prefs = await SharedPreferences.getInstance();
     final role = prefs.getString('admin_role') ?? 'moderator';
-    final name = prefs.getString('admin_full_name')
-        ?? prefs.getString('user_full_name')
-        ?? 'Admin';
+    final name =
+        prefs.getString('admin_full_name') ??
+        prefs.getString('user_full_name') ??
+        'Admin';
 
     if (mounted) {
       setState(() {
@@ -124,7 +127,8 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
       if (mounted && r['success'] == true) {
         setState(() {
           _users = List<Map<String, dynamic>>.from(
-            (r['users'] as List?)?.map((e) => Map<String, dynamic>.from(e)) ?? [],
+            (r['users'] as List?)?.map((e) => Map<String, dynamic>.from(e)) ??
+                [],
           );
           _loadingUsers = false;
         });
@@ -143,7 +147,8 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
       if (mounted && r['success'] == true) {
         setState(() {
           _trips = List<Map<String, dynamic>>.from(
-            (r['trips'] as List?)?.map((e) => Map<String, dynamic>.from(e)) ?? [],
+            (r['trips'] as List?)?.map((e) => Map<String, dynamic>.from(e)) ??
+                [],
           );
           _loadingTrips = false;
         });
@@ -162,7 +167,8 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
       if (mounted && r['success'] == true) {
         setState(() {
           _alerts = List<Map<String, dynamic>>.from(
-            (r['alerts'] as List?)?.map((e) => Map<String, dynamic>.from(e)) ?? [],
+            (r['alerts'] as List?)?.map((e) => Map<String, dynamic>.from(e)) ??
+                [],
           );
           _loadingAlerts = false;
         });
@@ -176,13 +182,27 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
 
   void _loadTabIfNeeded(int index) {
     switch (index) {
-      case 1: if (_users.isEmpty) _loadUsers(); break;
-      case 2: if (_trips.isEmpty) _loadTrips(); break;
-      case 3: if (_alerts.isEmpty) _loadAlerts(); break;
-      case 5: if (_packages.isEmpty)     _loadTourPackages();    break;
-      case 6: if (_virtualTours.isEmpty) _loadVirtualTours();   break;
-      case 7: if (_analytics.isEmpty)   _loadAnalytics();       break;
-      case 8: if (_payments.isEmpty)    _loadAdminPayments();   break;
+      case 1:
+        if (_users.isEmpty) _loadUsers();
+        break;
+      case 2:
+        if (_trips.isEmpty) _loadTrips();
+        break;
+      case 3:
+        if (_alerts.isEmpty) _loadAlerts();
+        break;
+      case 5:
+        if (_packages.isEmpty) _loadTourPackages();
+        break;
+      case 6:
+        if (_virtualTours.isEmpty) _loadVirtualTours();
+        break;
+      case 7:
+        if (_analytics.isEmpty) _loadAnalytics();
+        break;
+      case 8:
+        if (_payments.isEmpty) _loadAdminPayments();
+        break;
     }
   }
 
@@ -210,7 +230,10 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
       if (mounted && r['success'] == true) {
         setState(() {
           _payments = List<Map<String, dynamic>>.from(
-            (r['payments'] as List?)?.map((e) => Map<String, dynamic>.from(e)) ?? [],
+            (r['payments'] as List?)?.map(
+                  (e) => Map<String, dynamic>.from(e),
+                ) ??
+                [],
           );
           _loadingPayments = false;
         });
@@ -228,7 +251,9 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
       {'notes': notes ?? ''},
     );
     if (!mounted) return;
-    _snack(r['success'] == true ? 'Refund approved' : (r['message'] ?? 'Failed'));
+    _snack(
+      r['success'] == true ? 'Refund approved' : (r['message'] ?? 'Failed'),
+    );
     if (r['success'] == true) _loadAdminPayments();
   }
 
@@ -238,7 +263,9 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
       {'notes': notes ?? ''},
     );
     if (!mounted) return;
-    _snack(r['success'] == true ? 'Refund rejected' : (r['message'] ?? 'Failed'));
+    _snack(
+      r['success'] == true ? 'Refund rejected' : (r['message'] ?? 'Failed'),
+    );
     if (r['success'] == true) _loadAdminPayments();
   }
 
@@ -249,7 +276,8 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
       if (mounted && r['success'] == true) {
         setState(() {
           _virtualTours = List<Map<String, dynamic>>.from(
-            (r['tours'] as List?)?.map((e) => Map<String, dynamic>.from(e)) ?? [],
+            (r['tours'] as List?)?.map((e) => Map<String, dynamic>.from(e)) ??
+                [],
           );
           _loadingVirtualTours = false;
         });
@@ -275,7 +303,10 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
       if (mounted && r['success'] == true) {
         setState(() {
           _packages = List<Map<String, dynamic>>.from(
-            (r['packages'] as List?)?.map((e) => Map<String, dynamic>.from(e)) ?? [],
+            (r['packages'] as List?)?.map(
+                  (e) => Map<String, dynamic>.from(e),
+                ) ??
+                [],
           );
           _loadingPackages = false;
         });
@@ -290,22 +321,32 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
   Future<void> _deleteTourPackage(int id) async {
     final r = await ApiService.adminDeleteRequest('/admin/tours/$id');
     if (!mounted) return;
-    _snack(r['success'] == true ? 'Package deleted' : (r['message'] ?? 'Failed'));
+    _snack(
+      r['success'] == true ? 'Package deleted' : (r['message'] ?? 'Failed'),
+    );
     if (r['success'] == true) _loadTourPackages();
   }
 
   // ── User moderation actions ───────────────────────────────────────────────
   Future<void> _blockUser(int userId) async {
-    final r = await ApiService.adminPutRequest('/admin/users/$userId/block', {});
+    final r = await ApiService.adminPutRequest(
+      '/admin/users/$userId/block',
+      {},
+    );
     if (!mounted) return;
     _snack(r['success'] == true ? 'User blocked' : (r['message'] ?? 'Failed'));
     if (r['success'] == true) _loadUsers();
   }
 
   Future<void> _unblockUser(int userId) async {
-    final r = await ApiService.adminPutRequest('/admin/users/$userId/unblock', {});
+    final r = await ApiService.adminPutRequest(
+      '/admin/users/$userId/unblock',
+      {},
+    );
     if (!mounted) return;
-    _snack(r['success'] == true ? 'User unblocked' : (r['message'] ?? 'Failed'));
+    _snack(
+      r['success'] == true ? 'User unblocked' : (r['message'] ?? 'Failed'),
+    );
     if (r['success'] == true) _loadUsers();
   }
 
@@ -314,9 +355,14 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Delete User'),
-        content: const Text('This will permanently delete the user and all their data. This cannot be undone.'),
+        content: const Text(
+          'This will permanently delete the user and all their data. This cannot be undone.',
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: TextButton.styleFrom(foregroundColor: Colors.red),
@@ -337,27 +383,46 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Promote to Admin'),
-        content: const Text('Grant this user admin privileges in the users table?'),
+        content: const Text(
+          'Grant this user admin privileges in the users table?',
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Confirm')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Confirm'),
+          ),
         ],
       ),
     );
     if (confirmed != true || !mounted) return;
-    final r = await ApiService.adminPutRequest('/admin/users/$userId/make-admin', {});
+    final r = await ApiService.adminPutRequest(
+      '/admin/users/$userId/make-admin',
+      {},
+    );
     if (!mounted) return;
-    _snack(r['success'] == true ? 'User promoted to admin' : (r['message'] ?? 'Failed'));
+    _snack(
+      r['success'] == true
+          ? 'User promoted to admin'
+          : (r['message'] ?? 'Failed'),
+    );
     if (r['success'] == true) _loadUsers();
   }
 
   Future<void> _broadcastNotification(String title, String message) async {
     final r = await ApiService.adminPostRequest(
-        '/admin/broadcast-notification', {'title': title, 'message': message});
+      '/admin/broadcast-notification',
+      {'title': title, 'message': message},
+    );
     if (!mounted) return;
-    _snack(r['success'] == true
-        ? 'Broadcast sent to ${r['sent_to'] ?? 0} users'
-        : (r['message'] ?? 'Broadcast failed'));
+    _snack(
+      r['success'] == true
+          ? 'Broadcast sent to ${r['sent_to'] ?? 0} users'
+          : (r['message'] ?? 'Broadcast failed'),
+    );
   }
 
   void _snack(String msg) {
@@ -368,7 +433,9 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
   // ── Resolve alert from admin panel ────────────────────────────────────────
   Future<void> _resolveAlert(int alertId) async {
     final r = await ApiService.adminPutRequest(
-        '/admin/emergency-alerts/$alertId/resolve', {});
+      '/admin/emergency-alerts/$alertId/resolve',
+      {},
+    );
     if (!mounted) return;
     if (r['success'] == true) {
       _loadAlerts();
@@ -393,15 +460,22 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Admin Dashboard',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            const Text(
+              'Admin Dashboard',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
             Row(
               children: [
-                Text(_adminName,
-                    style: const TextStyle(fontSize: 11, color: Colors.white70)),
+                Text(
+                  _adminName,
+                  style: const TextStyle(fontSize: 11, color: Colors.white70),
+                ),
                 const SizedBox(width: 6),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 1,
+                  ),
                   decoration: BoxDecoration(
                     color: _isSuperAdmin ? Colors.amber : Colors.white24,
                     borderRadius: BorderRadius.circular(4),
@@ -449,7 +523,10 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
                     .where((a) => a['status'] == 'Active')
                     .isNotEmpty,
                 label: Text(
-                  _alerts.where((a) => a['status'] == 'Active').length.toString(),
+                  _alerts
+                      .where((a) => a['status'] == 'Active')
+                      .length
+                      .toString(),
                 ),
                 child: const Icon(Icons.emergency),
               ),
@@ -465,7 +542,10 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
               text: 'Live Map',
             ),
             const Tab(icon: Icon(Icons.local_offer_rounded), text: 'Packages'),
-            const Tab(icon: Icon(Icons.threed_rotation_rounded), text: 'VR Tours'),
+            const Tab(
+              icon: Icon(Icons.threed_rotation_rounded),
+              text: 'VR Tours',
+            ),
             const Tab(icon: Icon(Icons.analytics_rounded), text: 'Analytics'),
             const Tab(icon: Icon(Icons.payments_rounded), text: 'Payments'),
           ],
@@ -493,7 +573,11 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
             onDelete: _deleteUser,
             onMakeAdmin: _makeAdmin,
           ),
-          _TripsTab(trips: _trips, loading: _loadingTrips, onRefresh: _loadTrips),
+          _TripsTab(
+            trips: _trips,
+            loading: _loadingTrips,
+            onRefresh: _loadTrips,
+          ),
           _AlertsTab(
             alerts: _alerts,
             loading: _loadingAlerts,
@@ -559,14 +643,44 @@ class _OverviewTab extends StatelessWidget {
     }
 
     final cards = [
-      _StatDef('Total Users',         stats['total_users'],              Icons.people,          Colors.teal),
-      _StatDef('Group Bookings',       stats['total_group_bookings'],     Icons.groups,          Colors.purple),
-      _StatDef('Active Trips',         stats['active_group_trips'],        Icons.map,             Colors.green),
-      _StatDef('Emergency Alerts',     stats['active_sos'],               Icons.emergency,       Colors.red),
-      _StatDef('Single Bookings',      stats['total_bookings'],           Icons.bookmark,        Colors.blue),
-      _StatDef('Live Sessions',        stats['active_sessions'],           Icons.location_on,     Colors.orange),
-      _StatDef('AI Chats',             stats['ai_chats'],                 Icons.chat_bubble,     Colors.indigo),
-      _StatDef('System Health',        stats['system_health'],            Icons.health_and_safety, Colors.cyan),
+      _StatDef('Total Users', stats['total_users'], Icons.people, Colors.teal),
+      _StatDef(
+        'Group Bookings',
+        stats['total_group_bookings'],
+        Icons.groups,
+        Colors.purple,
+      ),
+      _StatDef(
+        'Active Trips',
+        stats['active_group_trips'],
+        Icons.map,
+        Colors.green,
+      ),
+      _StatDef(
+        'Emergency Alerts',
+        stats['active_sos'],
+        Icons.emergency,
+        Colors.red,
+      ),
+      _StatDef(
+        'Single Bookings',
+        stats['total_bookings'],
+        Icons.bookmark,
+        Colors.blue,
+      ),
+      _StatDef(
+        'Live Sessions',
+        stats['active_sessions'],
+        Icons.location_on,
+        Colors.orange,
+      ),
+      _StatDef('AI Chats', stats['ai_chats'], Icons.chat_bubble, Colors.indigo),
+      _StatDef(
+        'System Health',
+        stats['system_health'],
+        Icons.health_and_safety,
+        Colors.cyan,
+      ),
     ];
 
     return SingleChildScrollView(
@@ -630,8 +744,9 @@ class _BroadcastCardState extends State<_BroadcastCard> {
     final t = _titleCtrl.text.trim();
     final m = _msgCtrl.text.trim();
     if (t.isEmpty || m.isEmpty) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Title and message required')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Title and message required')),
+      );
       return;
     }
     setState(() => _sending = true);
@@ -661,10 +776,13 @@ class _BroadcastCardState extends State<_BroadcastCard> {
               children: [
                 Icon(Icons.campaign, color: Colors.indigo.shade700),
                 const SizedBox(width: 8),
-                Text('Send to All Users',
-                    style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        color: Colors.indigo.shade800)),
+                Text(
+                  'Send to All Users',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: Colors.indigo.shade800,
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 12),
@@ -675,10 +793,13 @@ class _BroadcastCardState extends State<_BroadcastCard> {
                 filled: true,
                 fillColor: Colors.white,
                 border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide.none),
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide.none,
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
               ),
             ),
             const SizedBox(height: 10),
@@ -690,10 +811,13 @@ class _BroadcastCardState extends State<_BroadcastCard> {
                 filled: true,
                 fillColor: Colors.white,
                 border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide.none),
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide.none,
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
               ),
             ),
             const SizedBox(height: 12),
@@ -706,13 +830,17 @@ class _BroadcastCardState extends State<_BroadcastCard> {
                         width: 16,
                         height: 16,
                         child: CircularProgressIndicator(
-                            strokeWidth: 2, color: Colors.white))
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
                     : const Text('Broadcast'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.indigo,
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8)),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                 ),
                 onPressed: _sending ? null : _send,
               ),
@@ -811,20 +939,36 @@ class _StatusBreakdown extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            _BarRow('Active Trips',     active, total == 0 ? 0 : active / total,    Colors.green),
+            _BarRow(
+              'Active Trips',
+              active,
+              total == 0 ? 0 : active / total,
+              Colors.green,
+            ),
             const SizedBox(height: 10),
-            _BarRow('Emergency Alerts', sos,    sos == 0   ? 0 : (sos / 20).clamp(0, 1.0), Colors.red),
+            _BarRow(
+              'Emergency Alerts',
+              sos,
+              sos == 0 ? 0 : (sos / 20).clamp(0, 1.0),
+              Colors.red,
+            ),
             const SizedBox(height: 10),
-            _BarRow('Total Users',     _num(stats['total_users']),
-                    _num(stats['total_users']) == 0 ? 0 :
-                    (_num(stats['total_users']) / 100).clamp(0, 1.0), Colors.teal),
+            _BarRow(
+              'Total Users',
+              _num(stats['total_users']),
+              _num(stats['total_users']) == 0
+                  ? 0
+                  : (_num(stats['total_users']) / 100).clamp(0, 1.0),
+              Colors.teal,
+            ),
           ],
         ),
       ),
     );
   }
 
-  int _num(dynamic v) => (v is num) ? v.toInt() : int.tryParse(v?.toString() ?? '') ?? 0;
+  int _num(dynamic v) =>
+      (v is num) ? v.toInt() : int.tryParse(v?.toString() ?? '') ?? 0;
 }
 
 class _BarRow extends StatelessWidget {
@@ -843,11 +987,14 @@ class _BarRow extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(label, style: const TextStyle(fontSize: 13)),
-            Text(value.toString(),
-                style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                    color: color)),
+            Text(
+              value.toString(),
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
+                color: color,
+              ),
+            ),
           ],
         ),
         const SizedBox(height: 4),
@@ -897,9 +1044,11 @@ class _UsersTab extends StatelessWidget {
     if (search == null || search!.isEmpty) return users;
     final q = search!.toLowerCase();
     return users
-        .where((u) =>
-            (u['full_name'] as String? ?? '').toLowerCase().contains(q) ||
-            (u['email'] as String? ?? '').toLowerCase().contains(q))
+        .where(
+          (u) =>
+              (u['full_name'] as String? ?? '').toLowerCase().contains(q) ||
+              (u['email'] as String? ?? '').toLowerCase().contains(q),
+        )
         .toList();
   }
 
@@ -946,17 +1095,19 @@ class _UsersTab extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
           child: Row(
             children: [
-              Text('${list.length} users',
-                  style: const TextStyle(
-                      fontSize: 12, color: Colors.grey)),
+              Text(
+                '${list.length} users',
+                style: const TextStyle(fontSize: 12, color: Colors.grey),
+              ),
               const Spacer(),
               TextButton.icon(
                 icon: const Icon(Icons.refresh, size: 14),
                 label: const Text('Refresh'),
                 onPressed: onRefresh,
                 style: TextButton.styleFrom(
-                    foregroundColor: _kAccent,
-                    padding: EdgeInsets.zero),
+                  foregroundColor: _kAccent,
+                  padding: EdgeInsets.zero,
+                ),
               ),
             ],
           ),
@@ -968,7 +1119,7 @@ class _UsersTab extends StatelessWidget {
               : ListView.separated(
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                   itemCount: list.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 6),
+                  separatorBuilder: (_, _) => const SizedBox(height: 6),
                   itemBuilder: (_, i) => _UserTile(
                     user: list[i],
                     isSuperAdmin: isSuperAdmin,
@@ -1028,9 +1179,10 @@ class _UserTile extends StatelessWidget {
               child: Text(
                 name.isNotEmpty ? name[0].toUpperCase() : '?',
                 style: TextStyle(
-                    color: isBlocked ? Colors.red : _kPrimary,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16),
+                  color: isBlocked ? Colors.red : _kPrimary,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
               ),
             ),
             const SizedBox(width: 12),
@@ -1042,49 +1194,64 @@ class _UserTile extends StatelessWidget {
                   Row(
                     children: [
                       Flexible(
-                        child: Text(name,
-                            style: const TextStyle(
-                                fontWeight: FontWeight.w600, fontSize: 14),
-                            overflow: TextOverflow.ellipsis),
+                        child: Text(
+                          name,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                       if (isAdmin) ...[
                         const SizedBox(width: 4),
                         Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 5, vertical: 1),
+                            horizontal: 5,
+                            vertical: 1,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.amber.shade100,
                             borderRadius: BorderRadius.circular(4),
                           ),
-                          child: Text('admin',
-                              style: TextStyle(
-                                  fontSize: 8,
-                                  color: Colors.amber.shade900,
-                                  fontWeight: FontWeight.bold)),
+                          child: Text(
+                            'admin',
+                            style: TextStyle(
+                              fontSize: 8,
+                              color: Colors.amber.shade900,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ),
                       ],
                       if (isBlocked) ...[
                         const SizedBox(width: 4),
                         Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 5, vertical: 1),
+                            horizontal: 5,
+                            vertical: 1,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.red.shade100,
                             borderRadius: BorderRadius.circular(4),
                           ),
-                          child: const Text('blocked',
-                              style: TextStyle(
-                                  fontSize: 8,
-                                  color: Colors.red,
-                                  fontWeight: FontWeight.bold)),
+                          child: const Text(
+                            'blocked',
+                            style: TextStyle(
+                              fontSize: 8,
+                              color: Colors.red,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ),
                       ],
                     ],
                   ),
-                  Text(email,
-                      style: const TextStyle(
-                          fontSize: 12, color: Colors.grey),
-                      overflow: TextOverflow.ellipsis),
+                  Text(
+                    email,
+                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                    overflow: TextOverflow.ellipsis,
+                  ),
                   const SizedBox(height: 4),
                   Row(
                     children: [
@@ -1101,49 +1268,75 @@ class _UserTile extends StatelessWidget {
               icon: const Icon(Icons.more_vert, size: 18, color: Colors.grey),
               onSelected: (action) {
                 switch (action) {
-                  case 'block': onBlock(userId); break;
-                  case 'unblock': onUnblock(userId); break;
-                  case 'delete': onDelete(userId); break;
-                  case 'make_admin': onMakeAdmin(userId); break;
+                  case 'block':
+                    onBlock(userId);
+                    break;
+                  case 'unblock':
+                    onUnblock(userId);
+                    break;
+                  case 'delete':
+                    onDelete(userId);
+                    break;
+                  case 'make_admin':
+                    onMakeAdmin(userId);
+                    break;
                 }
               },
               itemBuilder: (_) => [
                 if (!isBlocked)
                   const PopupMenuItem(
                     value: 'block',
-                    child: Row(children: [
-                      Icon(Icons.block, size: 16, color: Colors.orange),
-                      SizedBox(width: 8),
-                      Text('Block User'),
-                    ]),
+                    child: Row(
+                      children: [
+                        Icon(Icons.block, size: 16, color: Colors.orange),
+                        SizedBox(width: 8),
+                        Text('Block User'),
+                      ],
+                    ),
                   )
                 else
                   const PopupMenuItem(
                     value: 'unblock',
-                    child: Row(children: [
-                      Icon(Icons.check_circle_outline, size: 16, color: Colors.green),
-                      SizedBox(width: 8),
-                      Text('Unblock User'),
-                    ]),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.check_circle_outline,
+                          size: 16,
+                          color: Colors.green,
+                        ),
+                        SizedBox(width: 8),
+                        Text('Unblock User'),
+                      ],
+                    ),
                   ),
                 if (isSuperAdmin && !isAdmin)
                   const PopupMenuItem(
                     value: 'make_admin',
-                    child: Row(children: [
-                      Icon(Icons.admin_panel_settings, size: 16, color: Colors.indigo),
-                      SizedBox(width: 8),
-                      Text('Make Admin'),
-                    ]),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.admin_panel_settings,
+                          size: 16,
+                          color: Colors.indigo,
+                        ),
+                        SizedBox(width: 8),
+                        Text('Make Admin'),
+                      ],
+                    ),
                   ),
                 if (isSuperAdmin)
                   const PopupMenuItem(
                     value: 'delete',
-                    child: Row(children: [
-                      Icon(Icons.delete_outline, size: 16, color: Colors.red),
-                      SizedBox(width: 8),
-                      Text('Delete User',
-                          style: TextStyle(color: Colors.red)),
-                    ]),
+                    child: Row(
+                      children: [
+                        Icon(Icons.delete_outline, size: 16, color: Colors.red),
+                        SizedBox(width: 8),
+                        Text(
+                          'Delete User',
+                          style: TextStyle(color: Colors.red),
+                        ),
+                      ],
+                    ),
                   ),
               ],
             ),
@@ -1165,9 +1358,14 @@ class _UserTile extends StatelessWidget {
         children: [
           Icon(icon, size: 10, color: color),
           const SizedBox(width: 3),
-          Text(label,
-              style: TextStyle(
-                  fontSize: 10, color: color, fontWeight: FontWeight.w600)),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 10,
+              color: color,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
         ],
       ),
     );
@@ -1180,8 +1378,11 @@ class _TripsTab extends StatelessWidget {
   final bool loading;
   final VoidCallback onRefresh;
 
-  const _TripsTab(
-      {required this.trips, required this.loading, required this.onRefresh});
+  const _TripsTab({
+    required this.trips,
+    required this.loading,
+    required this.onRefresh,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1198,7 +1399,7 @@ class _TripsTab extends StatelessWidget {
       child: ListView.separated(
         padding: const EdgeInsets.all(16),
         itemCount: trips.length,
-        separatorBuilder: (_, __) => const SizedBox(height: 8),
+        separatorBuilder: (_, _) => const SizedBox(height: 8),
         itemBuilder: (_, i) => _TripTile(trip: trips[i]),
       ),
     );
@@ -1239,9 +1440,13 @@ class _TripTile extends StatelessWidget {
             Row(
               children: [
                 Expanded(
-                  child: Text(name,
-                      style: const TextStyle(
-                          fontWeight: FontWeight.bold, fontSize: 15)),
+                  child: Text(
+                    name,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                    ),
+                  ),
                 ),
                 _StatusChip(status: status, color: color),
               ],
@@ -1252,28 +1457,28 @@ class _TripTile extends StatelessWidget {
               children: [
                 const Icon(Icons.person, size: 13, color: Colors.grey),
                 const SizedBox(width: 4),
-                Text(organizer,
-                    style:
-                        const TextStyle(fontSize: 12, color: Colors.grey)),
+                Text(
+                  organizer,
+                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                ),
                 const SizedBox(width: 12),
                 const Icon(Icons.people, size: 13, color: Colors.grey),
                 const SizedBox(width: 4),
-                Text('$members member${members == 1 ? '' : 's'}',
-                    style:
-                        const TextStyle(fontSize: 12, color: Colors.grey)),
+                Text(
+                  '$members member${members == 1 ? '' : 's'}',
+                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                ),
               ],
             ),
             const SizedBox(height: 6),
             // ── Dates ────────────────────────────────────────────────────
             Row(
               children: [
-                const Icon(Icons.calendar_today,
-                    size: 12, color: Colors.grey),
+                const Icon(Icons.calendar_today, size: 12, color: Colors.grey),
                 const SizedBox(width: 4),
                 Text(
                   start == '—' ? 'Created $created' : '$start → $end',
-                  style:
-                      const TextStyle(fontSize: 11, color: Colors.grey),
+                  style: const TextStyle(fontSize: 11, color: Colors.grey),
                 ),
               ],
             ),
@@ -1330,10 +1535,7 @@ class _AlertsTab extends StatelessWidget {
           if (active.isNotEmpty) ...[
             _sectionTitle('Active Alerts (${active.length})'),
             const SizedBox(height: 8),
-            ...active.map((a) => _AlertTile(
-                  alert: a,
-                  onResolve: onResolve,
-                )),
+            ...active.map((a) => _AlertTile(alert: a, onResolve: onResolve)),
             const SizedBox(height: 20),
           ],
           if (rest.isNotEmpty) ...[
@@ -1401,14 +1603,21 @@ class _AlertTile extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(name,
-                          style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14)),
-                      Text(email,
-                          style: const TextStyle(
-                              fontSize: 11, color: Colors.grey),
-                          overflow: TextOverflow.ellipsis),
+                      Text(
+                        name,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                      Text(
+                        email,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: Colors.grey,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ],
                   ),
                 ),
@@ -1417,8 +1626,8 @@ class _AlertTile extends StatelessWidget {
                   color: isActive
                       ? Colors.red
                       : status == 'Resolved'
-                          ? Colors.green
-                          : Colors.grey,
+                      ? Colors.green
+                      : Colors.grey,
                 ),
               ],
             ),
@@ -1431,8 +1640,7 @@ class _AlertTile extends StatelessWidget {
                   color: Colors.grey.shade100,
                   borderRadius: BorderRadius.circular(6),
                 ),
-                child: Text(message,
-                    style: const TextStyle(fontSize: 13)),
+                child: Text(message, style: const TextStyle(fontSize: 13)),
               ),
             const SizedBox(height: 6),
             // ── Meta ──────────────────────────────────────────────────────
@@ -1441,8 +1649,7 @@ class _AlertTile extends StatelessWidget {
               runSpacing: 4,
               children: [
                 _metaItem(Icons.location_on, '$lat, $lng'),
-                if (tripName != null)
-                  _metaItem(Icons.directions_bus, tripName),
+                if (tripName != null) _metaItem(Icons.directions_bus, tripName),
                 _metaItem(Icons.access_time, created),
               ],
             ),
@@ -1459,7 +1666,8 @@ class _AlertTile extends StatelessWidget {
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 8),
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8)),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                   ),
                   onPressed: () => onResolve(id),
                 ),
@@ -1477,9 +1685,7 @@ class _AlertTile extends StatelessWidget {
       children: [
         Icon(icon, size: 12, color: Colors.grey),
         const SizedBox(width: 3),
-        Text(text,
-            style:
-                const TextStyle(fontSize: 11, color: Colors.grey)),
+        Text(text, style: const TextStyle(fontSize: 11, color: Colors.grey)),
       ],
     );
   }
@@ -1589,7 +1795,7 @@ class _EmergencyMapTab extends StatefulWidget {
 class _EmergencyMapTabState extends State<_EmergencyMapTab>
     with AutomaticKeepAliveClientMixin {
   final _mapCtrl = MapController();
-  io.Socket? _socket;
+  RealtimeRoom? _room;
   Timer? _pollTimer;
 
   List<_SosAlert> _alerts = [];
@@ -1610,8 +1816,7 @@ class _EmergencyMapTabState extends State<_EmergencyMapTab>
   @override
   void dispose() {
     _pollTimer?.cancel();
-    _socket?.disconnect();
-    _socket?.dispose();
+    _room?.leave();
     _mapCtrl.dispose();
     super.dispose();
   }
@@ -1662,7 +1867,9 @@ class _EmergencyMapTabState extends State<_EmergencyMapTab>
         _loading = false;
         if (_focused == null && alerts.isNotEmpty) {
           _focused = alerts.first;
-          WidgetsBinding.instance.addPostFrameCallback((_) => _centerOn(alerts.first.position, 13.0));
+          WidgetsBinding.instance.addPostFrameCallback(
+            (_) => _centerOn(alerts.first.position, 13.0),
+          );
         }
       });
     } catch (_) {
@@ -1670,22 +1877,14 @@ class _EmergencyMapTabState extends State<_EmergencyMapTab>
     }
   }
 
-  // ── Socket ─────────────────────────────────────────────────────────────────
+  // ── Realtime (private `emergency:admin` channel, admins only) ─────────────
   void _connectSocket() {
-    _socket = io.io(
-      ApiService.socketUrl,
-      io.OptionBuilder().setTransports(['websocket']).disableAutoConnect().build(),
-    );
-    _socket!.connect();
-
-    _socket!.onConnect((_) {
-      _socket!.emit('join:emergency-admin');
-    });
+    _room = RealtimeService.room('emergency:admin');
 
     // Live group member position update
-    _socket!.on('location:group-updated', (data) {
+    _room!.on('location:group-updated', (data) {
       if (!mounted) return;
-      final d = Map<String, dynamic>.from(data as Map);
+      final d = data;
       final rawUserId = d['user_id'];
       final rawGroupId = d['group_booking_id'];
       final lat = asDouble(d['latitude']);
@@ -1713,12 +1912,14 @@ class _EmergencyMapTabState extends State<_EmergencyMapTab>
     });
 
     // New SOS — reload to pick up new alert + group members
-    _socket!.on('emergency:sos', (_) { if (mounted) _load(); });
+    _room!.on('emergency:sos', (_) {
+      if (mounted) _load();
+    });
 
     // Alert resolved — remove from map
-    _socket!.on('emergency:resolved', (data) {
+    _room!.on('emergency:resolved', (data) {
       if (!mounted) return;
-      final d = Map<String, dynamic>.from(data as Map);
+      final d = data;
       final resolvedId = d['alert_id'];
       setState(() {
         _alerts.removeWhere((a) => _idMatch(a.alertId, resolvedId));
@@ -1727,11 +1928,15 @@ class _EmergencyMapTabState extends State<_EmergencyMapTab>
         }
       });
     });
+
+    _room!.join();
   }
 
   // ── Map helpers ────────────────────────────────────────────────────────────
   void _centerOn(LatLng pos, double zoom) {
-    try { _mapCtrl.move(pos, zoom); } catch (_) {}
+    try {
+      _mapCtrl.move(pos, zoom);
+    } catch (_) {}
   }
 
   void _fitAll() {
@@ -1743,13 +1948,15 @@ class _EmergencyMapTabState extends State<_EmergencyMapTab>
       }
     }
     if (pts.isEmpty) return;
-    if (pts.length == 1) { _centerOn(pts.first, 13.0); return; }
+    if (pts.length == 1) {
+      _centerOn(pts.first, 13.0);
+      return;
+    }
     try {
       final bounds = LatLngBounds.fromPoints(pts);
-      _mapCtrl.fitCamera(CameraFit.bounds(
-        bounds: bounds,
-        padding: const EdgeInsets.all(60),
-      ));
+      _mapCtrl.fitCamera(
+        CameraFit.bounds(bounds: bounds, padding: const EdgeInsets.all(60)),
+      );
     } catch (_) {}
   }
 
@@ -1763,7 +1970,10 @@ class _EmergencyMapTabState extends State<_EmergencyMapTab>
     }
 
     if (_alerts.isEmpty) {
-      return _emptyState(Icons.crisis_alert, 'No active SOS alerts\nMap will update automatically');
+      return _emptyState(
+        Icons.crisis_alert,
+        'No active SOS alerts\nMap will update automatically',
+      );
     }
 
     return Column(
@@ -1776,7 +1986,8 @@ class _EmergencyMapTabState extends State<_EmergencyMapTab>
               FlutterMap(
                 mapController: _mapCtrl,
                 options: MapOptions(
-                  initialCenter: _focused?.position ?? const LatLng(30.3753, 69.3451),
+                  initialCenter:
+                      _focused?.position ?? const LatLng(30.3753, 69.3451),
                   initialZoom: 12.0,
                   interactionOptions: const InteractionOptions(
                     flags: InteractiveFlag.all,
@@ -1784,7 +1995,8 @@ class _EmergencyMapTabState extends State<_EmergencyMapTab>
                 ),
                 children: [
                   TileLayer(
-                    urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                    urlTemplate:
+                        'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                     userAgentPackageName: 'com.safarsync.app',
                   ),
                   MarkerLayer(markers: _buildMarkers()),
@@ -1809,21 +2021,38 @@ class _EmergencyMapTabState extends State<_EmergencyMapTab>
                 top: 10,
                 left: 10,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.93),
                     borderRadius: BorderRadius.circular(20),
-                    boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 4)],
+                    boxShadow: const [
+                      BoxShadow(color: Colors.black12, blurRadius: 4),
+                    ],
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Container(
-                        width: 8, height: 8,
-                        decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
+                        width: 8,
+                        height: 8,
+                        decoration: const BoxDecoration(
+                          color: Colors.red,
+                          shape: BoxShape.circle,
+                        ),
                       ),
                       const SizedBox(width: 6),
-                      const Text('LIVE', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.red, letterSpacing: 1)),
+                      const Text(
+                        'LIVE',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.red,
+                          letterSpacing: 1,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -1834,11 +2063,16 @@ class _EmergencyMapTabState extends State<_EmergencyMapTab>
                 bottom: 10,
                 left: 10,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.93),
                     borderRadius: BorderRadius.circular(8),
-                    boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 4)],
+                    boxShadow: const [
+                      BoxShadow(color: Colors.black12, blurRadius: 4),
+                    ],
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -1846,7 +2080,11 @@ class _EmergencyMapTabState extends State<_EmergencyMapTab>
                     children: [
                       _legendRow(Icons.sos, Colors.red, 'SOS User'),
                       const SizedBox(height: 4),
-                      _legendRow(Icons.circle, _kMemberColors[0], 'Group Member'),
+                      _legendRow(
+                        Icons.circle,
+                        _kMemberColors[0],
+                        'Group Member',
+                      ),
                     ],
                   ),
                 ),
@@ -1869,12 +2107,18 @@ class _EmergencyMapTabState extends State<_EmergencyMapTab>
                     const SizedBox(width: 6),
                     Text(
                       'Active Alerts (${_alerts.length})',
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                      ),
                     ),
                     const Spacer(),
                     TextButton.icon(
                       icon: const Icon(Icons.refresh, size: 13),
-                      label: const Text('Refresh', style: TextStyle(fontSize: 12)),
+                      label: const Text(
+                        'Refresh',
+                        style: TextStyle(fontSize: 12),
+                      ),
                       onPressed: _load,
                       style: TextButton.styleFrom(
                         foregroundColor: _kAccent,
@@ -1891,7 +2135,7 @@ class _EmergencyMapTabState extends State<_EmergencyMapTab>
                   scrollDirection: Axis.horizontal,
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
                   itemCount: _alerts.length,
-                  separatorBuilder: (_, __) => const SizedBox(width: 10),
+                  separatorBuilder: (_, _) => const SizedBox(width: 10),
                   itemBuilder: (_, i) => _AlertMapCard(
                     alert: _alerts[i],
                     isSelected: _focused?.alertId == _alerts[i].alertId,
@@ -1916,93 +2160,101 @@ class _EmergencyMapTabState extends State<_EmergencyMapTab>
       final isFocused = _focused?.alertId == alert.alertId;
 
       // SOS user marker (red, larger when focused)
-      markers.add(Marker(
-        point: alert.position,
-        width: isFocused ? 64 : 52,
-        height: isFocused ? 64 : 52,
-        child: GestureDetector(
-          onTap: () {
-            setState(() => _focused = alert);
-            _centerOn(alert.position, 14.0);
-          },
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              if (isFocused)
+      markers.add(
+        Marker(
+          point: alert.position,
+          width: isFocused ? 64 : 52,
+          height: isFocused ? 64 : 52,
+          child: GestureDetector(
+            onTap: () {
+              setState(() => _focused = alert);
+              _centerOn(alert.position, 14.0);
+            },
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                if (isFocused)
+                  Container(
+                    width: 62,
+                    height: 62,
+                    decoration: BoxDecoration(
+                      color: Colors.red.withValues(alpha: 0.2),
+                      shape: BoxShape.circle,
+                    ),
+                  ),
                 Container(
-                  width: 62,
-                  height: 62,
+                  width: 42,
+                  height: 42,
                   decoration: BoxDecoration(
-                    color: Colors.red.withValues(alpha: 0.2),
+                    color: Colors.red.shade700,
                     shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 2.5),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.red.withValues(alpha: 0.5),
+                        blurRadius: 8,
+                        spreadRadius: isFocused ? 4 : 2,
+                      ),
+                    ],
                   ),
-                ),
-              Container(
-                width: 42,
-                height: 42,
-                decoration: BoxDecoration(
-                  color: Colors.red.shade700,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 2.5),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.red.withValues(alpha: 0.5),
-                      blurRadius: 8,
-                      spreadRadius: isFocused ? 4 : 2,
-                    ),
-                  ],
-                ),
-                child: const Center(
-                  child: Text(
-                    'SOS',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 0.5,
+                  child: const Center(
+                    child: Text(
+                      'SOS',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.5,
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
-      ));
+      );
 
       // Group member markers
       for (final member in alert.groupMembers) {
         if (member.position == null) continue;
         final color = _kMemberColors[member.colorIndex];
-        final initial = member.name.isNotEmpty ? member.name[0].toUpperCase() : '?';
+        final initial = member.name.isNotEmpty
+            ? member.name[0].toUpperCase()
+            : '?';
 
-        markers.add(Marker(
-          point: member.position!,
-          width: 46,
-          height: 46,
-          child: Tooltip(
-            message: member.name,
-            child: Container(
-              width: 38,
-              height: 38,
-              decoration: BoxDecoration(
-                color: color,
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.white, width: 2),
-                boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 4)],
-              ),
-              child: Center(
-                child: Text(
-                  initial,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 15,
-                    fontWeight: FontWeight.bold,
+        markers.add(
+          Marker(
+            point: member.position!,
+            width: 46,
+            height: 46,
+            child: Tooltip(
+              message: member.name,
+              child: Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: color,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 2),
+                  boxShadow: const [
+                    BoxShadow(color: Colors.black26, blurRadius: 4),
+                  ],
+                ),
+                child: Center(
+                  child: Text(
+                    initial,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ),
             ),
           ),
-        ));
+        );
       }
     }
     return markers;
@@ -2019,20 +2271,24 @@ class _EmergencyMapTabState extends State<_EmergencyMapTab>
       );
 
   Widget _legendRow(IconData icon, Color color, String label) => Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, color: color, size: 13),
-          const SizedBox(width: 6),
-          Text(label, style: const TextStyle(fontSize: 11)),
-        ],
-      );
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Icon(icon, color: color, size: 13),
+      const SizedBox(width: 6),
+      Text(label, style: const TextStyle(fontSize: 11)),
+    ],
+  );
 
   static bool _idMatch(dynamic a, dynamic b) =>
       a != null && b != null && a.toString() == b.toString();
 
   static DateTime? _parseDate(dynamic v) {
     if (v == null) return null;
-    try { return DateTime.parse(v.toString()); } catch (_) { return null; }
+    try {
+      return DateTime.parse(v.toString());
+    } catch (_) {
+      return null;
+    }
   }
 }
 
@@ -2050,8 +2306,9 @@ class _AlertMapCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final liveMemberCount =
-        alert.groupMembers.where((m) => m.position != null).length;
+    final liveMemberCount = alert.groupMembers
+        .where((m) => m.position != null)
+        .length;
     final totalMembers = alert.groupMembers.length;
 
     return GestureDetector(
@@ -2066,7 +2323,12 @@ class _AlertMapCard extends StatelessWidget {
             width: isSelected ? 1.8 : 1,
           ),
           boxShadow: isSelected
-              ? [BoxShadow(color: Colors.red.withValues(alpha: 0.15), blurRadius: 6)]
+              ? [
+                  BoxShadow(
+                    color: Colors.red.withValues(alpha: 0.15),
+                    blurRadius: 6,
+                  ),
+                ]
               : [],
         ),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -2082,7 +2344,9 @@ class _AlertMapCard extends StatelessWidget {
                   child: Text(
                     alert.userName,
                     style: const TextStyle(
-                        fontWeight: FontWeight.bold, fontSize: 13),
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    ),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
@@ -2092,7 +2356,11 @@ class _AlertMapCard extends StatelessWidget {
               const SizedBox(height: 3),
               Row(
                 children: [
-                  const Icon(Icons.directions_bus, size: 11, color: Colors.grey),
+                  const Icon(
+                    Icons.directions_bus,
+                    size: 11,
+                    color: Colors.grey,
+                  ),
                   const SizedBox(width: 4),
                   Expanded(
                     child: Text(
@@ -2118,7 +2386,9 @@ class _AlertMapCard extends StatelessWidget {
                     '$liveMemberCount/$totalMembers on map',
                     style: TextStyle(
                       fontSize: 11,
-                      color: liveMemberCount > 0 ? Colors.green.shade700 : Colors.grey,
+                      color: liveMemberCount > 0
+                          ? Colors.green.shade700
+                          : Colors.grey,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -2145,21 +2415,20 @@ class _AlertMapCard extends StatelessWidget {
 
 // ─── Shared helpers ───────────────────────────────────────────────────────────
 Widget _sectionTitle(String title) => Text(
-      title,
-      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-    );
+  title,
+  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+);
 
 Widget _emptyState(IconData icon, String msg) => Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, size: 64, color: Colors.grey.shade300),
-          const SizedBox(height: 12),
-          Text(msg,
-              style: TextStyle(color: Colors.grey.shade500, fontSize: 15)),
-        ],
-      ),
-    );
+  child: Column(
+    mainAxisAlignment: MainAxisAlignment.center,
+    children: [
+      Icon(icon, size: 64, color: Colors.grey.shade300),
+      const SizedBox(height: 12),
+      Text(msg, style: TextStyle(color: Colors.grey.shade500, fontSize: 15)),
+    ],
+  ),
+);
 
 // ─── Tour Packages Admin Tab ──────────────────────────────────────────────────
 
@@ -2208,13 +2477,18 @@ class _TourPackagesTab extends StatelessWidget {
             ),
           ),
           if (packages.isEmpty)
-            Expanded(child: _emptyState(Icons.local_offer_rounded, 'No tour packages found.\nRun migration_v6.sql to seed data.'))
+            Expanded(
+              child: _emptyState(
+                Icons.local_offer_rounded,
+                'No tour packages found.\nRun migration_v6.sql to seed data.',
+              ),
+            )
           else
             Expanded(
               child: ListView.separated(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
                 itemCount: packages.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 10),
+                separatorBuilder: (_, _) => const SizedBox(height: 10),
                 itemBuilder: (ctx, i) => _PackageAdminCard(
                   pkg: packages[i],
                   onDelete: () => onDelete(packages[i]['package_id'] as int),
@@ -2247,7 +2521,11 @@ class _PackageAdminCard extends StatelessWidget {
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         leading: CircleAvatar(
           backgroundColor: const Color(0xFF1B5A6E).withValues(alpha: 0.15),
-          child: const Icon(Icons.local_offer_rounded, color: Color(0xFF1B5A6E), size: 20),
+          child: const Icon(
+            Icons.local_offer_rounded,
+            color: Color(0xFF1B5A6E),
+            size: 20,
+          ),
         ),
         title: Text(
           pkg['title'] as String? ?? 'Package',
@@ -2263,7 +2541,9 @@ class _PackageAdminCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(
-                color: active ? Colors.green.withValues(alpha: 0.1) : Colors.red.withValues(alpha: 0.1),
+                color: active
+                    ? Colors.green.withValues(alpha: 0.1)
+                    : Colors.red.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
@@ -2276,18 +2556,29 @@ class _PackageAdminCard extends StatelessWidget {
               ),
             ),
             IconButton(
-              icon: const Icon(Icons.delete_outline_rounded, color: Colors.red, size: 20),
+              icon: const Icon(
+                Icons.delete_outline_rounded,
+                color: Colors.red,
+                size: 20,
+              ),
               onPressed: () async {
                 final ok = await showDialog<bool>(
                   context: context,
                   builder: (ctx) => AlertDialog(
                     title: const Text('Delete Package'),
-                    content: const Text('This will deactivate the package. Users won\'t see it anymore.'),
+                    content: const Text(
+                      'This will deactivate the package. Users won\'t see it anymore.',
+                    ),
                     actions: [
-                      TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+                      TextButton(
+                        onPressed: () => Navigator.pop(ctx, false),
+                        child: const Text('Cancel'),
+                      ),
                       TextButton(
                         onPressed: () => Navigator.pop(ctx, true),
-                        style: TextButton.styleFrom(foregroundColor: Colors.red),
+                        style: TextButton.styleFrom(
+                          foregroundColor: Colors.red,
+                        ),
                         child: const Text('Delete'),
                       ),
                     ],
@@ -2350,15 +2641,20 @@ class _VirtualToursAdminTab extends StatelessWidget {
                     builder: (_) => AlertDialog(
                       title: const Text('Delete Tour?'),
                       content: Text(
-                          'Delete "${tours[i]['title']}"? All scenes and hotspots will be removed permanently.'),
+                        'Delete "${tours[i]['title']}"? All scenes and hotspots will be removed permanently.',
+                      ),
                       actions: [
                         TextButton(
-                            onPressed: () => Navigator.pop(ctx, false),
-                            child: const Text('Cancel')),
+                          onPressed: () => Navigator.pop(ctx, false),
+                          child: const Text('Cancel'),
+                        ),
                         TextButton(
-                            onPressed: () => Navigator.pop(ctx, true),
-                            child: const Text('Delete',
-                                style: TextStyle(color: Colors.red))),
+                          onPressed: () => Navigator.pop(ctx, true),
+                          child: const Text(
+                            'Delete',
+                            style: TextStyle(color: Colors.red),
+                          ),
+                        ),
                       ],
                     ),
                   );
@@ -2378,7 +2674,10 @@ class _VTourAdminCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isActive = (tour['is_active'] as int? ?? 1) == 1;
+    final isActive =
+        tour['is_active'] == null ||
+        tour['is_active'] == true ||
+        tour['is_active'] == 1;
     final destName = tour['destination_name'] as String?;
 
     return Card(
@@ -2387,24 +2686,32 @@ class _VTourAdminCard extends StatelessWidget {
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         leading: Container(
-          width: 40, height: 40,
+          width: 40,
+          height: 40,
           decoration: BoxDecoration(
             gradient: const LinearGradient(
               colors: [Color(0xFF1B3A4C), Color(0xFF2CAFBC)],
             ),
             borderRadius: BorderRadius.circular(10),
           ),
-          child: const Icon(Icons.threed_rotation_rounded,
-              color: Colors.white, size: 20),
+          child: const Icon(
+            Icons.threed_rotation_rounded,
+            color: Colors.white,
+            size: 20,
+          ),
         ),
-        title: Text(tour['title'] ?? 'Tour',
-            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+        title: Text(
+          tour['title'] ?? 'Tour',
+          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+        ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (destName != null && destName.isNotEmpty)
-              Text('📍 $destName',
-                  style: const TextStyle(fontSize: 12, color: Colors.grey)),
+              Text(
+                '📍 $destName',
+                style: const TextStyle(fontSize: 12, color: Colors.grey),
+              ),
             const SizedBox(height: 4),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
@@ -2414,11 +2721,14 @@ class _VTourAdminCard extends StatelessWidget {
                     : Colors.grey.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(6),
               ),
-              child: Text(isActive ? 'Active' : 'Inactive',
-                  style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w600,
-                      color: isActive ? Colors.green : Colors.grey)),
+              child: Text(
+                isActive ? 'Active' : 'Inactive',
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                  color: isActive ? Colors.green : Colors.grey,
+                ),
+              ),
             ),
           ],
         ),
@@ -2456,14 +2766,24 @@ class _AnalyticsTab extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.analytics_outlined, size: 64, color: Colors.grey.shade300),
+            Icon(
+              Icons.analytics_outlined,
+              size: 64,
+              color: Colors.grey.shade300,
+            ),
             const SizedBox(height: 16),
-            const Text('No analytics data', style: TextStyle(color: Colors.grey)),
+            const Text(
+              'No analytics data',
+              style: TextStyle(color: Colors.grey),
+            ),
             const SizedBox(height: 16),
             ElevatedButton.icon(
               icon: const Icon(Icons.refresh),
               label: const Text('Load Analytics'),
-              style: ElevatedButton.styleFrom(backgroundColor: _kPrimary, foregroundColor: Colors.white),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _kPrimary,
+                foregroundColor: Colors.white,
+              ),
               onPressed: onRefresh,
             ),
           ],
@@ -2472,21 +2792,31 @@ class _AnalyticsTab extends StatelessWidget {
     }
 
     final totals = analytics['totals'] as Map<String, dynamic>? ?? {};
-    final monthlyBookings = (analytics['monthlyBookings'] as List?)
-        ?.map((e) => Map<String, dynamic>.from(e as Map))
-        .toList() ?? [];
-    final monthlyRevenue = (analytics['monthlyRevenue'] as List?)
-        ?.map((e) => Map<String, dynamic>.from(e as Map))
-        .toList() ?? [];
-    final monthlySos = (analytics['monthlySos'] as List?)
-        ?.map((e) => Map<String, dynamic>.from(e as Map))
-        .toList() ?? [];
-    final popularDests = (analytics['popularDestinations'] as List?)
-        ?.map((e) => Map<String, dynamic>.from(e as Map))
-        .toList() ?? [];
-    final bookingsByStatus = (analytics['bookingsByStatus'] as List?)
-        ?.map((e) => Map<String, dynamic>.from(e as Map))
-        .toList() ?? [];
+    final monthlyBookings =
+        (analytics['monthlyBookings'] as List?)
+            ?.map((e) => Map<String, dynamic>.from(e as Map))
+            .toList() ??
+        [];
+    final monthlyRevenue =
+        (analytics['monthlyRevenue'] as List?)
+            ?.map((e) => Map<String, dynamic>.from(e as Map))
+            .toList() ??
+        [];
+    final monthlySos =
+        (analytics['monthlySos'] as List?)
+            ?.map((e) => Map<String, dynamic>.from(e as Map))
+            .toList() ??
+        [];
+    final popularDests =
+        (analytics['popularDestinations'] as List?)
+            ?.map((e) => Map<String, dynamic>.from(e as Map))
+            .toList() ??
+        [];
+    final bookingsByStatus =
+        (analytics['bookingsByStatus'] as List?)
+            ?.map((e) => Map<String, dynamic>.from(e as Map))
+            .toList() ??
+        [];
 
     return RefreshIndicator(
       onRefresh: () async => onRefresh(),
@@ -2531,7 +2861,9 @@ class _AnalyticsTab extends StatelessWidget {
               labelKey: 'm',
               color: Colors.teal,
               unit: 'PKR ',
-              formatValue: (v) => v >= 1000 ? '${(v / 1000).toStringAsFixed(1)}K' : v.toStringAsFixed(0),
+              formatValue: (v) => v >= 1000
+                  ? '${(v / 1000).toStringAsFixed(1)}K'
+                  : v.toStringAsFixed(0),
             ),
             const SizedBox(height: 24),
           ],
@@ -2579,11 +2911,36 @@ class _TotalsGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final items = [
-      _StatDef('Users',          totalsNum('total_users').toInt(),          Icons.people,          Colors.teal),
-      _StatDef('Bookings',       totalsNum('total_bookings').toInt(),       Icons.bookmark,        Colors.blue),
-      _StatDef('Group Bookings', totalsNum('total_group_bookings').toInt(), Icons.groups,          Colors.purple),
-      _StatDef('SOS Alerts',     totalsNum('total_sos').toInt(),            Icons.emergency,       Colors.red),
-      _StatDef('Revenue (PKR)',  'PKR ${(totalsNum('total_revenue')).toStringAsFixed(0)}', Icons.attach_money, Colors.green),
+      _StatDef(
+        'Users',
+        totalsNum('total_users').toInt(),
+        Icons.people,
+        Colors.teal,
+      ),
+      _StatDef(
+        'Bookings',
+        totalsNum('total_bookings').toInt(),
+        Icons.bookmark,
+        Colors.blue,
+      ),
+      _StatDef(
+        'Group Bookings',
+        totalsNum('total_group_bookings').toInt(),
+        Icons.groups,
+        Colors.purple,
+      ),
+      _StatDef(
+        'SOS Alerts',
+        totalsNum('total_sos').toInt(),
+        Icons.emergency,
+        Colors.red,
+      ),
+      _StatDef(
+        'Revenue (PKR)',
+        'PKR ${(totalsNum('total_revenue')).toStringAsFixed(0)}',
+        Icons.attach_money,
+        Colors.green,
+      ),
     ];
 
     return GridView.builder(
@@ -2608,12 +2965,18 @@ class _BookingStatusBars extends StatelessWidget {
 
   Color _colorFor(String s) {
     switch (s.toLowerCase()) {
-      case 'active': return Colors.green;
-      case 'completed': return Colors.blue;
-      case 'cancelled': return Colors.red;
-      case 'pending': return Colors.orange;
-      case 'refunded': return Colors.purple;
-      default: return Colors.grey;
+      case 'active':
+        return Colors.green;
+      case 'completed':
+        return Colors.blue;
+      case 'cancelled':
+        return Colors.red;
+      case 'pending':
+        return Colors.orange;
+      case 'refunded':
+        return Colors.purple;
+      default:
+        return Colors.grey;
     }
   }
 
@@ -2678,8 +3041,13 @@ class _BarChart extends StatelessWidget {
             children: List.generate(data.length, (i) {
               final val = values[i];
               final frac = maxVal == 0 ? 0.0 : (val / maxVal).clamp(0.0, 1.0);
-              final label = (data[i][labelKey] as String? ?? '').replaceFirst(RegExp(r'^\d{4}-'), '');
-              final fmt = formatValue != null ? formatValue!(val) : '$unit${val.toStringAsFixed(0)}';
+              final label = (data[i][labelKey] as String? ?? '').replaceFirst(
+                RegExp(r'^\d{4}-'),
+                '',
+              );
+              final fmt = formatValue != null
+                  ? formatValue!(val)
+                  : '$unit${val.toStringAsFixed(0)}';
 
               return Expanded(
                 child: Padding(
@@ -2690,7 +3058,11 @@ class _BarChart extends StatelessWidget {
                       if (val > 0)
                         Text(
                           fmt,
-                          style: TextStyle(fontSize: 8, color: color, fontWeight: FontWeight.w600),
+                          style: TextStyle(
+                            fontSize: 8,
+                            color: color,
+                            fontWeight: FontWeight.w600,
+                          ),
                           textAlign: TextAlign.center,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -2702,7 +3074,9 @@ class _BarChart extends StatelessWidget {
                           child: Container(
                             decoration: BoxDecoration(
                               color: color.withValues(alpha: 0.85),
-                              borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
+                              borderRadius: const BorderRadius.vertical(
+                                top: Radius.circular(4),
+                              ),
                             ),
                           ),
                         ),
@@ -2748,14 +3122,17 @@ class _PopularDestsTable extends StatelessWidget {
             final name = data[i]['name'] as String? ?? '?';
             final city = data[i]['city'] as String? ?? '';
             final count = asInt(data[i]['c']) ?? 0;
-            final frac = maxCount == 0 ? 0.0 : (count / maxCount).clamp(0.0, 1.0);
+            final frac = maxCount == 0
+                ? 0.0
+                : (count / maxCount).clamp(0.0, 1.0);
 
             return Padding(
               padding: const EdgeInsets.only(bottom: 12),
               child: Row(
                 children: [
                   Container(
-                    width: 22, height: 22,
+                    width: 22,
+                    height: 22,
                     decoration: BoxDecoration(
                       color: _kPrimary,
                       shape: BoxShape.circle,
@@ -2763,7 +3140,11 @@ class _PopularDestsTable extends StatelessWidget {
                     child: Center(
                       child: Text(
                         '${i + 1}',
-                        style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ),
@@ -2778,11 +3159,21 @@ class _PopularDestsTable extends StatelessWidget {
                             Expanded(
                               child: Text(
                                 city.isNotEmpty ? '$name, $city' : name,
-                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ),
-                            Text('$count', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: _kAccent)),
+                            Text(
+                              '$count',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: _kAccent,
+                              ),
+                            ),
                           ],
                         ),
                         const SizedBox(height: 4),
@@ -2851,10 +3242,12 @@ class _AdminPaymentsTabState extends State<_AdminPaymentsTab> {
       .fold(0.0, (sum, p) => sum + (asDouble(p['amount']) ?? 0));
 
   int get _pendingRefundCount => widget.payments
-      .where((p) =>
-          p['refund_requested_at'] != null &&
-          p['refund_approved_at'] == null &&
-          p['refund_rejected_at'] == null)
+      .where(
+        (p) =>
+            p['refund_requested_at'] != null &&
+            p['refund_approved_at'] == null &&
+            p['refund_rejected_at'] == null,
+      )
       .length;
 
   Future<void> _handleAction(int paymentId, bool approve) async {
@@ -2866,9 +3259,11 @@ class _AdminPaymentsTabState extends State<_AdminPaymentsTab> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(approve
-                ? 'This will trigger a refund via Stripe and mark the booking as Refunded.'
-                : 'The refund request will be rejected.'),
+            Text(
+              approve
+                  ? 'This will trigger a refund via Stripe and mark the booking as Refunded.'
+                  : 'The refund request will be rejected.',
+            ),
             const SizedBox(height: 12),
             TextField(
               controller: notesCtrl,
@@ -2880,7 +3275,10 @@ class _AdminPaymentsTabState extends State<_AdminPaymentsTab> {
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: approve ? Colors.green : Colors.red,
@@ -2904,10 +3302,14 @@ class _AdminPaymentsTabState extends State<_AdminPaymentsTab> {
 
   Color _statusColor(String? s) {
     switch (s) {
-      case 'succeeded': return Colors.green;
-      case 'refunded': return Colors.purple;
-      case 'failed': return Colors.red;
-      default: return Colors.orange;
+      case 'succeeded':
+        return Colors.green;
+      case 'refunded':
+        return Colors.purple;
+      case 'failed':
+        return Colors.red;
+      default:
+        return Colors.orange;
     }
   }
 
@@ -2965,26 +3367,36 @@ class _AdminPaymentsTabState extends State<_AdminPaymentsTab> {
                 child: SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: Row(
-                    children: ['all', 'succeeded', 'refunded', 'failed', 'pending'].map((s) {
-                      final isActive = _filterStatus == s && !_refundPendingOnly;
-                      return Padding(
-                        padding: const EdgeInsets.only(right: 6),
-                        child: FilterChip(
-                          label: Text(s == 'all' ? 'All' : s),
-                          selected: isActive,
-                          onSelected: (_) => setState(() {
-                            _filterStatus = s;
-                            _refundPendingOnly = false;
-                          }),
-                          selectedColor: _kAccent.withValues(alpha: 0.2),
-                          checkmarkColor: _kPrimary,
-                          labelStyle: TextStyle(
-                            fontSize: 12,
-                            color: isActive ? _kPrimary : Colors.grey.shade700,
-                          ),
-                        ),
-                      );
-                    }).toList(),
+                    children:
+                        [
+                          'all',
+                          'succeeded',
+                          'refunded',
+                          'failed',
+                          'pending',
+                        ].map((s) {
+                          final isActive =
+                              _filterStatus == s && !_refundPendingOnly;
+                          return Padding(
+                            padding: const EdgeInsets.only(right: 6),
+                            child: FilterChip(
+                              label: Text(s == 'all' ? 'All' : s),
+                              selected: isActive,
+                              onSelected: (_) => setState(() {
+                                _filterStatus = s;
+                                _refundPendingOnly = false;
+                              }),
+                              selectedColor: _kAccent.withValues(alpha: 0.2),
+                              checkmarkColor: _kPrimary,
+                              labelStyle: TextStyle(
+                                fontSize: 12,
+                                color: isActive
+                                    ? _kPrimary
+                                    : Colors.grey.shade700,
+                              ),
+                            ),
+                          );
+                        }).toList(),
                   ),
                 ),
               ),
@@ -3022,7 +3434,11 @@ class _AdminPaymentsTabState extends State<_AdminPaymentsTab> {
                       Center(
                         child: Column(
                           children: [
-                            Icon(Icons.receipt_long, size: 64, color: Colors.grey.shade300),
+                            Icon(
+                              Icons.receipt_long,
+                              size: 64,
+                              color: Colors.grey.shade300,
+                            ),
                             const SizedBox(height: 12),
                             Text(
                               _refundPendingOnly
@@ -3051,8 +3467,14 @@ class _AdminPaymentsTabState extends State<_AdminPaymentsTab> {
                         margin: const EdgeInsets.only(bottom: 10),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
-                          side: hasRefundRequest && !refundApproved && !refundRejected
-                              ? const BorderSide(color: Colors.orange, width: 1.5)
+                          side:
+                              hasRefundRequest &&
+                                  !refundApproved &&
+                                  !refundRejected
+                              ? const BorderSide(
+                                  color: Colors.orange,
+                                  width: 1.5,
+                                )
                               : BorderSide.none,
                         ),
                         child: Padding(
@@ -3064,9 +3486,14 @@ class _AdminPaymentsTabState extends State<_AdminPaymentsTab> {
                                 children: [
                                   // Status badge
                                   Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 3,
+                                    ),
                                     decoration: BoxDecoration(
-                                      color: _statusColor(status).withValues(alpha: 0.12),
+                                      color: _statusColor(
+                                        status,
+                                      ).withValues(alpha: 0.12),
                                       borderRadius: BorderRadius.circular(6),
                                     ),
                                     child: Text(
@@ -3080,16 +3507,27 @@ class _AdminPaymentsTabState extends State<_AdminPaymentsTab> {
                                   ),
                                   const SizedBox(width: 8),
                                   // Refund badge
-                                  if (hasRefundRequest && !refundApproved && !refundRejected)
+                                  if (hasRefundRequest &&
+                                      !refundApproved &&
+                                      !refundRejected)
                                     Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 3,
+                                      ),
                                       decoration: BoxDecoration(
-                                        color: Colors.orange.withValues(alpha: 0.12),
+                                        color: Colors.orange.withValues(
+                                          alpha: 0.12,
+                                        ),
                                         borderRadius: BorderRadius.circular(6),
                                       ),
                                       child: const Text(
                                         'REFUND REQUESTED',
-                                        style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.orange),
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.orange,
+                                        ),
                                       ),
                                     ),
                                   const Spacer(),
@@ -3107,7 +3545,11 @@ class _AdminPaymentsTabState extends State<_AdminPaymentsTab> {
                               // User & destination
                               Row(
                                 children: [
-                                  const Icon(Icons.person, size: 13, color: Colors.grey),
+                                  const Icon(
+                                    Icons.person,
+                                    size: 13,
+                                    color: Colors.grey,
+                                  ),
                                   const SizedBox(width: 4),
                                   Text(
                                     '${p['full_name'] ?? '?'} · ${p['email'] ?? ''}',
@@ -3120,43 +3562,66 @@ class _AdminPaymentsTabState extends State<_AdminPaymentsTab> {
                                 const SizedBox(height: 2),
                                 Row(
                                   children: [
-                                    const Icon(Icons.place, size: 13, color: Colors.grey),
+                                    const Icon(
+                                      Icons.place,
+                                      size: 13,
+                                      color: Colors.grey,
+                                    ),
                                     const SizedBox(width: 4),
                                     Text(
                                       p['destination_name'].toString(),
-                                      style: const TextStyle(fontSize: 12, color: Colors.grey),
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.grey,
+                                      ),
                                     ),
                                   ],
                                 ),
                               ],
                               // Refund action buttons
-                              if (hasRefundRequest && !refundApproved && !refundRejected) ...[
+                              if (hasRefundRequest &&
+                                  !refundApproved &&
+                                  !refundRejected) ...[
                                 const SizedBox(height: 10),
                                 Row(
                                   children: [
                                     Expanded(
                                       child: OutlinedButton.icon(
                                         icon: const Icon(Icons.close, size: 14),
-                                        label: const Text('Reject', style: TextStyle(fontSize: 12)),
+                                        label: const Text(
+                                          'Reject',
+                                          style: TextStyle(fontSize: 12),
+                                        ),
                                         style: OutlinedButton.styleFrom(
                                           foregroundColor: Colors.red,
-                                          side: const BorderSide(color: Colors.red),
-                                          padding: const EdgeInsets.symmetric(vertical: 6),
+                                          side: const BorderSide(
+                                            color: Colors.red,
+                                          ),
+                                          padding: const EdgeInsets.symmetric(
+                                            vertical: 6,
+                                          ),
                                         ),
-                                        onPressed: () => _handleAction(paymentId, false),
+                                        onPressed: () =>
+                                            _handleAction(paymentId, false),
                                       ),
                                     ),
                                     const SizedBox(width: 8),
                                     Expanded(
                                       child: ElevatedButton.icon(
                                         icon: const Icon(Icons.check, size: 14),
-                                        label: const Text('Approve', style: TextStyle(fontSize: 12)),
+                                        label: const Text(
+                                          'Approve',
+                                          style: TextStyle(fontSize: 12),
+                                        ),
                                         style: ElevatedButton.styleFrom(
                                           backgroundColor: Colors.green,
                                           foregroundColor: Colors.white,
-                                          padding: const EdgeInsets.symmetric(vertical: 6),
+                                          padding: const EdgeInsets.symmetric(
+                                            vertical: 6,
+                                          ),
                                         ),
-                                        onPressed: () => _handleAction(paymentId, true),
+                                        onPressed: () =>
+                                            _handleAction(paymentId, true),
                                       ),
                                     ),
                                   ],
@@ -3167,11 +3632,18 @@ class _AdminPaymentsTabState extends State<_AdminPaymentsTab> {
                                   padding: const EdgeInsets.only(top: 6),
                                   child: Row(
                                     children: [
-                                      const Icon(Icons.check_circle, size: 14, color: Colors.green),
+                                      const Icon(
+                                        Icons.check_circle,
+                                        size: 14,
+                                        color: Colors.green,
+                                      ),
                                       const SizedBox(width: 4),
                                       Text(
                                         'Refund approved${p['refund_admin_notes']?.toString().isNotEmpty == true ? ' · ${p['refund_admin_notes']}' : ''}',
-                                        style: const TextStyle(fontSize: 11, color: Colors.green),
+                                        style: const TextStyle(
+                                          fontSize: 11,
+                                          color: Colors.green,
+                                        ),
                                       ),
                                     ],
                                   ),
@@ -3181,11 +3653,18 @@ class _AdminPaymentsTabState extends State<_AdminPaymentsTab> {
                                   padding: const EdgeInsets.only(top: 6),
                                   child: Row(
                                     children: [
-                                      const Icon(Icons.cancel, size: 14, color: Colors.red),
+                                      const Icon(
+                                        Icons.cancel,
+                                        size: 14,
+                                        color: Colors.red,
+                                      ),
                                       const SizedBox(width: 4),
                                       Text(
                                         'Refund rejected${p['refund_admin_notes']?.toString().isNotEmpty == true ? ' · ${p['refund_admin_notes']}' : ''}',
-                                        style: const TextStyle(fontSize: 11, color: Colors.red),
+                                        style: const TextStyle(
+                                          fontSize: 11,
+                                          color: Colors.red,
+                                        ),
                                       ),
                                     ],
                                   ),
@@ -3224,7 +3703,11 @@ class _MiniStat extends StatelessWidget {
         const SizedBox(height: 4),
         Text(
           value,
-          style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 14),
+          style: TextStyle(
+            color: color,
+            fontWeight: FontWeight.bold,
+            fontSize: 14,
+          ),
         ),
         Text(
           label,
@@ -3268,7 +3751,10 @@ class _ExportReportsCardState extends State<_ExportReportsCard> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Export failed: $e'), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text('Export failed: $e'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     } finally {
@@ -3280,7 +3766,8 @@ class _ExportReportsCardState extends State<_ExportReportsCard> {
     final pdf = pw.Document();
     final now = DateTime.now();
     final dateStr = DateFormat('dd MMMM yyyy, hh:mm a').format(now);
-    final totals = (data['totals'] ?? data['analytics']?['totals'] ?? {}) as Map;
+    final totals =
+        (data['totals'] ?? data['analytics']?['totals'] ?? {}) as Map;
     final summary = data['summary'] as Map? ?? {};
 
     pdf.addPage(
@@ -3291,85 +3778,148 @@ class _ExportReportsCardState extends State<_ExportReportsCard> {
           // Header
           pw.Container(
             width: double.infinity,
-            padding: const pw.EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: const pw.EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 12,
+            ),
             color: const PdfColor(0.10, 0.13, 0.49),
             child: pw.Column(
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
                 pw.Text(
                   'SafarSync Admin Report',
-                  style: pw.TextStyle(fontSize: 22, color: PdfColors.white, fontWeight: pw.FontWeight.bold),
+                  style: pw.TextStyle(
+                    fontSize: 22,
+                    color: PdfColors.white,
+                    fontWeight: pw.FontWeight.bold,
+                  ),
                 ),
                 pw.SizedBox(height: 4),
                 pw.Text(
                   _reportTitle(type),
-                  style: const pw.TextStyle(fontSize: 14, color: PdfColors.white),
+                  style: const pw.TextStyle(
+                    fontSize: 14,
+                    color: PdfColors.white,
+                  ),
                 ),
               ],
             ),
           ),
           pw.SizedBox(height: 16),
-          pw.Text('Generated: $dateStr', style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey)),
+          pw.Text(
+            'Generated: $dateStr',
+            style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey),
+          ),
           pw.SizedBox(height: 20),
 
           // Analytics summary
           if (type == 'analytics' && totals.isNotEmpty) ...[
-            pw.Text('Platform Totals', style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
+            pw.Text(
+              'Platform Totals',
+              style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold),
+            ),
             pw.SizedBox(height: 8),
             pw.Table(
               border: pw.TableBorder.all(color: PdfColors.grey300),
               children: [
                 pw.TableRow(
-                  decoration: const pw.BoxDecoration(color: PdfColor(0.22, 0.29, 0.67)),
+                  decoration: const pw.BoxDecoration(
+                    color: PdfColor(0.22, 0.29, 0.67),
+                  ),
                   children: [
                     _pdfCell('Metric', isHeader: true),
                     _pdfCell('Value', isHeader: true),
                   ],
                 ),
-                ...(totals.entries.map((e) => pw.TableRow(children: [
-                  _pdfCell(e.key.replaceAll('_', ' ')),
-                  _pdfCell(e.value?.toString() ?? ''),
-                ]))),
+                ...(totals.entries.map(
+                  (e) => pw.TableRow(
+                    children: [
+                      _pdfCell(e.key.replaceAll('_', ' ')),
+                      _pdfCell(e.value?.toString() ?? ''),
+                    ],
+                  ),
+                )),
               ],
             ),
           ],
 
           // Revenue report
           if (type == 'revenue' && summary.isNotEmpty) ...[
-            pw.Text('Revenue Summary', style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
+            pw.Text(
+              'Revenue Summary',
+              style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold),
+            ),
             pw.SizedBox(height: 8),
             pw.Table(
               border: pw.TableBorder.all(color: PdfColors.grey300),
               children: [
                 pw.TableRow(
-                  decoration: const pw.BoxDecoration(color: PdfColor(0.05, 0.60, 0.35)),
+                  decoration: const pw.BoxDecoration(
+                    color: PdfColor(0.05, 0.60, 0.35),
+                  ),
                   children: [
                     _pdfCell('Metric', isHeader: true),
                     _pdfCell('Value', isHeader: true),
                   ],
                 ),
-                pw.TableRow(children: [_pdfCell('Total Revenue'), _pdfCell('PKR ${summary['total_revenue'] ?? 0}')]),
-                pw.TableRow(children: [_pdfCell('Total Refunded'), _pdfCell('PKR ${summary['total_refunded'] ?? 0}')]),
-                pw.TableRow(children: [_pdfCell('Successful Payments'), _pdfCell('${summary['successful_payments'] ?? 0}')]),
-                pw.TableRow(children: [_pdfCell('Failed Payments'), _pdfCell('${summary['failed_payments'] ?? 0}')]),
+                pw.TableRow(
+                  children: [
+                    _pdfCell('Total Revenue'),
+                    _pdfCell('PKR ${summary['total_revenue'] ?? 0}'),
+                  ],
+                ),
+                pw.TableRow(
+                  children: [
+                    _pdfCell('Total Refunded'),
+                    _pdfCell('PKR ${summary['total_refunded'] ?? 0}'),
+                  ],
+                ),
+                pw.TableRow(
+                  children: [
+                    _pdfCell('Successful Payments'),
+                    _pdfCell('${summary['successful_payments'] ?? 0}'),
+                  ],
+                ),
+                pw.TableRow(
+                  children: [
+                    _pdfCell('Failed Payments'),
+                    _pdfCell('${summary['failed_payments'] ?? 0}'),
+                  ],
+                ),
               ],
             ),
             pw.SizedBox(height: 16),
             if ((data['monthly'] as List?)?.isNotEmpty == true) ...[
-              pw.Text('Monthly Revenue', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
+              pw.Text(
+                'Monthly Revenue',
+                style: pw.TextStyle(
+                  fontSize: 12,
+                  fontWeight: pw.FontWeight.bold,
+                ),
+              ),
               pw.SizedBox(height: 6),
               pw.Table(
                 border: pw.TableBorder.all(color: PdfColors.grey300),
                 children: [
                   pw.TableRow(
-                    decoration: const pw.BoxDecoration(color: PdfColors.grey300),
-                    children: [_pdfCell('Month'), _pdfCell('Revenue'), _pdfCell('Transactions')],
+                    decoration: const pw.BoxDecoration(
+                      color: PdfColors.grey300,
+                    ),
+                    children: [
+                      _pdfCell('Month'),
+                      _pdfCell('Revenue'),
+                      _pdfCell('Transactions'),
+                    ],
                   ),
-                  ...(data['monthly'] as List).map((r) => pw.TableRow(children: [
-                    _pdfCell(r['month']?.toString() ?? ''),
-                    _pdfCell('PKR ${r['revenue'] ?? 0}'),
-                    _pdfCell('${r['transactions'] ?? 0}'),
-                  ])),
+                  ...(data['monthly'] as List).map(
+                    (r) => pw.TableRow(
+                      children: [
+                        _pdfCell(r['month']?.toString() ?? ''),
+                        _pdfCell('PKR ${r['revenue'] ?? 0}'),
+                        _pdfCell('${r['transactions'] ?? 0}'),
+                      ],
+                    ),
+                  ),
                 ],
               ),
             ],
@@ -3377,27 +3927,44 @@ class _ExportReportsCardState extends State<_ExportReportsCard> {
 
           // SOS report
           if (type == 'sos') ...[
-            pw.Text('SOS Alert Report', style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
+            pw.Text(
+              'SOS Alert Report',
+              style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold),
+            ),
             pw.SizedBox(height: 8),
             if ((data['alerts'] as List?)?.isEmpty != false)
-              pw.Text('No SOS alerts found.', style: const pw.TextStyle(fontSize: 11))
+              pw.Text(
+                'No SOS alerts found.',
+                style: const pw.TextStyle(fontSize: 11),
+              )
             else
               pw.Table(
                 border: pw.TableBorder.all(color: PdfColors.grey300),
                 children: [
                   pw.TableRow(
-                    decoration: const pw.BoxDecoration(color: PdfColor(0.72, 0.11, 0.11)),
+                    decoration: const pw.BoxDecoration(
+                      color: PdfColor(0.72, 0.11, 0.11),
+                    ),
                     children: [
                       _pdfCell('User', isHeader: true),
                       _pdfCell('Status', isHeader: true),
                       _pdfCell('Date', isHeader: true),
                     ],
                   ),
-                  ...(data['alerts'] as List).take(50).map((a) => pw.TableRow(children: [
-                    _pdfCell(a['full_name']?.toString() ?? '?'),
-                    _pdfCell(a['status']?.toString() ?? ''),
-                    _pdfCell(a['created_at']?.toString().split('T').first ?? ''),
-                  ])),
+                  ...(data['alerts'] as List)
+                      .take(50)
+                      .map(
+                        (a) => pw.TableRow(
+                          children: [
+                            _pdfCell(a['full_name']?.toString() ?? '?'),
+                            _pdfCell(a['status']?.toString() ?? ''),
+                            _pdfCell(
+                              a['created_at']?.toString().split('T').first ??
+                                  '',
+                            ),
+                          ],
+                        ),
+                      ),
                 ],
               ),
           ],
@@ -3412,28 +3979,32 @@ class _ExportReportsCardState extends State<_ExportReportsCard> {
     );
 
     await Printing.layoutPdf(
-      name: 'SafarSync_${_reportTitle(type).replaceAll(' ', '_')}_${DateFormat('yyyyMMdd').format(now)}.pdf',
+      name:
+          'SafarSync_${_reportTitle(type).replaceAll(' ', '_')}_${DateFormat('yyyyMMdd').format(now)}.pdf',
       onLayout: (PdfPageFormat fmt) async => pdf.save(),
     );
   }
 
   static pw.Widget _pdfCell(String text, {bool isHeader = false}) => pw.Padding(
-        padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-        child: pw.Text(
-          text,
-          style: pw.TextStyle(
-            fontSize: isHeader ? 11 : 10,
-            fontWeight: isHeader ? pw.FontWeight.bold : null,
-            color: isHeader ? PdfColors.white : PdfColors.black,
-          ),
-        ),
-      );
+    padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+    child: pw.Text(
+      text,
+      style: pw.TextStyle(
+        fontSize: isHeader ? 11 : 10,
+        fontWeight: isHeader ? pw.FontWeight.bold : null,
+        color: isHeader ? PdfColors.white : PdfColors.black,
+      ),
+    ),
+  );
 
   static String _reportTitle(String type) {
     switch (type) {
-      case 'revenue': return 'Revenue Report';
-      case 'sos': return 'SOS Alerts Report';
-      default: return 'Platform Analytics Report';
+      case 'revenue':
+        return 'Revenue Report';
+      case 'sos':
+        return 'SOS Alerts Report';
+      default:
+        return 'Platform Analytics Report';
     }
   }
 
@@ -3452,14 +4023,24 @@ class _ExportReportsCardState extends State<_ExportReportsCard> {
           children: [
             Row(
               children: [
-                Icon(Icons.picture_as_pdf, color: Colors.indigo.shade700, size: 20),
+                Icon(
+                  Icons.picture_as_pdf,
+                  color: Colors.indigo.shade700,
+                  size: 20,
+                ),
                 const SizedBox(width: 8),
-                Text('Download PDF Reports',
-                    style: TextStyle(fontWeight: FontWeight.w600, color: Colors.indigo.shade800)),
+                Text(
+                  'Download PDF Reports',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: Colors.indigo.shade800,
+                  ),
+                ),
                 const Spacer(),
                 if (_exporting)
                   const SizedBox(
-                    width: 18, height: 18,
+                    width: 18,
+                    height: 18,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   ),
               ],
@@ -3528,7 +4109,14 @@ class _ExportChip extends StatelessWidget {
             children: [
               Icon(icon, color: color, size: 16),
               const SizedBox(width: 6),
-              Text(label, style: TextStyle(color: color, fontWeight: FontWeight.w600, fontSize: 13)),
+              Text(
+                label,
+                style: TextStyle(
+                  color: color,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                ),
+              ),
               const SizedBox(width: 6),
               Icon(Icons.download_rounded, color: color, size: 14),
             ],

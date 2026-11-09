@@ -1,4 +1,4 @@
-import 'package:firebase_auth/firebase_auth.dart';
+import '../../utils/app_auth.dart';
 import 'package:flutter/material.dart';
 import '../../utils/local_database_service.dart';
 import '../../utils/responsive.dart';
@@ -33,7 +33,9 @@ class _TopNavigationState extends State<TopNavigation> {
   }
 
   void _onUnreadChanged() {
-    if (mounted) setState(() => _unread = NotificationService.instance.unreadCount);
+    if (mounted) {
+      setState(() => _unread = NotificationService.instance.unreadCount);
+    }
   }
 
   Future<void> _fetchUnreadCount() async {
@@ -47,13 +49,13 @@ class _TopNavigationState extends State<TopNavigation> {
   }
 
   Future<void> _loadUserName() async {
-    final user = FirebaseAuth.instance.currentUser;
+    final user = AppAuth.currentUser;
     if (user == null) return;
 
-    // 1. Firebase displayName (Google / Apple / signup users who set it)
-    final firebaseName = user.displayName?.trim() ?? '';
-    if (firebaseName.isNotEmpty) {
-      _setName(firebaseName);
+    // 1. Auth profile name (Google / Apple / signup metadata)
+    final authName = user.displayName?.trim() ?? '';
+    if (authName.isNotEmpty) {
+      _setName(authName);
       return;
     }
 
@@ -156,7 +158,8 @@ class _TopNavigationState extends State<TopNavigation> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                          builder: (_) => const NotificationsPage()),
+                        builder: (_) => const NotificationsPage(),
+                      ),
                     ).then((_) => _fetchUnreadCount());
                   },
                 ),

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import '../utils/app_auth.dart';
 import '../utils/api_service.dart';
 import 'bookings_page.dart';
 import 'group_bookings_page.dart';
@@ -9,9 +9,9 @@ import 'notifications_page.dart';
 import 'sasta_tour_page.dart';
 
 // ─── Brand tokens ─────────────────────────────────────────────────────────────
-const _kPrimary  = Color(0xFF1B5A6E);
+const _kPrimary = Color(0xFF1B5A6E);
 const _kPrimary2 = Color(0xFF0D3B4D);
-const _kAccent   = Color(0xFF2CAFBC);
+const _kAccent = Color(0xFF2CAFBC);
 
 // ─────────────────────────────────────────────────────────────────────────────
 class SmartDashboardPage extends StatefulWidget {
@@ -24,16 +24,16 @@ class SmartDashboardPage extends StatefulWidget {
 
 class _SmartDashboardPageState extends State<SmartDashboardPage> {
   // ── Stats ──────────────────────────────────────────────────────────────────
-  int _singleBookings    = 0;
-  int _groupBookings     = 0;
-  int _activeTrips       = 0;
-  int _activeTracking    = 0;
-  int _pendingInvites    = 0;
-  bool _loading          = true;
+  int _singleBookings = 0;
+  int _groupBookings = 0;
+  int _activeTrips = 0;
+  int _activeTracking = 0;
+  int _pendingInvites = 0;
+  bool _loading = true;
 
   // ── User ───────────────────────────────────────────────────────────────────
-  String _userName    = 'Traveler';
-  String _initial     = 'T';
+  String _userName = 'Traveler';
+  String _initial = 'T';
 
   @override
   void initState() {
@@ -43,10 +43,10 @@ class _SmartDashboardPageState extends State<SmartDashboardPage> {
   }
 
   void _initUser() {
-    final u = FirebaseAuth.instance.currentUser;
+    final u = AppAuth.currentUser;
     final name = u?.displayName ?? u?.email?.split('@').first ?? 'Traveler';
     _userName = name;
-    _initial  = name.isNotEmpty ? name[0].toUpperCase() : 'T';
+    _initial = name.isNotEmpty ? name[0].toUpperCase() : 'T';
   }
 
   Future<void> _load() async {
@@ -59,17 +59,23 @@ class _SmartDashboardPageState extends State<SmartDashboardPage> {
       ]);
 
       final bookings = res[0]['bookings'] as List? ?? [];
-      final groups   = res[1]['group_bookings'] as List? ?? [];
-      final invRaw   = res[2]['pending_count'];
+      final groups = res[1]['group_bookings'] as List? ?? [];
+      final invRaw = res[2]['pending_count'];
 
       if (!mounted) return;
       setState(() {
         _singleBookings = bookings.length;
-        _groupBookings  = groups.length;
-        _activeTrips    = groups.where((g) => (g as Map)['status'] == 'Active').length;
-        _activeTracking = bookings.where((b) => (b as Map)['status'] == 'Active').length + _activeTrips;
-        _pendingInvites = (invRaw is int) ? invRaw : int.tryParse(invRaw?.toString() ?? '0') ?? 0;
-        _loading        = false;
+        _groupBookings = groups.length;
+        _activeTrips = groups
+            .where((g) => (g as Map)['status'] == 'Active')
+            .length;
+        _activeTracking =
+            bookings.where((b) => (b as Map)['status'] == 'Active').length +
+            _activeTrips;
+        _pendingInvites = (invRaw is int)
+            ? invRaw
+            : int.tryParse(invRaw?.toString() ?? '0') ?? 0;
+        _loading = false;
       });
     } catch (_) {
       if (mounted) setState(() => _loading = false);
@@ -187,15 +193,15 @@ class _SmartDashboardPageState extends State<SmartDashboardPage> {
       _label('Quick Actions'),
       const SizedBox(height: 12),
       _QuickActions(
-        onNewBooking:    () => _push(const CreateBookingScreen()),
-        onNewGroup:      () => _push(const CreateGroupBookingScreen()),
-        onAllBookings:   () => _push(const BookingsPage()),
-        onGroupTrips:    () => _push(const GroupBookingsPage()),
-        onInvitations:   () => _push(const GroupInvitationsPage()),
-        onSastaTours:    () => _push(const SastaTourPage()),
+        onNewBooking: () => _push(const CreateBookingScreen()),
+        onNewGroup: () => _push(const CreateGroupBookingScreen()),
+        onAllBookings: () => _push(const BookingsPage()),
+        onGroupTrips: () => _push(const GroupBookingsPage()),
+        onInvitations: () => _push(const GroupInvitationsPage()),
+        onSastaTours: () => _push(const SastaTourPage()),
         onBudgetPlanner: () => _push(const BudgetPlannerPage()),
-        onGroups:        () => _push(const GroupsPage()),
-        pendingInvites:  _pendingInvites,
+        onGroups: () => _push(const GroupsPage()),
+        pendingInvites: _pendingInvites,
       ),
       const SizedBox(height: 24),
 
@@ -204,7 +210,9 @@ class _SmartDashboardPageState extends State<SmartDashboardPage> {
       const SizedBox(height: 12),
       _TrackingCard(
         count: _activeTracking,
-        onTap: _activeTracking > 0 ? () => _push(const GroupBookingsPage()) : null,
+        onTap: _activeTracking > 0
+            ? () => _push(const GroupBookingsPage())
+            : null,
       ),
     ];
   }
@@ -249,7 +257,7 @@ class _Header extends StatelessWidget {
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.only(
-          bottomLeft:  Radius.circular(28),
+          bottomLeft: Radius.circular(28),
           bottomRight: Radius.circular(28),
         ),
       ),
@@ -265,7 +273,10 @@ class _Header extends StatelessWidget {
             decoration: BoxDecoration(
               color: _kAccent.withValues(alpha: 0.22),
               shape: BoxShape.circle,
-              border: Border.all(color: _kAccent.withValues(alpha: 0.45), width: 1.5),
+              border: Border.all(
+                color: _kAccent.withValues(alpha: 0.45),
+                width: 1.5,
+              ),
             ),
             child: Center(
               child: Text(
@@ -288,7 +299,11 @@ class _Header extends StatelessWidget {
               children: [
                 const Text(
                   'Assalam-o-Alaikum,',
-                  style: TextStyle(color: Colors.white60, fontSize: 12, height: 1.2),
+                  style: TextStyle(
+                    color: Colors.white60,
+                    fontSize: 12,
+                    height: 1.2,
+                  ),
                 ),
                 const SizedBox(height: 1),
                 Text(
@@ -305,7 +320,11 @@ class _Header extends StatelessWidget {
                 const SizedBox(height: 3),
                 const Text(
                   "Here's your trip overview",
-                  style: TextStyle(color: Colors.white54, fontSize: 11, height: 1.2),
+                  style: TextStyle(
+                    color: Colors.white54,
+                    fontSize: 11,
+                    height: 1.2,
+                  ),
                 ),
               ],
             ),
@@ -316,7 +335,11 @@ class _Header extends StatelessWidget {
             clipBehavior: Clip.none,
             children: [
               IconButton(
-                icon: const Icon(Icons.notifications_outlined, color: Colors.white, size: 22),
+                icon: const Icon(
+                  Icons.notifications_outlined,
+                  color: Colors.white,
+                  size: 22,
+                ),
                 onPressed: onNotifications,
                 tooltip: 'Notifications',
                 padding: const EdgeInsets.all(8),
@@ -349,7 +372,11 @@ class _Header extends StatelessWidget {
 
           // Refresh
           IconButton(
-            icon: const Icon(Icons.refresh_rounded, color: Colors.white60, size: 20),
+            icon: const Icon(
+              Icons.refresh_rounded,
+              color: Colors.white60,
+              size: 20,
+            ),
             onPressed: onRefresh,
             tooltip: 'Refresh',
             padding: const EdgeInsets.all(8),
@@ -391,13 +418,18 @@ class _StatCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(14),
             border: Border.all(color: const Color(0xFFEEEEEE)),
             boxShadow: const [
-              BoxShadow(color: Color(0x08000000), blurRadius: 8, offset: Offset(0, 2)),
+              BoxShadow(
+                color: Color(0x08000000),
+                blurRadius: 8,
+                offset: Offset(0, 2),
+              ),
             ],
           ),
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min, // ← prevents the column from expanding
+            mainAxisSize:
+                MainAxisSize.min, // ← prevents the column from expanding
             children: [
               // Icon row
               Row(
@@ -414,7 +446,11 @@ class _StatCard extends StatelessWidget {
                   ),
                   const Spacer(),
                   if (onTap != null)
-                    Icon(Icons.arrow_forward_ios_rounded, size: 10, color: Colors.grey.shade400),
+                    Icon(
+                      Icons.arrow_forward_ios_rounded,
+                      size: 10,
+                      color: Colors.grey.shade400,
+                    ),
                 ],
               ),
               const SizedBox(height: 8),
@@ -481,7 +517,11 @@ class _InviteBanner extends StatelessWidget {
                   color: Colors.orange.shade600,
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(Icons.mail_rounded, color: Colors.white, size: 20),
+                child: const Icon(
+                  Icons.mail_rounded,
+                  color: Colors.white,
+                  size: 20,
+                ),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -498,7 +538,10 @@ class _InviteBanner extends StatelessWidget {
                     ),
                     Text(
                       'Tap to view and respond',
-                      style: TextStyle(fontSize: 12, color: Colors.orange.shade700),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.orange.shade700,
+                      ),
                     ),
                   ],
                 ),
@@ -743,10 +786,16 @@ class _SecondaryCard extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
-              color: badge != null ? Colors.orange.shade200 : const Color(0xFFEEEEEE),
+              color: badge != null
+                  ? Colors.orange.shade200
+                  : const Color(0xFFEEEEEE),
             ),
             boxShadow: const [
-              BoxShadow(color: Color(0x06000000), blurRadius: 6, offset: Offset(0, 2)),
+              BoxShadow(
+                color: Color(0x06000000),
+                blurRadius: 6,
+                offset: Offset(0, 2),
+              ),
             ],
           ),
           child: Row(
@@ -775,7 +824,10 @@ class _SecondaryCard extends StatelessWidget {
               ),
               if (badge != null)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 7,
+                    vertical: 3,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.orange,
                     borderRadius: BorderRadius.circular(10),
@@ -790,7 +842,11 @@ class _SecondaryCard extends StatelessWidget {
                   ),
                 )
               else
-                Icon(Icons.chevron_right_rounded, size: 16, color: Colors.grey.shade400),
+                Icon(
+                  Icons.chevron_right_rounded,
+                  size: 16,
+                  color: Colors.grey.shade400,
+                ),
             ],
           ),
         ),
@@ -824,7 +880,11 @@ class _TrackingCard extends StatelessWidget {
               color: on ? Colors.green.shade200 : const Color(0xFFEEEEEE),
             ),
             boxShadow: const [
-              BoxShadow(color: Color(0x06000000), blurRadius: 6, offset: Offset(0, 2)),
+              BoxShadow(
+                color: Color(0x06000000),
+                blurRadius: 6,
+                offset: Offset(0, 2),
+              ),
             ],
           ),
           child: Row(
@@ -837,7 +897,11 @@ class _TrackingCard extends StatelessWidget {
                   color: on ? Colors.green : Colors.grey.shade300,
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.share_location_rounded, color: Colors.white, size: 22),
+                child: const Icon(
+                  Icons.share_location_rounded,
+                  color: Colors.white,
+                  size: 22,
+                ),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -850,7 +914,9 @@ class _TrackingCard extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
-                        color: on ? Colors.green.shade800 : Colors.grey.shade700,
+                        color: on
+                            ? Colors.green.shade800
+                            : Colors.grey.shade700,
                         height: 1.2,
                       ),
                     ),
@@ -859,7 +925,11 @@ class _TrackingCard extends StatelessWidget {
                       on
                           ? '$count active session${count > 1 ? 's' : ''} — tap to open'
                           : 'Start a group trip to enable live tracking',
-                      style: TextStyle(fontSize: 12, color: Colors.grey.shade600, height: 1.3),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade600,
+                        height: 1.3,
+                      ),
                     ),
                   ],
                 ),
@@ -867,7 +937,10 @@ class _TrackingCard extends StatelessWidget {
               if (on) ...[
                 const SizedBox(width: 8),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 9,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.green.shade600,
                     borderRadius: BorderRadius.circular(20),
@@ -878,7 +951,10 @@ class _TrackingCard extends StatelessWidget {
                       Container(
                         width: 5,
                         height: 5,
-                        decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                        decoration: const BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                        ),
                       ),
                       const SizedBox(width: 5),
                       const Text(
