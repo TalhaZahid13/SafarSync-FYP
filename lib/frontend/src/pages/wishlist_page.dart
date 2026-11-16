@@ -11,7 +11,7 @@ class WishlistPage extends StatelessWidget {
   static const Color _cardBg = AppTheme.pureWhite;
   static const Color _primaryText = AppTheme.darkSlate;
   static const Color _secondaryText = AppTheme.mediumGray;
-  static const Color _priceColor = AppTheme.turquoise;
+  static Color get _priceColor => AppTheme.turquoise;
   static const Color _surfaceOutline = AppTheme.veryLightGray;
 
   final wishlistItems = {
@@ -233,11 +233,7 @@ class WishlistPage extends StatelessWidget {
                           Expanded(
                             child: Row(
                               children: [
-                                const Icon(
-                                  Icons.star,
-                                  size: 14,
-                                  color: _priceColor,
-                                ),
+                                Icon(Icons.star, size: 14, color: _priceColor),
                                 const SizedBox(width: 2),
                                 Text(
                                   '${item['rating']}',
@@ -253,7 +249,7 @@ class WishlistPage extends StatelessWidget {
                           const SizedBox(width: 8),
                           Text(
                             item['price'],
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 20,
                               color: _priceColor,
                               fontWeight: FontWeight.w700,
@@ -371,7 +367,7 @@ class WishlistPage extends StatelessWidget {
                 title: 'Destinations',
                 icon: Icons.place_outlined,
                 accent: AppTheme.turquoise,
-                ctaGradient: const [AppTheme.turquoise, AppTheme.lightGray],
+                ctaGradient: [AppTheme.turquoise, AppTheme.lightGray],
                 items: wishlistItems['destinations']!,
               ),
               SizedBox(height: padding * 0.9),
@@ -379,7 +375,7 @@ class WishlistPage extends StatelessWidget {
                 title: 'Hotels',
                 icon: Icons.apartment_rounded,
                 accent: AppTheme.turquoise,
-                ctaGradient: const [AppTheme.turquoise, AppTheme.mediumGray],
+                ctaGradient: [AppTheme.turquoise, AppTheme.mediumGray],
                 items: wishlistItems['hotels']!,
               ),
               SizedBox(height: padding * 0.9),
@@ -387,7 +383,7 @@ class WishlistPage extends StatelessWidget {
                 title: 'Restaurants',
                 icon: Icons.restaurant_rounded,
                 accent: AppTheme.turquoise,
-                ctaGradient: const [AppTheme.turquoise, AppTheme.darkSlate],
+                ctaGradient: [AppTheme.turquoise, AppTheme.darkSlate],
                 items: wishlistItems['restaurants']!,
               ),
             ],

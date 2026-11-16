@@ -1,7 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../utils/api_service.dart';
-import '../utils/app_auth.dart';
+import 'package:provider/provider.dart';
+import '../utils/user_profile_provider.dart';
 import '../utils/realtime_service.dart';
 
 class GroupChatPage extends StatefulWidget {
@@ -61,7 +62,7 @@ class _GroupChatPageState extends State<GroupChatPage> {
   /// Live chat over a private Supabase Realtime channel (`group:<id>`):
   /// new/deleted messages are pushed by the API; typing is client-to-client.
   void _connectSocket() {
-    final myName = AppAuth.currentUser?.displayName ?? 'Someone';
+    final myName = context.read<UserProfileProvider>().fullName ?? 'Someone';
     _myName = myName;
     _room = RealtimeService.room('group:${widget.groupId}')
       ..on('chat:message', (msg) {

@@ -26,6 +26,7 @@ import 'src/utils/api_service.dart';
 import 'src/utils/env_config.dart';
 import 'src/utils/auth_storage.dart';
 import 'src/ui/destination_theme.dart';
+import 'src/utils/user_profile_provider.dart';
 
 /// Root navigator, used for app-wide dialogs (e.g. password recovery).
 final GlobalKey<NavigatorState> appNavigatorKey = GlobalKey<NavigatorState>();
@@ -132,6 +133,20 @@ void main() async {
   } catch (e) {
     debugPrint('[SafarSync] ✗ Destination theme init (non-fatal): $e');
   }
+  // Some screens read AppTheme accent getters directly; when the destination
+  // theme changes the accent, rebuild every open route once so they repaint.
+  var lastAccent = AppTheme.turquoise;
+  destinationThemeProvider.addListener(() {
+    if (AppTheme.turquoise == lastAccent) return;
+    lastAccent = AppTheme.turquoise;
+    WidgetsBinding.instance.addPostFrameCallback((_) => _rebuildOpenRoutes());
+  });
+
+  // Follows Supabase auth: loads the signed-in user's profile + theme and
+  // clears them on sign-out / account switch.
+  final userProfileProvider = UserProfileProvider(
+    themes: destinationThemeProvider,
+  )..start();
 
   _listenForPasswordRecovery();
 
@@ -140,6 +155,7 @@ void main() async {
     SafarSyncApp(
       themeController: themeController,
       destinationThemeProvider: destinationThemeProvider,
+      userProfileProvider: userProfileProvider,
     ),
   );
 
@@ -147,14 +163,29 @@ void main() async {
   debugPrint('[SafarSync] ✓ Notification init started in background');
 }
 
+/// Marks every element under the navigator dirty (used after an accent
+/// change so widgets that read AppTheme getters directly repaint).
+void _rebuildOpenRoutes() {
+  final ctx = appNavigatorKey.currentContext;
+  if (ctx is! Element) return;
+  void visit(Element e) {
+    e.markNeedsBuild();
+    e.visitChildren(visit);
+  }
+
+  ctx.visitChildren(visit);
+}
+
 class SafarSyncApp extends StatelessWidget {
   final ThemeController themeController;
   final DestinationThemeProvider destinationThemeProvider;
+  final UserProfileProvider userProfileProvider;
 
   const SafarSyncApp({
     super.key,
     required this.themeController,
     required this.destinationThemeProvider,
+    required this.userProfileProvider,
   });
 
   @override
@@ -163,9 +194,12 @@ class SafarSyncApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider.value(value: themeController),
         ChangeNotifierProvider.value(value: destinationThemeProvider),
+        ChangeNotifierProvider.value(value: userProfileProvider),
       ],
-      child: Consumer<ThemeController>(
-        builder: (context, controller, _) {
+      // Rebuilds the Material theme whenever light/dark mode or the
+      // destination theme (accent palette) changes.
+      child: Consumer2<ThemeController, DestinationThemeProvider>(
+        builder: (context, controller, destination, _) {
           return MaterialApp(
             navigatorKey: appNavigatorKey,
             title: 'SafarSync',
@@ -262,6 +296,7 @@ class _AuthGateState extends State<AuthGate> {
         } catch (_) {}
         await ApiService.removeToken();
       }
+      if (!mounted) return;
       setState(() {
         _isLoggedIn = false;
         _sessionMessage =
@@ -493,7 +528,6 @@ class _AppState extends State<App> with WidgetsBindingObserver {
     _sosTileChannel.setMethodCallHandler(_onSosTileMethod);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkPendingSos();
-      context.read<DestinationThemeProvider>().checkActiveBooking().ignore();
     });
     SessionManager.recordActivity();
   }

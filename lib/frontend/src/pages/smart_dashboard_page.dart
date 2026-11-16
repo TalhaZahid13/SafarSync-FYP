@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-import '../utils/app_auth.dart';
+import '../ui/app_theme.dart';
+import 'package:provider/provider.dart';
+import '../utils/user_profile_provider.dart';
 import '../utils/api_service.dart';
 import 'bookings_page.dart';
 import 'group_bookings_page.dart';
@@ -11,7 +13,7 @@ import 'sasta_tour_page.dart';
 // ─── Brand tokens ─────────────────────────────────────────────────────────────
 const _kPrimary = Color(0xFF1B5A6E);
 const _kPrimary2 = Color(0xFF0D3B4D);
-const _kAccent = Color(0xFF2CAFBC);
+Color get _kAccent => AppTheme.turquoise;
 
 // ─────────────────────────────────────────────────────────────────────────────
 class SmartDashboardPage extends StatefulWidget {
@@ -32,21 +34,11 @@ class _SmartDashboardPageState extends State<SmartDashboardPage> {
   bool _loading = true;
 
   // ── User ───────────────────────────────────────────────────────────────────
-  String _userName = 'Traveler';
-  String _initial = 'T';
 
   @override
   void initState() {
     super.initState();
-    _initUser();
     _load();
-  }
-
-  void _initUser() {
-    final u = AppAuth.currentUser;
-    final name = u?.displayName ?? u?.email?.split('@').first ?? 'Traveler';
-    _userName = name;
-    _initial = name.isNotEmpty ? name[0].toUpperCase() : 'T';
   }
 
   Future<void> _load() async {
@@ -90,6 +82,7 @@ class _SmartDashboardPageState extends State<SmartDashboardPage> {
   // ── Build ──────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
+    final profile = context.watch<UserProfileProvider>();
     return Scaffold(
       backgroundColor: const Color(0xFFF5F6FA),
       body: RefreshIndicator(
@@ -101,8 +94,9 @@ class _SmartDashboardPageState extends State<SmartDashboardPage> {
             // ── Gradient header ───────────────────────────────────────────────
             SliverToBoxAdapter(
               child: _Header(
-                userName: _userName,
-                initial: _initial,
+                // Signed-in user's real name from the database profile.
+                userName: profile.firstName,
+                initial: profile.initials.substring(0, 1),
                 pendingInvites: _pendingInvites,
                 onRefresh: _load,
                 onNotifications: () => _push(const NotificationsPage()),
@@ -126,7 +120,7 @@ class _SmartDashboardPageState extends State<SmartDashboardPage> {
     if (_loading) {
       return [
         const SizedBox(height: 80),
-        const Center(child: CircularProgressIndicator(color: _kAccent)),
+        Center(child: CircularProgressIndicator(color: _kAccent)),
       ];
     }
 

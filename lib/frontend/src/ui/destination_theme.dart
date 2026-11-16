@@ -2,10 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../utils/api_service.dart';
+import 'app_theme.dart';
 
 // ─── Destination Theme System ─────────────────────────────────────────────────
-// Adapts accent colors + gradients based on the user's active/upcoming booking
-// destination. Manual override in Settings always takes priority.
+// The whole app's accent palette follows the signed-in user's booked trip:
+//   1. a manual choice saved to the user's account (Settings → Journey Theme)
+//   2. otherwise the trip in progress (status Active)
+//   3. otherwise the next upcoming Confirmed trip
+//   4. otherwise the default SafarSync theme.
+// Pending / Awaiting-payment / Cancelled / Refunded bookings, hotel and
+// restaurant reservations, and trips that have already ended never count.
+// All selection logic lives in [DestinationThemeProvider]; pages only read it.
 
 enum DestinationThemeType {
   defaultTheme,
@@ -57,6 +64,23 @@ class DestinationTheme {
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
+
+  /// App-wide accent for this theme. Destination palettes are darkened just
+  /// enough for white button text / accent text on white to reach WCAG AA
+  /// (4.5:1). The default theme keeps the exact SafarSync brand color.
+  Color get uiAccent => type == DestinationThemeType.defaultTheme
+      ? AppTheme.defaultAccent
+      : _withContrastOnWhite(primary, 4.5);
+
+  /// Soft tint of the accent (chips, soft fills, light borders).
+  Color get uiTint => type == DestinationThemeType.defaultTheme
+      ? AppTheme.defaultAccentTint
+      : Color.lerp(Colors.white, uiAccent, 0.16)!;
+
+  /// Light-mode page background (null = plain white for the default theme).
+  Color? get lightBackground => type == DestinationThemeType.defaultTheme
+      ? null
+      : Color.lerp(Colors.white, heroLight.first, 0.6);
 
   // ── Predefined themes ─────────────────────────────────────────────────────
 
@@ -174,20 +198,44 @@ class DestinationTheme {
       context.read<DestinationThemeProvider>().activeTheme;
 }
 
-// ─── Destination → Theme Type Mapping ────────────────────────────────────────
+double _contrastOnWhite(Color c) => 1.05 / (c.computeLuminance() + 0.05);
 
-DestinationThemeType typeFromDestination(String name, String? category) {
-  final n = name.toLowerCase();
-  final c = (category ?? '').toLowerCase();
+Color _withContrastOnWhite(Color c, double target) {
+  var hsl = HSLColor.fromColor(c);
+  var out = c;
+  while (_contrastOnWhite(out) < target && hsl.lightness > 0.05) {
+    hsl = hsl.withLightness((hsl.lightness - 0.02).clamp(0.0, 1.0));
+    out = hsl.toColor();
+  }
+  return out;
+}
+
+// ─── Destination → Theme Type Mapping ────────────────────────────────────────
+// Matches the destination name + city first (most specific), then falls back
+// to the catalogue category (nature / adventure / history / food, and the
+// tour-package categories Nature / Adventure / Cultural).
+
+DestinationThemeType typeFromDestination(
+  String name,
+  String? category, {
+  String? city,
+}) {
+  final n = '${name.toLowerCase()} ${(city ?? '').toLowerCase()}';
+  final c = (category ?? '').toLowerCase().trim();
 
   if (_m(n, [
     'skardu',
+    'k2',
+    'baltoro',
+    'concordia',
     'nathiagali',
+    'nathia gali',
     'malam jabba',
     'kalam',
     'snow',
     'winter',
     'glacier',
+    'siachen',
     'siachin',
     'frozen',
     'naltar',
@@ -197,7 +245,6 @@ DestinationThemeType typeFromDestination(String name, String? category) {
   if (_m(n, [
     'beach',
     'clifton',
-    'maldives',
     'gwadar',
     'sea view',
     'ocean',
@@ -213,37 +260,34 @@ DestinationThemeType typeFromDestination(String name, String? category) {
   if (_m(n, [
     'thar',
     'desert',
-    'dubai',
     'cholistan',
     'sand dune',
     'dune',
     'arid',
-    'rajasthan',
-    'sinai',
-    'sahara',
-    'barren',
+    'mohenjo',
+    'larkana',
+    'derawar',
   ])) {
     return DestinationThemeType.desert;
   }
   if (_m(n, [
     'forest',
     'jungle',
-    'amazon',
-    'deosai',
     'mangrove',
     'rainforest',
     'woodland',
-    'timber',
     'grove',
+    'ayubia',
   ])) {
     return DestinationThemeType.forest;
   }
   if (_m(n, [
+    'food street',
+    'burns road',
     'lahore',
     'karachi',
     'islamabad',
     'rawalpindi',
-    'city',
     'downtown',
     'metro',
     'faisalabad',
@@ -252,7 +296,6 @@ DestinationThemeType typeFromDestination(String name, String? category) {
     'hyderabad',
     'quetta',
     'sialkot',
-    'gujranwala',
     'urban',
   ])) {
     return DestinationThemeType.urban;
@@ -268,22 +311,16 @@ DestinationThemeType typeFromDestination(String name, String? category) {
     'hills',
     'peak',
     'summit',
-    'pass',
-    'k2',
     'trek',
     'fairy meadows',
+    'deosai',
     'attabad',
-    'khyber',
     'margalla',
     'karakoram',
     'hindukush',
     'himalaya',
     'gilgit',
-    'baltistan',
     'chitral',
-    'rohtas',
-    'fort',
-    'lake',
     'nanga parbat',
     'babusar',
   ])) {
@@ -292,128 +329,262 @@ DestinationThemeType typeFromDestination(String name, String? category) {
 
   switch (c) {
     case 'nature':
-      return DestinationThemeType.mountain;
     case 'adventure':
       return DestinationThemeType.mountain;
-    case 'cultural':
-      return DestinationThemeType.urban;
-    case 'food':
-      return DestinationThemeType.urban;
+    // Heritage sites (Rohtas Fort, Mohenjo-daro) → warm sandstone palette.
     case 'history':
+    case 'historical':
+    case 'heritage':
+      return DestinationThemeType.desert;
+    case 'cultural':
+    case 'food':
       return DestinationThemeType.urban;
     default:
       return DestinationThemeType.defaultTheme;
   }
 }
 
-// Applies weather code override: heavy snow always overrides
-DestinationThemeType applyWeatherModifier(DestinationThemeType base, int code) {
-  if (code >= 71 && code <= 86) return DestinationThemeType.snow;
-  return base;
-}
-
 bool _m(String text, List<String> kw) => kw.any((k) => text.contains(k));
+
+// ─── Booking selection (pure, testable) ──────────────────────────────────────
+
+/// Picks the booking that should drive the theme, or null.
+///
+/// Priority: a trip in progress (status Active) → the Confirmed trip that is
+/// ongoing or starts soonest. Ignores hotel/restaurant reservations, bookings
+/// without a destination, other statuses, and trips that have already ended.
+Map<String, dynamic>? selectThemeBooking(
+  List<Map<String, dynamic>> bookings, {
+  DateTime? now,
+}) {
+  final today = DateUtils.dateOnly(now ?? DateTime.now());
+  DateTime? start(Map<String, dynamic> b) =>
+      DateTime.tryParse('${b['travel_date'] ?? b['booking_date'] ?? ''}');
+  int days(Map<String, dynamic> b) =>
+      (int.tryParse('${b['estimated_duration_days'] ?? ''}') ?? 1).clamp(
+        1,
+        365,
+      );
+
+  bool eligible(Map<String, dynamic> b) {
+    final type = '${b['booking_type'] ?? ''}'.toLowerCase();
+    if (type == 'hotel' || type == 'restaurant') return false;
+    if ('${b['destination_name'] ?? ''}'.trim().isEmpty) return false;
+    final status = '${b['status'] ?? ''}'.toLowerCase();
+    if (status == 'active') return true;
+    if (status != 'confirmed') return false;
+    final s = start(b);
+    if (s == null) return true; // undated confirmed trip still counts
+    final lastDay = DateUtils.dateOnly(s).add(Duration(days: days(b) - 1));
+    return !lastDay.isBefore(today);
+  }
+
+  final candidates = bookings.where(eligible).toList();
+  if (candidates.isEmpty) return null;
+  final active = candidates.where(
+    (b) => '${b['status']}'.toLowerCase() == 'active',
+  );
+  if (active.isNotEmpty) return active.first;
+  candidates.sort((a, b) {
+    final sa = start(a), sb = start(b);
+    if (sa == null && sb == null) return 0;
+    if (sa == null) return 1;
+    if (sb == null) return -1;
+    return sa.compareTo(sb);
+  });
+  return candidates.first;
+}
 
 // ─── Provider ─────────────────────────────────────────────────────────────────
 
-const _kPrefKey = 'destination_theme_pref';
-const _kManualKey = 'destination_theme_manual';
+// Legacy device-wide keys (pre per-user storage) — removed on first run.
+const _kLegacyPrefKey = 'destination_theme_pref';
+const _kLegacyManualKey = 'destination_theme_manual';
+String _prefKey(String uid) => 'destination_theme_pref_$uid';
+String _manualKey(String uid) => 'destination_theme_manual_$uid';
 
-class DestinationThemeProvider extends ChangeNotifier {
+class DestinationThemeProvider extends ChangeNotifier
+    with WidgetsBindingObserver {
   DestinationThemeType _type = DestinationThemeType.defaultTheme;
   bool _isManual = false;
+  String? _uid;
+  String? _sourceName; // destination of the booking driving the theme
+  DateTime? _lastRefresh;
+  int _generation = 0; // bumps on every account switch; drops stale replies
 
   DestinationThemeType get activeType => _type;
   bool get isManual => _isManual;
   bool get isNonDefault => _type != DestinationThemeType.defaultTheme;
   DestinationTheme get activeTheme => DestinationTheme.fromType(_type);
 
+  /// Destination name of the booking that selected the current theme
+  /// (null for manual / default).
+  String? get sourceName => _sourceName;
+
   // ── Init ─────────────────────────────────────────────────────────────────────
 
   Future<void> init() async {
+    WidgetsBinding.instance.addObserver(this);
+    _applyAccent();
     try {
       final prefs = await SharedPreferences.getInstance();
-      _isManual = prefs.getBool(_kManualKey) ?? false;
-      final s = prefs.getString(_kPrefKey);
-      if (s != null) _type = _fromStr(s);
-      notifyListeners();
+      await prefs.remove(_kLegacyPrefKey);
+      await prefs.remove(_kLegacyManualKey);
     } catch (_) {}
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Bookings can change elsewhere (admin, web, payment webhook): re-check
+    // when the app comes back to the foreground, at most once a minute.
+    if (state == AppLifecycleState.resumed && _uid != null) {
+      final last = _lastRefresh;
+      if (last == null || DateTime.now().difference(last).inSeconds > 60) {
+        refresh().ignore();
+      }
+    }
+  }
+
+  // ── Account binding (called by UserProfileProvider) ─────────────────────────
+
+  /// Switches the theme state to [uid]'s account; null = signed out.
+  Future<void> attachUser(String? uid) async {
+    if (uid == _uid) return;
+    _generation++;
+    _uid = uid;
+    _isManual = false;
+    _sourceName = null;
+    _lastRefresh = null;
+    _setType(DestinationThemeType.defaultTheme, persist: false);
+    if (uid == null) return;
+
+    // Restore this user's last theme instantly (no flash on cold start)…
+    final gen = _generation;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (gen != _generation) return;
+      _isManual = prefs.getBool(_manualKey(uid)) ?? false;
+      final s = prefs.getString(_prefKey(uid));
+      if (s != null) _setType(_fromStr(s), persist: false);
+    } catch (_) {}
+    // …then confirm against the server.
+    await refresh();
   }
 
   // ── Manual control (user-selected in Settings) ───────────────────────────────
 
   void setManualTheme(DestinationThemeType type) {
-    _isManual = (type != DestinationThemeType.defaultTheme);
-    _type = type;
-    notifyListeners();
-    _persist();
-    if (_isManual) _syncBackend(type);
+    if (type == DestinationThemeType.defaultTheme) {
+      resetToAuto();
+      return;
+    }
+    _isManual = true;
+    _sourceName = null;
+    _setType(type);
+    _syncBackend(type);
   }
 
   void resetToAuto() {
     _isManual = false;
-    _type = DestinationThemeType.defaultTheme;
-    notifyListeners();
+    _syncBackend(DestinationThemeType.defaultTheme);
     _persist();
+    notifyListeners();
+    refresh().ignore();
   }
 
-  // ── Auto-detection (called after login) ──────────────────────────────────────
+  // ── Server refresh ───────────────────────────────────────────────────────────
 
-  Future<void> checkActiveBooking({int? weatherCode}) async {
-    if (_isManual) return;
+  /// Re-reads the user's saved theme choice and bookings and re-selects.
+  /// Call after creating, paying for, or cancelling a booking.
+  Future<void> refresh() async {
+    final uid = _uid;
+    if (uid == null) return;
+    final gen = _generation;
+    _lastRefresh = DateTime.now();
     try {
-      final r = await ApiService.getRequest(
-        '/bookings?status=confirmed&limit=1',
-      );
-      final bookings = (r['bookings'] as List?) ?? [];
-      if (bookings.isEmpty) {
-        final r2 = await ApiService.getRequest(
-          '/bookings?status=upcoming&limit=1',
-        );
-        final upcoming = (r2['bookings'] as List?) ?? [];
-        if (upcoming.isEmpty) {
-          _setAuto(DestinationThemeType.defaultTheme);
+      final results = await Future.wait([
+        ApiService.getRequest('/auth/me'),
+        ApiService.getRequest('/bookings?status=active&limit=20'),
+        ApiService.getRequest('/bookings?status=confirmed&limit=50'),
+      ]);
+      if (gen != _generation) return; // account switched meanwhile
+
+      final me = results[0];
+      if (me['success'] == true) {
+        final pref = '${(me['user'] as Map?)?['theme_preference'] ?? ''}';
+        final manual = _fromStr(pref);
+        _isManual = manual != DestinationThemeType.defaultTheme;
+        if (_isManual) {
+          _sourceName = null;
+          _setType(manual);
           return;
         }
-        _applyBooking(upcoming.first as Map<String, dynamic>, weatherCode);
+      }
+
+      // A failed bookings call must not wipe a correct theme.
+      if (results[1]['success'] != true || results[2]['success'] != true) {
         return;
       }
-      _applyBooking(bookings.first as Map<String, dynamic>, weatherCode);
-    } catch (_) {}
+      final all = <Map<String, dynamic>>[
+        for (final r in [results[1], results[2]])
+          for (final b in (r['bookings'] as List? ?? const []))
+            if (b is Map) Map<String, dynamic>.from(b),
+      ];
+      final chosen = selectThemeBooking(all);
+      if (chosen == null) {
+        _sourceName = null;
+        _setType(DestinationThemeType.defaultTheme);
+        return;
+      }
+      _sourceName = '${chosen['destination_name']}';
+      _setType(
+        typeFromDestination(
+          _sourceName!,
+          chosen['category'] as String?,
+          city: chosen['city'] as String?,
+        ),
+      );
+    } catch (e) {
+      debugPrint('[DestinationTheme] refresh failed (keeping theme): $e');
+    }
   }
 
-  void _applyBooking(Map<String, dynamic> b, int? weatherCode) {
-    final name = (b['destination_name'] ?? b['name'] ?? '') as String;
-    final cat = (b['category'] ?? '') as String;
-    var t = typeFromDestination(name, cat);
-    if (weatherCode != null) t = applyWeatherModifier(t, weatherCode);
-    _setAuto(t);
-  }
+  /// Back-compat entry point used by older call sites.
+  Future<void> checkActiveBooking() => refresh();
 
-  // Called from weather widget when live weather is available
-  void applyWeatherCode(int code) {
-    if (_isManual) return;
-    final modified = applyWeatherModifier(_type, code);
-    if (modified == _type) return;
-    _type = modified;
-    notifyListeners();
-    _persist();
-  }
+  // ── Internals ───────────────────────────────────────────────────────────────
 
-  void _setAuto(DestinationThemeType t) {
-    if (_isManual || t == _type) return;
+  void _setType(DestinationThemeType t, {bool persist = true}) {
     _type = t;
+    _applyAccent();
+    if (persist) _persist();
+    // Always notify: manual/source flags may have changed even if the
+    // palette did not.
     notifyListeners();
-    _persist();
   }
 
-  // ── Persistence ──────────────────────────────────────────────────────────────
+  void _applyAccent() {
+    final t = activeTheme;
+    AppTheme.applyAccent(
+      accent: t.uiAccent,
+      tint: t.uiTint,
+      lightBackground: t.lightBackground,
+    );
+  }
 
   Future<void> _persist() async {
+    final uid = _uid;
+    if (uid == null) return;
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_kPrefKey, _toStr(_type));
-      await prefs.setBool(_kManualKey, _isManual);
+      await prefs.setString(_prefKey(uid), _toStr(_type));
+      await prefs.setBool(_manualKey(uid), _isManual);
     } catch (_) {}
   }
 

@@ -1,11 +1,39 @@
 import 'package:flutter/material.dart';
 
+/// App-wide colors and Material themes.
+///
+/// The brand accent (historically a single turquoise used under many names)
+/// is *dynamic*: it follows the user's active destination theme
+/// (see `DestinationThemeProvider`). Neutral colors (text, greys, whites)
+/// are fixed. Call [applyAccent] — the provider does this — and every
+/// accent getter below, plus [lightTheme]/[darkTheme], picks it up.
 class AppTheme {
+  AppTheme._();
+
+  // ── Dynamic accent (destination theme) ──────────────────────────────────
+  static const Color defaultAccent = Color(0xFF2CAFBC);
+  static const Color defaultAccentTint = Color(0xFFDCEEF0);
+
+  static Color _accent = defaultAccent;
+  static Color _accentTint = defaultAccentTint;
+  static Color? _scaffoldTint; // light-mode page background, null = white
+
+  /// Sets the accent used by every accent getter and the Material themes.
+  static void applyAccent({
+    required Color accent,
+    required Color tint,
+    Color? lightBackground,
+  }) {
+    _accent = accent;
+    _accentTint = tint;
+    _scaffoldTint = lightBackground;
+  }
+
   // Primary Brand Colors
-  static const Color turquoise = Color(0xFF2CAFBC);
+  static Color get turquoise => _accent;
   static const Color darkSlate = Color(0xFF404745);
   static const Color mediumGray = Color(0xFF9A9E9D);
-  static const Color lightGray = Color(0xFFDCEEF0);
+  static Color get lightGray => _accentTint;
   static const Color offWhite = Color(0xFFEAEBEC);
   static const Color veryLightGray = Color(0xFFEFEFEF);
   static const Color pureWhite = Color(0xFFFFFFFF);
@@ -19,61 +47,61 @@ class AppTheme {
   static const Color ink = Color(0xFF404745);
   // Recommendation Section Colors
   static const Color recommendationCardBg = Color(0xE6EAEBEC);
-  static const Color recommendationBorder = Color(0xFF2CAFBC);
+  static Color get recommendationBorder => _accent;
 
   // Filter / Category Gradients (bright scheme)
-  static const LinearGradient natureGradient = LinearGradient(
-    colors: [Color(0xFF2CAFBC), Color(0xFF9A9E9D)],
+  static LinearGradient get natureGradient => LinearGradient(
+    colors: [_accent, mediumGray],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
 
-  static const LinearGradient historyGradient = LinearGradient(
-    colors: [Color(0xFF2CAFBC), Color(0xFFDCEEF0)],
+  static LinearGradient get historyGradient => LinearGradient(
+    colors: [_accent, _accentTint],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
 
-  static const LinearGradient foodGradient = LinearGradient(
-    colors: [Color(0xFF404745), Color(0xFF2CAFBC)],
+  static LinearGradient get foodGradient => LinearGradient(
+    colors: [darkSlate, _accent],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
 
-  static const LinearGradient adventureGradient = LinearGradient(
-    colors: [Color(0xFF2CAFBC), Color(0xFF404745)],
+  static LinearGradient get adventureGradient => LinearGradient(
+    colors: [_accent, darkSlate],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
 
   // Recommendation Card Backgrounds
-  static const Color natureCardBg = Color(0x4D2CAFBC);
-  static const Color historyCardBg = Color(0x4DDCEEF0);
+  static Color get natureCardBg => _accent.withAlpha(0x4D);
+  static Color get historyCardBg => _accentTint.withAlpha(0x4D);
   static const Color foodCardBg = Color(0x4D404745);
   static const Color adventureCardBg = Color(0x4D9A9E9D);
 
   // Recommendation Borders
-  static const Color natureBorder = Color(0xFF2CAFBC);
-  static const Color historyBorder = Color(0xFFDCEEF0);
+  static Color get natureBorder => _accent;
+  static Color get historyBorder => _accentTint;
   static const Color foodBorder = Color(0xFF404745);
-  static const Color adventureBorder = Color(0xFF2CAFBC);
-  static const Color gold = Color(0xFF2CAFBC);
-  static const Color coral = Color(0xFF2CAFBC);
-  static const Color cyan = Color(0xFF2CAFBC);
+  static Color get adventureBorder => _accent;
+  static Color get gold => _accent;
+  static Color get coral => _accent;
+  static Color get cyan => _accent;
   static const Color emerald = Color(0xFF9A9E9D);
   static const Color violet = Color(0xFF404745);
   static const Color glassStrong = Color(0xCCFFFFFF);
-  static const Color rose = Color(0xFF2CAFBC);
-  static const Color teal = Color(0xFF2CAFBC);
-  static const Color pink = Color(0xFFDCEEF0);
-  static const Color sky = Color(0xFF2CAFBC);
+  static Color get rose => _accent;
+  static Color get teal => _accent;
+  static Color get pink => _accentTint;
+  static Color get sky => _accent;
   static const Color purple = Color(0xFF404745);
 
   // ✅ Weather Card Colors (bright scheme)
   static const Color weatherCardStart = Color(0xFFEAEBEC);
   static const Color weatherCardEnd = Color(0xFFFFFFFF);
 
-  static const Color weatherBorder = Color(0xFF2CAFBC);
+  static Color get weatherBorder => _accent;
 
   static const Color weatherTextPrimary = Color(0xFF404745);
   static const Color weatherTextSecondary = Color(0xFF9A9E9D);
@@ -85,14 +113,14 @@ class AppTheme {
     end: Alignment.bottomRight,
   );
 
-  static const LinearGradient homeGradient = LinearGradient(
-    colors: [turquoise, offWhite],
+  static LinearGradient get homeGradient => LinearGradient(
+    colors: [_accent, offWhite],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
 
   // ✅ 🔥 Weather Decoration (IMPORTANT)
-  static BoxDecoration weatherCardDecoration = BoxDecoration(
+  static BoxDecoration get weatherCardDecoration => BoxDecoration(
     gradient: weatherCardGradient,
     borderRadius: BorderRadius.circular(20),
     border: Border.all(color: weatherBorder.withValues(alpha: 0.35), width: 1),
@@ -106,16 +134,18 @@ class AppTheme {
   );
 
   static ThemeData lightTheme() {
+    final accent = _accent;
     final colorScheme = ColorScheme.fromSeed(
-      seedColor: turquoise,
+      seedColor: accent,
       brightness: Brightness.light,
-    ).copyWith(primary: turquoise, secondary: mediumGray, surface: pureWhite);
+    ).copyWith(primary: accent, secondary: mediumGray, surface: pureWhite);
+    final scaffold = _scaffoldTint ?? pureWhite;
 
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.light,
       colorScheme: colorScheme,
-      scaffoldBackgroundColor: pureWhite,
+      scaffoldBackgroundColor: scaffold,
       cardColor: pureWhite,
       cardTheme: CardThemeData(
         color: pureWhite,
@@ -131,15 +161,15 @@ class AppTheme {
         fillColor: offWhite,
         hintStyle: const TextStyle(color: mediumGray),
         labelStyle: const TextStyle(color: darkSlate),
-        prefixIconColor: turquoise,
-        suffixIconColor: turquoise,
+        prefixIconColor: accent,
+        suffixIconColor: accent,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
           borderSide: const BorderSide(color: veryLightGray, width: 1),
         ),
       ),
-      appBarTheme: const AppBarTheme(
-        backgroundColor: pureWhite,
+      appBarTheme: AppBarTheme(
+        backgroundColor: scaffold,
         foregroundColor: darkSlate,
         elevation: 0,
       ),
@@ -148,16 +178,16 @@ class AppTheme {
         bodySmall: TextStyle(color: mediumGray),
         titleLarge: TextStyle(color: darkSlate, fontWeight: FontWeight.bold),
       ),
-      iconTheme: const IconThemeData(color: turquoise),
+      iconTheme: IconThemeData(color: accent),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: turquoise,
+          backgroundColor: accent,
           foregroundColor: Colors.white,
           elevation: 2,
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
-            side: const BorderSide(color: turquoise, width: 1),
+            side: BorderSide(color: accent, width: 1),
           ),
         ),
       ),
@@ -166,10 +196,11 @@ class AppTheme {
   }
 
   static ThemeData darkTheme() {
+    final accent = _accent;
     final colorScheme = ColorScheme.fromSeed(
-      seedColor: turquoise,
+      seedColor: accent,
       brightness: Brightness.dark,
-    ).copyWith(primary: turquoise, secondary: mediumGray, surface: offWhite);
+    ).copyWith(primary: accent, secondary: mediumGray, surface: offWhite);
 
     return ThemeData(
       useMaterial3: true,
@@ -194,8 +225,8 @@ class AppTheme {
         fillColor: lightGray,
         hintStyle: const TextStyle(color: mediumGray),
         labelStyle: const TextStyle(color: darkSlate),
-        prefixIconColor: turquoise,
-        suffixIconColor: turquoise,
+        prefixIconColor: accent,
+        suffixIconColor: accent,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
           borderSide: BorderSide.none,
@@ -211,16 +242,16 @@ class AppTheme {
         bodySmall: TextStyle(color: mediumGray),
         titleLarge: TextStyle(color: darkSlate, fontWeight: FontWeight.bold),
       ),
-      iconTheme: const IconThemeData(color: turquoise),
+      iconTheme: IconThemeData(color: accent),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: turquoise,
+          backgroundColor: accent,
           foregroundColor: Colors.white,
           elevation: 2,
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
-            side: const BorderSide(color: turquoise, width: 1),
+            side: BorderSide(color: accent, width: 1),
           ),
         ),
       ),

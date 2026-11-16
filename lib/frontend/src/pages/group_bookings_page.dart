@@ -59,15 +59,17 @@ class _GroupBookingsPageState extends State<GroupBookingsPage> {
 
   Future<void> _joinByIdDialog() async {
     final controller = TextEditingController();
-    final groupId = await showDialog<String>(
+    // Groups are joined with their private invite code — never a numeric id.
+    final inviteCode = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Join Group Trip'),
         content: TextField(
           controller: controller,
-          keyboardType: TextInputType.number,
+          textCapitalization: TextCapitalization.characters,
           decoration: const InputDecoration(
-            labelText: 'Group ID',
+            labelText: 'Invite code',
+            helperText: 'Ask the organizer for the group\'s invite code',
             border: OutlineInputBorder(),
           ),
         ),
@@ -83,13 +85,12 @@ class _GroupBookingsPageState extends State<GroupBookingsPage> {
         ],
       ),
     );
-    if (groupId == null || groupId.isEmpty) return;
+    if (inviteCode == null || inviteCode.isEmpty) return;
 
     try {
-      final r = await ApiService.postRequest(
-        '/group-bookings/$groupId/join',
-        {},
-      );
+      final r = await ApiService.postRequest('/groups/join', {
+        'invite_code': inviteCode,
+      });
       if (!mounted) return;
       _snack(
         r['success'] == true
@@ -120,7 +121,7 @@ class _GroupBookingsPageState extends State<GroupBookingsPage> {
         actions: [
           IconButton(
             icon: const Icon(Icons.group_add),
-            tooltip: 'Join by ID',
+            tooltip: 'Join with invite code',
             onPressed: _joinByIdDialog,
           ),
           IconButton(

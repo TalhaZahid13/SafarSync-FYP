@@ -67,7 +67,7 @@ class AIRecommendations extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            children: const [
+            children: [
               Icon(Icons.auto_awesome, color: AppTheme.gold),
               SizedBox(width: 8),
               Text(

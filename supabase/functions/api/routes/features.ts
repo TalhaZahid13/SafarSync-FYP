@@ -5,6 +5,7 @@ import { resolveAdmin } from "../lib/auth.ts";
 import { background, emit, notify } from "../lib/notify.ts";
 import { emails, groqChat, groqConfigured, stripe, stripeConfigured, verifyStripeSignature } from "../lib/external.ts";
 import { getBookingById } from "./trips.ts";
+import { HOLD_MINUTES } from "./hospitality.ts";
 
 const SYSTEM_PROMPT = `You are Safar AI, a travel assistant specializing in Pakistan tourism.
 You help travelers plan trips, discover destinations, understand local culture, find food spots,
@@ -314,33 +315,56 @@ export function registerFeatures(r: Router) {
   });
 
   // ── payments (Stripe) ─────────────────────────────────────────────────────
-  r.post("/payments/create-intent", "user", async ({ auth, body }) => {
-    if (!stripeConfigured()) fail(500, "Stripe not configured. Set the STRIPE_SECRET_KEY secret.");
-    const bookingId = toInt(body?.booking_id);
-    const amount = toInt(body?.amount);
-    if (!bookingId || !amount) fail(400, "booking_id and amount are required");
-    if (amount! < 50) fail(400, "Amount must be at least 50 cents");
-    const booking = await getBookingById(bookingId!);
-    if (!booking) fail(404, "Booking not found");
-    if (booking!.user_id !== auth.userId) fail(403, "Forbidden");
-    if (booking!.payment_status === "Paid") fail(400, "This booking is already paid");
-    const pi = await stripe("POST", "payment_intents", {
-      amount: Math.round(amount!), currency: "usd",
-      automatic_payment_methods: { enabled: true },
-      metadata: { booking_id: String(bookingId), user_id: String(auth.userId) },
-    });
-    await q(
-      `insert into public.payments (user_id, booking_id, stripe_payment_intent_id, amount, currency, status)
-       values ($1, $2, $3, $4, 'usd', 'pending')
-       on conflict (stripe_payment_intent_id) do update set status = 'pending'`,
-      [auth.userId, bookingId, pi.id, Math.round(amount!) / 100]);
-    await exec(`update public.bookings set status = 'Awaiting Payment' where booking_id = $1 and status = 'Pending'`, [bookingId]);
-    return json({ success: true, clientSecret: pi.client_secret, paymentIntentId: pi.id });
-  });
+  // ── Payment amount: ONE server-side source of truth ──────────────────────
+  // Hotel stays carry a server-built price_breakdown (rooms × nights + fees +
+  // tax). Destination bookings keep the original rule: total + 10% tax.
+  // Restaurant reservations are free (no payment).
+  const quoteFor = (b: Record<string, any>) => {
+    const pb = b.price_breakdown;
+    if (pb && Number(pb.total) > 0) {
+      return {
+        subtotal: Number(pb.room_subtotal) + Number(pb.service_fee || 0), tax: Number(pb.tax),
+        tax_rate: Number(pb.tax_rate), total: Number(pb.total), currency: "PKR", breakdown: pb,
+      };
+    }
+    if (b.booking_type === "restaurant") return null;
+    const subtotal = Number(b.total_amount) > 0
+      ? Number(b.total_amount)
+      : (Number(b.estimated_duration_days) || 1) * (Number(b.average_cost) || 50) * (Number(b.num_travelers) || 1);
+    const tax = Math.round(subtotal * 0.10 * 100) / 100;
+    return { subtotal, tax, tax_rate: 0.10, total: Math.round((subtotal + tax) * 100) / 100, currency: "PKR", breakdown: null };
+  };
 
-  const markPaid = async (bookingId: number, piId: string, amountCents: number) => {
+  // Charge currency is a server decision. Default: PKR (paisa, 2 decimals).
+  // PAYMENT_CURRENCY=usd switches to USD using the admin-set usd_pkr_rate.
+  const chargeFor = async (totalPkr: number) => {
+    const cur = (Deno.env.get("PAYMENT_CURRENCY") || "pkr").toLowerCase();
+    if (cur === "pkr") return { currency: "pkr", amount: Math.round(totalPkr * 100), fx_rate: null as number | null };
+    if (cur !== "usd") throw new Error(`Unsupported PAYMENT_CURRENCY ${cur}`);
+    const rate = Number((await q1(`select value from public.app_settings where key = 'usd_pkr_rate'`))?.value);
+    if (!(rate > 0)) fail(503, "USD charging is enabled but no PKR→USD rate is configured. Contact support.");
+    return { currency: "usd", amount: Math.round((totalPkr / rate) * 100), fx_rate: rate };
+  };
+
+  const loadPayable = async (bookingId: number, userId: number) => {
+    const booking = await getBookingById(bookingId);
+    if (!booking) fail(404, "Booking not found");
+    if (booking!.user_id !== userId) fail(403, "Forbidden");
+    return booking!;
+  };
+
+  /** Confirms the booking only if Stripe charged exactly what we recorded. */
+  const markPaid = async (bookingId: number, piId: string, amountMinor: number, currency?: string) => {
+    const rec = await q1(`select amount, currency from public.payments where stripe_payment_intent_id = $1`, [piId]);
+    if (!rec) fail(409, "No payment record for this charge — not confirmed. Contact support.");
+    if (Math.round(Number(rec!.amount) * 100) !== Number(amountMinor) ||
+        (currency && String(rec!.currency).toLowerCase() !== String(currency).toLowerCase())) {
+      console.error(`[payments] amount/currency mismatch for ${piId}: recorded ${rec!.amount} ${rec!.currency}, stripe ${amountMinor} ${currency}`);
+      fail(409, "Payment amount does not match the booking — not confirmed. Contact support.");
+    }
     return await tx(async (t) => {
-      await q(`update public.bookings set payment_status = 'Paid', payment_intent_id = $1, status = 'Confirmed'
+      await q(`update public.bookings set payment_status = 'Paid', payment_intent_id = $1,
+                      status = case when status in ('Pending', 'Awaiting Payment') then 'Confirmed' else status end
                where booking_id = $2`, [piId, bookingId], t);
       const pay = await q1(`update public.payments set status = 'succeeded' where stripe_payment_intent_id = $1
                             returning id`, [piId], t);
@@ -348,24 +372,111 @@ export function registerFeatures(r: Router) {
         const already = await q1(`select 1 from public.transactions where payment_id = $1 and status = 'completed'`, [pay.id], t);
         if (!already) {
           await q(`insert into public.transactions (payment_id, amount, status, transaction_reference)
-                   values ($1, $2, 'completed', $3)`, [pay.id, amountCents / 100, piId], t);
+                   values ($1, $2, 'completed', $3)`, [pay.id, amountMinor / 100, piId], t);
         }
       }
       return pay?.id ?? null;
     });
   };
 
+  r.get("/payments/quote/:booking_id", "user", async ({ auth, params }) => {
+    const b = await loadPayable(idParam(params.booking_id), auth.userId);
+    const qt = quoteFor(b);
+    if (!qt) return json({ success: true, payable: false, reason: "Restaurant reservations are free — no payment needed." });
+    const charge = await chargeFor(qt.total);
+    return json({
+      success: true, payable: b.payment_status !== "Paid", booking_id: b.booking_id, ...qt,
+      charge_currency: charge.currency.toUpperCase(), charge_amount: charge.amount / 100, fx_rate: charge.fx_rate,
+    });
+  });
+
+  r.post("/payments/create-intent", "user", async ({ auth, body }) => {
+    if (!stripeConfigured()) fail(500, "Stripe not configured. Set the STRIPE_SECRET_KEY secret.");
+    const bookingId = toInt(body?.booking_id);
+    if (!bookingId) fail(400, "booking_id is required");
+    const booking = await loadPayable(bookingId!, auth.userId);
+    if (booking.payment_status === "Paid") fail(400, "This booking is already paid");
+    if (["Cancelled", "Refunded", "Completed"].includes(booking.status)) {
+      fail(400, `Cannot pay for a ${booking.status} booking`);
+    }
+    // Any client-sent `amount` is ignored: the charge comes only from the
+    // server-side quote.
+    const qt = quoteFor(booking);
+    if (!qt || !(qt.total > 0)) fail(400, "This booking has nothing to pay");
+
+    // A hotel hold lapses after HOLD_MINUTES unpaid; re-check rooms are free.
+    if (booking.booking_type === "hotel" && booking.room_type_id &&
+        Date.now() - new Date(booking.created_at).getTime() > HOLD_MINUTES * 60000) {
+      const free = await q1(
+        `select rt.total_rooms - coalesce((select sum(b2.rooms) from public.bookings b2
+            where b2.room_type_id = rt.room_type_id and b2.booking_id <> $1
+              and b2.check_in < $3 and b2.check_out > $2
+              and (b2.status in ('Confirmed','Active') or (b2.status in ('Pending','Awaiting Payment')
+                   and b2.created_at > now() - make_interval(mins => $4)))), 0) as free
+         from public.hotel_room_types rt where rt.room_type_id = $5`,
+        [booking.booking_id, booking.check_in, booking.check_out, HOLD_MINUTES, booking.room_type_id]);
+      if (Number(free?.free ?? 0) < Number(booking.rooms ?? 1)) {
+        fail(409, "Your room hold expired and the rooms have since been booked. Please make a new booking.");
+      }
+    }
+
+    const charge = await chargeFor(qt!.total);
+
+    // Re-use an open PaymentIntent for the same booking/amount/currency
+    // instead of creating a second one (no duplicate charges on retries).
+    const open = await q1(
+      `select stripe_payment_intent_id from public.payments
+       where booking_id = $1 and user_id = $2 and status = 'pending' and amount = $3 and lower(currency) = $4
+       order by created_at desc limit 1`, [bookingId, auth.userId, charge.amount / 100, charge.currency]);
+    if (open) {
+      const existing = await stripe("GET", `payment_intents/${encodeURIComponent(open.stripe_payment_intent_id)}`);
+      if (existing.status === "succeeded") {
+        await markPaid(bookingId!, existing.id, existing.amount, existing.currency);
+        fail(400, "This booking is already paid");
+      }
+      if (["requires_payment_method", "requires_confirmation", "requires_action"].includes(existing.status)) {
+        return json({
+          success: true, clientSecret: existing.client_secret, paymentIntentId: existing.id,
+          amount: existing.amount / 100, currency: String(existing.currency).toUpperCase(),
+          quoted_total_pkr: qt!.total, fx_rate: charge.fx_rate, livemode: existing.livemode, reused: true,
+        });
+      }
+    }
+
+    const pi = await stripe("POST", "payment_intents", {
+      amount: charge.amount, currency: charge.currency,
+      automatic_payment_methods: { enabled: true },
+      description: `SafarSync booking ${booking.booking_reference ?? bookingId}`,
+      metadata: {
+        booking_id: String(bookingId), user_id: String(auth.userId),
+        quoted_total_pkr: String(qt!.total), charge_currency: charge.currency,
+      },
+    }, `pi-${bookingId}-${charge.currency}-${charge.amount}-${Math.floor(Date.now() / 600000)}`);
+    await q(
+      `insert into public.payments (user_id, booking_id, stripe_payment_intent_id, amount, currency, status)
+       values ($1, $2, $3, $4, $5, 'pending')
+       on conflict (stripe_payment_intent_id) do update set status = 'pending'`,
+      [auth.userId, bookingId, pi.id, charge.amount / 100, charge.currency]);
+    await exec(`update public.bookings set status = 'Awaiting Payment' where booking_id = $1 and status = 'Pending'`, [bookingId]);
+    return json({
+      success: true, clientSecret: pi.client_secret, paymentIntentId: pi.id,
+      amount: charge.amount / 100, currency: charge.currency.toUpperCase(), quoted_total_pkr: qt!.total,
+      fx_rate: charge.fx_rate, livemode: pi.livemode,
+    });
+  });
+
   r.post("/payments/confirm", "user", async ({ auth, body }) => {
     if (!stripeConfigured()) fail(500, "Stripe not configured. Set the STRIPE_SECRET_KEY secret.");
     const bookingId = toInt(body?.booking_id);
     const piId = text(body?.payment_intent_id, 255);
     if (!bookingId || !piId) fail(400, "booking_id and payment_intent_id are required");
+    await loadPayable(bookingId!, auth.userId);
     const pi = await stripe("GET", `payment_intents/${encodeURIComponent(piId!)}`);
-    if (pi.status !== "succeeded") fail(400, `Payment not completed. Status: ${pi.status}`);
     if (String(pi.metadata?.user_id) !== String(auth.userId) || String(pi.metadata?.booking_id) !== String(bookingId)) {
       fail(403, "Payment does not belong to this user");
     }
-    const paymentId = await markPaid(bookingId!, piId!, pi.amount);
+    if (pi.status !== "succeeded") fail(400, `Payment not completed. Status: ${pi.status}`);
+    const paymentId = await markPaid(bookingId!, piId!, pi.amount, pi.currency);
     return json({ success: true, message: "Payment confirmed. Booking is now Confirmed.", payment_id: paymentId });
   });
 
@@ -379,7 +490,7 @@ export function registerFeatures(r: Router) {
     const obj = event?.data?.object ?? {};
     switch (event.type) {
       case "payment_intent.succeeded":
-        if (obj.metadata?.booking_id) await markPaid(Number(obj.metadata.booking_id), obj.id, obj.amount);
+        if (obj.metadata?.booking_id) await markPaid(Number(obj.metadata.booking_id), obj.id, obj.amount, obj.currency);
         break;
       case "payment_intent.payment_failed":
       case "payment_intent.canceled":
@@ -400,8 +511,12 @@ export function registerFeatures(r: Router) {
             await exec(`update public.bookings set status = 'Refunded', payment_status = 'Refunded' where booking_id = $1`,
               [pay.booking_id]);
           }
-          await q(`insert into public.transactions (payment_id, amount, status, transaction_reference)
-                   values ($1, $2, 'refunded', $3)`, [pay.id, (obj.amount_refunded ?? 0) / 100, obj.id]);
+          const dup = await q1(`select 1 from public.transactions where payment_id = $1 and status = 'refunded'
+                                and transaction_reference = $2`, [pay.id, obj.id]);
+          if (!dup) {
+            await q(`insert into public.transactions (payment_id, amount, status, transaction_reference)
+                     values ($1, $2, 'refunded', $3)`, [pay.id, (obj.amount_refunded ?? 0) / 100, obj.id]);
+          }
         }
         break;
       }
@@ -428,17 +543,22 @@ export function registerFeatures(r: Router) {
 
   r.get("/payments/history", "user", async ({ auth }) => {
     const rows = await q(
-      `select p.*, b.booking_id, d.name as destination_name from public.payments p
+      `select p.*, b.booking_id, b.booking_type, b.booking_reference,
+              coalesce(d.name, h.name, rs.name) as destination_name from public.payments p
        left join public.bookings b on b.booking_id = p.booking_id
        left join public.destinations d on d.destination_id = b.destination_id
+       left join public.hotels h on h.hotel_id = b.hotel_id
+       left join public.restaurants rs on rs.restaurant_id = b.restaurant_id
        where p.user_id = $1 order by p.created_at desc`, [auth.userId]);
     return json({ success: true, payments: rows });
   });
 
   r.get("/payments/:payment_id/receipt", "user", async ({ auth, params }) => {
     const row = await q1(
-      `select p.*, b.booking_id, b.num_travelers, b.travel_date, b.booking_date,
-              d.name as destination_name, u.full_name, u.email,
+      `select p.*, b.booking_id, b.num_travelers, b.travel_date, b.booking_date, b.booking_reference,
+              b.booking_type, b.check_in, b.check_out, b.rooms, b.price_breakdown,
+              coalesce(d.name, (select name from public.hotels where hotel_id = b.hotel_id)) as destination_name,
+              u.full_name, u.email,
               t.transaction_reference, t.created_at as transaction_date
        from public.payments p
        left join public.bookings b on b.booking_id = p.booking_id
@@ -653,20 +773,35 @@ Return ONLY valid JSON in this exact format (no markdown, no explanation):
   });
 
   r.post("/virtual-tours/narration", "user", async ({ body }) => {
-    const sceneName = text(body?.scene_name, 200);
-    if (!sceneName) fail(400, "scene_name required");
+    let sceneName = text(body?.scene_name, 200);
     const sceneId = toInt(body?.scene_id);
+    let tourTitle = text(body?.tour_title, 200);
+    let destName = text(body?.destination_name, 200);
+    let canCache = false;
     if (sceneId) {
-      const cached = await q1(`select ai_narration from public.virtual_tour_scenes
-                               where id = $1 and coalesce(ai_narration, '') <> ''`, [sceneId]);
-      if (cached) return json({ success: true, narration: cached.ai_narration, cached: true });
+      const scene = await q1(
+        `select s.scene_name, s.ai_narration, vt.title as tour_title, d.name as destination_name
+         from public.virtual_tour_scenes s
+         join public.virtual_tours vt on vt.id = s.tour_id
+         left join public.destinations d on d.destination_id = vt.destination_id
+         where s.id = $1`, [sceneId]);
+      if (scene?.ai_narration) return json({ success: true, narration: scene.ai_narration, cached: true });
+      // Narration is cached for every visitor, so build it only from stored
+      // data, never from client text (prevents cache poisoning).
+      if (scene) {
+        sceneName = scene.scene_name;
+        tourTitle = scene.tour_title ?? null;
+        destName = scene.destination_name ?? null;
+        canCache = true;
+      }
     }
+    if (!sceneName) fail(400, "scene_name required");
     if (!groqConfigured()) fail(503, "AI service not configured");
     const prompt = [
       "You are a professional tour guide narrating a virtual 360° tour of Pakistan.",
       `You are currently at: ${sceneName}`,
-      text(body?.tour_title, 200) ? `As part of the "${text(body.tour_title, 200)}" tour.` : "",
-      text(body?.destination_name, 200) ? `Destination: ${text(body.destination_name, 200)}.` : "",
+      tourTitle ? `As part of the "${tourTitle}" tour.` : "",
+      destName ? `Destination: ${destName}.` : "",
       "Provide a 3-4 sentence engaging narration. Include:",
       "- What the visitor is seeing right now",
       "- A key historical or natural fact",
@@ -676,7 +811,10 @@ Return ONLY valid JSON in this exact format (no markdown, no explanation):
     try {
       const narration = (await groqChat([{ role: "user", content: prompt }], { maxTokens: 200, temperature: 0.75 })).trim() ||
         "Welcome to this incredible location. Take a moment to look around in every direction.";
-      if (sceneId) await exec(`update public.virtual_tour_scenes set ai_narration = $1 where id = $2`, [narration, sceneId]);
+      if (canCache) {
+        await exec(`update public.virtual_tour_scenes set ai_narration = $1
+                    where id = $2 and coalesce(ai_narration, '') = ''`, [narration, sceneId]);
+      }
       return json({ success: true, narration });
     } catch (e) {
       console.error("[ai] narration:", (e as Error).message);

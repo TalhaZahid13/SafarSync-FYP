@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../ui/app_theme.dart';
 import '../utils/api_service.dart';
 import 'virtual_tour_player_page.dart';
 
@@ -30,9 +31,10 @@ class _VirtualTourPageState extends State<VirtualTourPage> {
     });
     try {
       final resp = await ApiService.getRequest('/virtual-tours');
+      if (!mounted) return;
       setState(() => _tours = (resp['tours'] as List? ?? []));
     } catch (e) {
-      setState(() => _error = 'Could not load tours: $e');
+      if (mounted) setState(() => _error = 'Could not load tours: $e');
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -80,10 +82,10 @@ class _VirtualTourPageState extends State<VirtualTourPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
+                        Text(
                           '360°',
                           style: TextStyle(
-                            color: Color(0xFF2CAFBC),
+                            color: AppTheme.turquoise,
                             fontSize: 32,
                             fontWeight: FontWeight.w900,
                           ),
@@ -118,15 +120,15 @@ class _VirtualTourPageState extends State<VirtualTourPage> {
           ),
         ],
         body: _loading
-            ? const Center(
-                child: CircularProgressIndicator(color: Color(0xFF2CAFBC)),
+            ? Center(
+                child: CircularProgressIndicator(color: AppTheme.turquoise),
               )
             : _error != null
             ? _buildError()
             : _tours.isEmpty
             ? _buildEmpty()
             : RefreshIndicator(
-                color: const Color(0xFF2CAFBC),
+                color: AppTheme.turquoise,
                 onRefresh: _fetchTours,
                 child: ListView.builder(
                   padding: const EdgeInsets.all(16),
@@ -154,9 +156,7 @@ class _VirtualTourPageState extends State<VirtualTourPage> {
         ),
         const SizedBox(height: 16),
         ElevatedButton(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF2CAFBC),
-          ),
+          style: ElevatedButton.styleFrom(backgroundColor: AppTheme.turquoise),
           onPressed: _fetchTours,
           child: const Text('Retry'),
         ),
@@ -250,9 +250,7 @@ class _TourCard extends StatelessWidget {
                           vertical: 4,
                         ),
                         decoration: BoxDecoration(
-                          color: const Color(
-                            0xFF2CAFBC,
-                          ).withValues(alpha: 0.85),
+                          color: AppTheme.turquoise.withValues(alpha: 0.85),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: const Text(
@@ -329,16 +327,16 @@ class _TourCard extends StatelessWidget {
                       const SizedBox(height: 4),
                       Row(
                         children: [
-                          const Icon(
+                          Icon(
                             Icons.location_on,
                             size: 13,
-                            color: Color(0xFF2CAFBC),
+                            color: AppTheme.turquoise,
                           ),
                           const SizedBox(width: 4),
                           Text(
                             tour['destination_name'].toString(),
-                            style: const TextStyle(
-                              color: Color(0xFF2CAFBC),
+                            style: TextStyle(
+                              color: AppTheme.turquoise,
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
                             ),
@@ -367,7 +365,7 @@ class _TourCard extends StatelessWidget {
                         icon: const Icon(Icons.threed_rotation, size: 18),
                         label: const Text('Start Virtual Tour'),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF2CAFBC),
+                          backgroundColor: AppTheme.turquoise,
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 12),
                           shape: RoundedRectangleBorder(

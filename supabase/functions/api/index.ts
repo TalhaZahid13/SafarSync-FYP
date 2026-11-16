@@ -11,6 +11,7 @@ import { registerCore } from "./routes/core.ts";
 import { registerTrips } from "./routes/trips.ts";
 import { registerFeatures } from "./routes/features.ts";
 import { registerAdmin } from "./routes/admin.ts";
+import { registerHospitality } from "./routes/hospitality.ts";
 
 const router = new Router();
 router.get("/health", "public", () => json({ status: "OK", timestamp: new Date().toISOString() }));
@@ -18,6 +19,7 @@ registerCore(router);
 registerTrips(router);
 registerFeatures(router);
 registerAdmin(router);
+registerHospitality(router);
 
 // Simple per-isolate rate limits (mirrors express-rate-limit settings).
 const buckets = new Map<string, { n: number; reset: number }>();
@@ -37,8 +39,9 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   const url = new URL(req.url);
-  // pathname is /api/<endpoint> (function name prefix); tolerate /functions/v1/api too
-  const path = url.pathname.replace(/^\/functions\/v1/, "").replace(/^\/api(?=\/|$)/, "") || "/";
+  // pathname is /api/<endpoint> (function name prefix); tolerate /functions/v1/api
+  // and the api-staging copy used to test a release before it goes live.
+  const path = url.pathname.replace(/^\/functions\/v1/, "").replace(/^\/api(?:-staging)?(?=\/|$)/, "") || "/";
   const ip = (req.headers.get("x-forwarded-for") ?? "").split(",")[0].trim() || "unknown";
 
   try {

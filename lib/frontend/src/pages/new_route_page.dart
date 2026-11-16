@@ -63,9 +63,9 @@ class _NewRoutePageState extends State<NewRoutePage> {
       firstDate: now,
       lastDate: now.add(const Duration(days: 730)),
       builder: (ctx, child) => Theme(
-        data: Theme.of(ctx).copyWith(
-          colorScheme: const ColorScheme.light(primary: AppTheme.turquoise),
-        ),
+        data: Theme.of(
+          ctx,
+        ).copyWith(colorScheme: ColorScheme.light(primary: AppTheme.turquoise)),
         child: child!,
       ),
     );
@@ -256,8 +256,8 @@ class _NewRoutePageState extends State<NewRoutePage> {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF1B3A5C), Color(0xFF2CAFBC)],
+                gradient: LinearGradient(
+                  colors: [Color(0xFF1B3A5C), AppTheme.turquoise],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -349,7 +349,7 @@ class _NewRoutePageState extends State<NewRoutePage> {
                       ),
                       const SizedBox(width: 8),
                       _locatingMe
-                          ? const SizedBox(
+                          ? SizedBox(
                               width: 20,
                               height: 20,
                               child: CircularProgressIndicator(
@@ -358,7 +358,7 @@ class _NewRoutePageState extends State<NewRoutePage> {
                               ),
                             )
                           : IconButton(
-                              icon: const Icon(
+                              icon: Icon(
                                 Icons.my_location,
                                 size: 20,
                                 color: AppTheme.turquoise,
@@ -485,7 +485,7 @@ class _NewRoutePageState extends State<NewRoutePage> {
                         textAlign: TextAlign.center,
                       ),
                     ),
-                    const Padding(
+                    Padding(
                       padding: EdgeInsets.symmetric(horizontal: 8),
                       child: Icon(
                         Icons.arrow_forward,
@@ -599,7 +599,7 @@ class _NewRoutePageState extends State<NewRoutePage> {
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: AppTheme.turquoise, width: 1.5),
+        borderSide: BorderSide(color: AppTheme.turquoise, width: 1.5),
       ),
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),

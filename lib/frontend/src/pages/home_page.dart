@@ -56,7 +56,15 @@ class _HomePageState extends State<HomePage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (dtProvider.isNonDefault) _JourneyThemeBanner(theme: dtTheme),
+            if (dtProvider.isNonDefault)
+              _JourneyThemeBanner(
+                theme: dtTheme,
+                subtitle: dtProvider.isManual
+                    ? 'Chosen by you in Settings'
+                    : (dtProvider.sourceName != null
+                          ? 'Based on your ${dtProvider.sourceName} trip'
+                          : 'Based on your booked trip'),
+              ),
             SearchBar(onTabChange: widget.onTabChange),
             SizedBox(height: padding),
             // RepaintBoundary isolates each section so rebuilds don't cascade
@@ -96,7 +104,8 @@ class _HomePageState extends State<HomePage> {
 // Shown when a non-default destination theme is active (auto or manual).
 class _JourneyThemeBanner extends StatelessWidget {
   final DestinationTheme theme;
-  const _JourneyThemeBanner({required this.theme});
+  final String subtitle;
+  const _JourneyThemeBanner({required this.theme, required this.subtitle});
 
   @override
   Widget build(BuildContext context) {
@@ -127,9 +136,11 @@ class _JourneyThemeBanner extends StatelessWidget {
                     fontSize: 13,
                   ),
                 ),
-                const Text(
-                  'Based on your active booking destination',
-                  style: TextStyle(color: Colors.white70, fontSize: 11),
+                Text(
+                  subtitle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: Colors.white70, fontSize: 11),
                 ),
               ],
             ),

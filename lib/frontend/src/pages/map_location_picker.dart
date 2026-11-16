@@ -49,6 +49,7 @@ class _MapLocationPickerPageState extends State<MapLocationPickerPage> {
   @override
   void dispose() {
     _debounce?.cancel();
+    _mapCtrl.dispose();
     super.dispose();
   }
 
@@ -120,16 +121,14 @@ class _MapLocationPickerPageState extends State<MapLocationPickerPage> {
         iconTheme: const IconThemeData(color: Colors.white),
         actions: [
           IconButton(
-            icon: const Icon(Icons.my_location, color: AppTheme.turquoise),
+            icon: Icon(Icons.my_location, color: AppTheme.turquoise),
             tooltip: 'My location',
             onPressed: _goToCurrentLocation,
           ),
         ],
       ),
       body: _loading
-          ? const Center(
-              child: CircularProgressIndicator(color: AppTheme.turquoise),
-            )
+          ? Center(child: CircularProgressIndicator(color: AppTheme.turquoise))
           : Stack(
               children: [
                 FlutterMap(
@@ -266,7 +265,7 @@ class _MapLocationPickerPageState extends State<MapLocationPickerPage> {
                             const SizedBox(width: 8),
                             Expanded(
                               child: _geocoding
-                                  ? const Row(
+                                  ? Row(
                                       children: [
                                         SizedBox(
                                           width: 14,

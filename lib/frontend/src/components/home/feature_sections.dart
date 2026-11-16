@@ -83,21 +83,21 @@ class FeatureSections extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(vertical: 10),
               decoration: BoxDecoration(
-                color: const Color(0xFF2CAFBC).withValues(alpha: 0.15),
+                color: AppTheme.turquoise.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: const Color(0xFF2CAFBC).withValues(alpha: 0.4),
+                  color: AppTheme.turquoise.withValues(alpha: 0.4),
                 ),
               ),
-              child: const Row(
+              child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.map_rounded, color: Color(0xFF2CAFBC), size: 16),
+                  Icon(Icons.map_rounded, color: AppTheme.turquoise, size: 16),
                   SizedBox(width: 8),
                   Text(
                     'Open Offline Maps Manager',
                     style: TextStyle(
-                      color: Color(0xFF2CAFBC),
+                      color: AppTheme.turquoise,
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                     ),

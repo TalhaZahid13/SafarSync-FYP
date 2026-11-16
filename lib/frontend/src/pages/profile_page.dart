@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../utils/user_profile_provider.dart';
+import '../ui/app_theme.dart';
 import '../utils/app_auth.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../utils/pdf_export.dart'; // TripData, Destination, RouteData, Hotel, Restaurant, TripStats
@@ -21,7 +24,7 @@ import '../utils/session_manager.dart';
 const Color _bgTop = Color(0xFFF8FFFE);
 const Color _bgMid = Color(0xFFEFF9FA);
 const Color _bgBottom = Color(0xFFE3F5F7);
-const Color _teal = Color(0xFF2CAFBC);
+Color get _teal => AppTheme.turquoise;
 const Color _orange = Color(0xFFFF8C42);
 const Color _violet = Color(0xFF7C6FAF);
 const Color _cyan = Color(0xFF00BCD4);
@@ -29,7 +32,7 @@ const Color _gold = Color(0xFFFFB830);
 const Color _titleColor = Color(0xFF404745);
 const Color _mutedText = Color(0xFF9A9E9D);
 const Color _cardBg = Color(0xFFFFFFFF);
-const Color _cardOutline = Color(0x1A2CAFBC);
+Color get _cardOutline => AppTheme.turquoise.withAlpha(0x1A);
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -43,9 +46,6 @@ class _ProfilePageState extends State<ProfilePage> {
   Map<String, dynamic> _stats = {};
   bool _statsLoaded = false;
   int? _appUserId;
-  String? _profileName;
-  String? _city;
-  String? _photoUrl;
 
   @override
   void initState() {
@@ -57,25 +57,12 @@ class _ProfilePageState extends State<ProfilePage> {
     final isAdmin = await ApiService.getIsAdmin();
     final appUserId = await ApiService.getCurrentUserId();
     final statsResp = await ApiService.getRequest('/users/stats');
-    final profileResp = await ApiService.getRequest('/users/profile');
     if (mounted) {
-      String? name;
-      String? city;
-      String? photoUrl;
-      if (profileResp['success'] == true) {
-        final u = profileResp['user'] as Map<String, dynamic>? ?? {};
-        name = u['full_name'] as String?;
-        city = u['city'] as String?;
-        photoUrl = u['profile_picture_url'] as String?;
-      }
       setState(() {
         _isAdmin = isAdmin;
         _appUserId = appUserId;
         _stats = (statsResp['stats'] as Map<String, dynamic>?) ?? {};
         _statsLoaded = true;
-        _profileName = name;
-        _city = city;
-        _photoUrl = photoUrl;
       });
     }
   }
@@ -88,19 +75,25 @@ class _ProfilePageState extends State<ProfilePage> {
       context,
       MaterialPageRoute(builder: (_) => const ProfileSettingsPage()),
     );
-    if (mounted) await _loadData();
+    if (!mounted) return;
+    // Name / city / photo live in UserProfileProvider (already updated on
+    // save); re-read it and the stats from the server to be sure.
+    this.context.read<UserProfileProvider>().refresh().ignore();
+    await _loadData();
   }
 
   @override
   Widget build(BuildContext context) {
+    final profile = context.watch<UserProfileProvider>();
     return _ProfilePageView(
       isAdmin: _isAdmin,
       stats: _stats,
       statsLoaded: _statsLoaded,
       appUserId: _appUserId,
-      profileName: _profileName,
-      city: _city,
-      photoUrl: _photoUrl,
+      profileName: profile.fullName,
+      email: profile.email,
+      city: profile.city,
+      photoUrl: profile.photoUrl,
       onEditProfile: () => _openSettingsAndRefresh(context),
     );
   }
@@ -112,6 +105,7 @@ class _ProfilePageView extends StatelessWidget {
   final bool statsLoaded;
   final int? appUserId;
   final String? profileName;
+  final String? email;
   final String? city;
   final String? photoUrl;
   final VoidCallback onEditProfile;
@@ -123,18 +117,21 @@ class _ProfilePageView extends StatelessWidget {
     required this.onEditProfile,
     this.appUserId,
     this.profileName,
+    this.email,
     this.city,
     this.photoUrl,
   });
 
   void handleExportPDF() {
     final user = AppAuth.currentUser;
-    final userName = user?.displayName ?? 'Traveller';
+    final userName = (profileName?.isNotEmpty == true)
+        ? profileName!
+        : (user?.displayName ?? 'Traveller');
 
-    // Use real stats from the backend; fall back to zeros if not yet loaded.
-    final placesVisited = asInt(stats['total_bookings']) ?? 0;
+    // Use real stats from the backend (/users/stats keys); zeros until loaded.
+    final placesVisited = asInt(stats['completed_trips']) ?? 0;
     final tripsPlanned = asInt(stats['total_bookings']) ?? 0;
-    final groupTrips = asInt(stats['group_bookings']) ?? 0;
+    final groupTrips = asInt(stats['group_trips']) ?? 0;
 
     final tripData = TripData(
       userName: userName,
@@ -157,16 +154,16 @@ class _ProfilePageView extends StatelessWidget {
         filePrefix: 'Travel_Report',
         userInfo: PdfExportUserInfo(
           fullName: userName,
-          email: user?.email ?? '',
+          email: email ?? user?.email ?? '',
           userId: appUserId != null
               ? 'ID-$appUserId'
               : (user?.uid ?? 'unknown'),
-          profileImageUrl: user?.photoURL,
+          profileImageUrl: photoUrl ?? user?.photoURL,
         ),
         bookingDetails: {
           'Total Bookings': '${stats['total_bookings'] ?? 0}',
-          'Group Bookings': '${stats['group_bookings'] ?? 0}',
-          'Active Tracking': '${stats['active_tracking'] ?? 0}',
+          'Group Trips': '${stats['group_trips'] ?? 0}',
+          'Completed Trips': '${stats['completed_trips'] ?? 0}',
         },
         travelHistory: [],
         emergencyEvents: const [],
@@ -382,7 +379,7 @@ class _ProfilePageView extends StatelessWidget {
                         'Globetrotter',
                         'Road Warrior',
                       ];
-                      final colors = const [_orange, _teal, _violet, _cyan];
+                      final colors = [_orange, _teal, _violet, _cyan];
                       return Wrap(
                         spacing: 8,
                         runSpacing: 8,
@@ -587,7 +584,7 @@ class _ProfilePageView extends StatelessWidget {
         : (user?.displayName?.isNotEmpty == true)
         ? user!.displayName!
         : 'Traveller';
-    final email = user?.email ?? '';
+    final email = this.email ?? user?.email ?? '';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [

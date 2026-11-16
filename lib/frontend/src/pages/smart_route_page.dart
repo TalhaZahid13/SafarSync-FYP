@@ -478,7 +478,7 @@ class _SmartRoutePageState extends State<SmartRoutePage> {
                   vertical: 14,
                 ),
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
+                  gradient: LinearGradient(
                     colors: [AppTheme.turquoise, Color(0xFF1B8E99)],
                     begin: Alignment.centerLeft,
                     end: Alignment.centerRight,

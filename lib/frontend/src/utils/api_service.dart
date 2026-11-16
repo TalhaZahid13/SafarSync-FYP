@@ -82,8 +82,17 @@ class ApiService {
           m.contains('already been registered')) {
         return 'This email is already in use';
       }
+      // Supabase rejects passwords found in data breaches (HaveIBeenPwned)
+      // once leaked-password protection is enabled.
+      if (e is AuthWeakPasswordException &&
+          e.reasons.any((r) => r.toLowerCase().contains('pwned'))) {
+        return 'This password has appeared in a data breach. Please choose a different password.';
+      }
+      if (m.contains('pwned') || m.contains('breach') || m.contains('leaked')) {
+        return 'This password has appeared in a data breach. Please choose a different password.';
+      }
       if (m.contains('password should be') || m.contains('weak')) {
-        return 'Password is too weak';
+        return 'Password is too weak — use at least 8 characters with letters and numbers.';
       }
       if (m.contains('invalid') && m.contains('email')) {
         return 'Invalid email address';

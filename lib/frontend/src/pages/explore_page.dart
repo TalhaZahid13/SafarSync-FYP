@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../ui/app_theme.dart';
 import '../utils/api_service.dart';
 import 'bookings_page.dart';
 import 'live_map_page.dart';
@@ -50,6 +51,7 @@ class _ExplorePageState extends State<ExplorePage> {
         limit: 50,
         // sortBy: 'rating',
       );
+      if (!mounted) return;
 
       if (response['success']) {
         final data = response['data'];
@@ -74,6 +76,7 @@ class _ExplorePageState extends State<ExplorePage> {
         }
       }
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         errorMessage = 'Error loading destinations: $e';
         isLoadingDestinations = false;
@@ -362,7 +365,7 @@ class _ExplorePageState extends State<ExplorePage> {
                                 style: TextStyle(color: Colors.white),
                               ),
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF2CAFBC),
+                                backgroundColor: AppTheme.turquoise,
                                 padding: const EdgeInsets.symmetric(
                                   vertical: 12,
                                 ),
@@ -844,9 +847,9 @@ class _VirtualTourButtonState extends State<_VirtualTourButton> {
   @override
   Widget build(BuildContext context) {
     if (_checking) {
-      return const Padding(
+      return Padding(
         padding: EdgeInsets.symmetric(vertical: 4),
-        child: LinearProgressIndicator(color: Color(0xFF2CAFBC), minHeight: 2),
+        child: LinearProgressIndicator(color: AppTheme.turquoise, minHeight: 2),
       );
     }
     if (_tour == null) return const SizedBox.shrink();
@@ -867,20 +870,16 @@ class _VirtualTourButtonState extends State<_VirtualTourButton> {
             ),
           );
         },
-        icon: const Icon(
-          Icons.threed_rotation,
-          size: 18,
-          color: Color(0xFF2CAFBC),
-        ),
-        label: const Text(
+        icon: Icon(Icons.threed_rotation, size: 18, color: AppTheme.turquoise),
+        label: Text(
           'Start Virtual Tour',
           style: TextStyle(
-            color: Color(0xFF2CAFBC),
+            color: AppTheme.turquoise,
             fontWeight: FontWeight.w600,
           ),
         ),
         style: OutlinedButton.styleFrom(
-          side: const BorderSide(color: Color(0xFF2CAFBC)),
+          side: BorderSide(color: AppTheme.turquoise),
           padding: const EdgeInsets.symmetric(vertical: 12),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),

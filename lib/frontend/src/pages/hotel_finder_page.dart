@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import '../ui/app_theme.dart';
-import 'bookings_page.dart';
+import 'package:intl/intl.dart';
+import '../utils/api_service.dart';
+import '../utils/safe_parse.dart';
+import 'hotel_booking_page.dart';
 import 'live_map_page.dart';
 
 class HotelFinderPage extends StatefulWidget {
@@ -17,86 +20,54 @@ class _HotelFinderPageState extends State<HotelFinderPage> {
 
   final List<String> _categories = ['All', 'Luxury', 'Boutique', 'Budget'];
 
-  final List<Map<String, dynamic>> _hotels = [
-    {
-      'name': 'Serena Hotel Islamabad',
-      'location': 'F-5, Islamabad',
-      'image':
-          'https://images.unsplash.com/photo-1578683010236-d716f9a3f461?w=400&q=80',
-      'rating': 4.8,
-      'price': 'PKR 25,000',
-      'priceNum': 25000.0,
-      'category': 'Luxury',
-      'amenities': ['WiFi', 'Pool', 'Spa', 'Restaurant'],
-      'lat': 33.7174,
-      'lng': 73.0629,
-    },
-    {
-      'name': 'Pearl Continental Lahore',
-      'location': 'Mall Road, Lahore',
-      'image':
-          'https://images.unsplash.com/photo-1571003123894-1f0594d2b5d9?w=400&q=80',
-      'rating': 4.6,
-      'price': 'PKR 18,000',
-      'priceNum': 18000.0,
-      'category': 'Luxury',
-      'amenities': ['WiFi', 'Pool', 'Gym', 'Restaurant'],
-      'lat': 31.5498,
-      'lng': 74.3444,
-    },
-    {
-      'name': 'Avari Towers Karachi',
-      'location': 'Fatima Jinnah Road, Karachi',
-      'image':
-          'https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?w=400&q=80',
-      'rating': 4.5,
-      'price': 'PKR 22,000',
-      'priceNum': 22000.0,
-      'category': 'Luxury',
-      'amenities': ['WiFi', 'Pool', 'Business Center'],
-      'lat': 24.8607,
-      'lng': 67.0101,
-    },
-    {
-      'name': 'Monal Guest House Murree',
-      'location': 'Mall Road, Murree',
-      'image':
-          'https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=400&q=80',
-      'rating': 4.3,
-      'price': 'PKR 8,000',
-      'priceNum': 8000.0,
-      'category': 'Boutique',
-      'amenities': ['WiFi', 'Mountain View', 'Breakfast'],
-      'lat': 33.9078,
-      'lng': 73.3944,
-    },
-    {
-      'name': 'PTDC Motel Hunza',
-      'location': 'Karimabad, Hunza',
-      'image':
-          'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&q=80',
-      'rating': 4.1,
-      'price': 'PKR 5,500',
-      'priceNum': 5500.0,
-      'category': 'Budget',
-      'amenities': ['WiFi', 'Valley View', 'Parking'],
-      'lat': 36.3136,
-      'lng': 74.6402,
-    },
-    {
-      'name': 'Lockwood Hotel Lahore',
-      'location': 'Gulberg III, Lahore',
-      'image':
-          'https://images.unsplash.com/photo-1564501049412-61c2a3083791?w=400&q=80',
-      'rating': 4.4,
-      'price': 'PKR 12,000',
-      'priceNum': 12000.0,
-      'category': 'Boutique',
-      'amenities': ['WiFi', 'Restaurant', 'Bar'],
-      'lat': 31.5117,
-      'lng': 74.3510,
-    },
-  ];
+  // Hotels, rooms and prices come from the SafarSync API (admin-managed
+  // inventory). The app never decides a price.
+  List<Map<String, dynamic>> _hotels = [];
+  bool _loading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    final r = await ApiService.getRequest('/hotels', auth: false);
+    if (!mounted) return;
+    setState(() {
+      _loading = false;
+      if (r['success'] == true) {
+        final money = NumberFormat('#,##0');
+        _hotels = [
+          for (final h in (r['hotels'] as List? ?? const []))
+            if (h is Map)
+              {
+                'hotel_id': asInt(h['hotel_id']),
+                'name': '${h['name'] ?? ''}',
+                'location': '${h['address'] ?? h['city'] ?? ''}',
+                'image': '${h['image_url'] ?? ''}',
+                'rating': asDouble(h['rating']) ?? 0.0,
+                'price': asDouble(h['from_price']) != null
+                    ? 'From PKR ${money.format(asDouble(h['from_price']))}'
+                    : 'See rooms',
+                'category': '${h['category'] ?? ''}',
+                'amenities': [
+                  for (final a in (h['amenities'] as List? ?? const [])) '$a',
+                ],
+                'lat': asDouble(h['latitude']),
+                'lng': asDouble(h['longitude']),
+              },
+        ];
+      } else {
+        _error = '${r['message'] ?? r['error'] ?? 'Could not load hotels'}';
+      }
+    });
+  }
 
   List<Map<String, dynamic>> get _filtered {
     return _hotels.where((h) {
@@ -148,10 +119,7 @@ class _HotelFinderPageState extends State<HotelFinderPage> {
                   onChanged: (v) => setState(() => _query = v),
                   decoration: InputDecoration(
                     hintText: 'Search hotels...',
-                    prefixIcon: const Icon(
-                      Icons.search,
-                      color: AppTheme.turquoise,
-                    ),
+                    prefixIcon: Icon(Icons.search, color: AppTheme.turquoise),
                     filled: true,
                     fillColor: AppTheme.offWhite,
                     border: OutlineInputBorder(
@@ -194,7 +162,22 @@ class _HotelFinderPageState extends State<HotelFinderPage> {
           ),
           // Hotel list
           Expanded(
-            child: _filtered.isEmpty
+            child: _loading
+                ? const Center(child: CircularProgressIndicator())
+                : _error != null
+                ? Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(_error!, textAlign: TextAlign.center),
+                        TextButton(
+                          onPressed: _load,
+                          child: const Text('Retry'),
+                        ),
+                      ],
+                    ),
+                  )
+                : _filtered.isEmpty
                 ? const Center(
                     child: Text(
                       'No hotels found.',
@@ -291,7 +274,7 @@ class _HotelCard extends StatelessWidget {
                     color: Colors.white.withValues(alpha: 0.9),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.favorite_border,
                     size: 18,
                     color: AppTheme.turquoise,
@@ -387,14 +370,14 @@ class _HotelCard extends StatelessWidget {
                   children: [
                     Text(
                       hotel['price'] as String,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.bold,
                         color: AppTheme.turquoise,
                       ),
                     ),
                     const Text(
-                      ' / night',
+                      ' / night + taxes',
                       style: TextStyle(
                         fontSize: 12,
                         color: AppTheme.mediumGray,
@@ -420,7 +403,7 @@ class _HotelCard extends StatelessWidget {
                         ),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: AppTheme.turquoise,
-                          side: const BorderSide(color: AppTheme.turquoise),
+                          side: BorderSide(color: AppTheme.turquoise),
                           padding: const EdgeInsets.symmetric(vertical: 10),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
@@ -434,10 +417,9 @@ class _HotelCard extends StatelessWidget {
                         onPressed: () => Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (_) => CreateBookingScreen(
-                              presetType: 'hotel',
-                              presetItemName: hotel['name'] as String,
-                              presetPricePerUnit: hotel['priceNum'] as double,
+                            builder: (_) => HotelBookingPage(
+                              hotelId: hotel['hotel_id'] as int,
+                              hotelName: hotel['name'] as String,
                             ),
                           ),
                         ),
