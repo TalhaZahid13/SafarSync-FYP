@@ -736,7 +736,7 @@ class _WeatherForecastPageState extends State<WeatherForecastPage> {
             // ── Body content ────────────────────────────────────────────────
             SliverToBoxAdapter(
               child: _loading
-                  ? const SizedBox(
+                  ? SizedBox(
                       height: 300,
                       child: Center(
                         child: CircularProgressIndicator(

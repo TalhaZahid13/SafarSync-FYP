@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import '../ui/app_theme.dart';
-import 'bookings_page.dart';
+import 'package:intl/intl.dart';
+import '../utils/api_service.dart';
+import '../utils/safe_parse.dart';
+import 'restaurant_reservation_page.dart';
 import 'live_map_page.dart';
 
 class FoodSpotsPage extends StatefulWidget {
@@ -23,92 +26,55 @@ class _FoodSpotsPageState extends State<FoodSpotsPage> {
     'Fast Food',
   ];
 
-  final List<Map<String, dynamic>> _restaurants = [
-    {
-      'name': 'Monal Restaurant',
-      'location': 'Pir Sohawa, Islamabad',
-      'cuisine': 'Pakistani & Continental',
-      'cuisineTag': 'Pakistani',
-      'image':
-          'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=400&q=80',
-      'rating': 4.9,
-      'price': 'PKR 3,000',
-      'priceNum': 3000.0,
-      'tags': ['Rooftop', 'Family', 'Scenic View'],
-      'lat': 33.7551,
-      'lng': 73.0898,
-    },
-    {
-      'name': 'Bundu Khan',
-      'location': 'Main Boulevard, Lahore',
-      'cuisine': 'Traditional BBQ',
-      'cuisineTag': 'BBQ',
-      'image':
-          'https://images.unsplash.com/photo-1544025162-d76694265947?w=400&q=80',
-      'rating': 4.7,
-      'price': 'PKR 2,000',
-      'priceNum': 2000.0,
-      'tags': ['BBQ', 'Dine-in', 'Takeaway'],
-      'lat': 31.5201,
-      'lng': 74.3587,
-    },
-    {
-      'name': 'The Golden Fork',
-      'location': 'Blue Area, Islamabad',
-      'cuisine': 'Continental',
-      'cuisineTag': 'Continental',
-      'image':
-          'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=400&q=80',
-      'rating': 4.5,
-      'price': 'PKR 2,500',
-      'priceNum': 2500.0,
-      'tags': ['Fine Dining', 'Business'],
-      'lat': 33.7280,
-      'lng': 73.0883,
-    },
-    {
-      'name': 'Kolachi Restaurant',
-      'location': 'Do Darya, Karachi',
-      'cuisine': 'Pakistani',
-      'cuisineTag': 'Pakistani',
-      'image':
-          'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=400&q=80',
-      'rating': 4.6,
-      'price': 'PKR 2,800',
-      'priceNum': 2800.0,
-      'tags': ['Seafood', 'Sea View', 'Family'],
-      'lat': 24.8138,
-      'lng': 67.0291,
-    },
-    {
-      'name': "McDonald's",
-      'location': 'Multiple Locations',
-      'cuisine': 'Fast Food',
-      'cuisineTag': 'Fast Food',
-      'image':
-          'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=400&q=80',
-      'rating': 4.0,
-      'price': 'PKR 800',
-      'priceNum': 800.0,
-      'tags': ['Quick Bite', 'Takeaway', 'Delivery'],
-      'lat': null,
-      'lng': null,
-    },
-    {
-      'name': 'Salt\'n Pepper Village',
-      'location': 'Main Canal Bank Road, Lahore',
-      'cuisine': 'Pakistani',
-      'cuisineTag': 'Pakistani',
-      'image':
-          'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400&q=80',
-      'rating': 4.8,
-      'price': 'PKR 3,500',
-      'priceNum': 3500.0,
-      'tags': ['Village Theme', 'Desi', 'Family'],
-      'lat': 31.4792,
-      'lng': 74.2917,
-    },
-  ];
+  // Restaurants, opening hours and table availability come from the API.
+  List<Map<String, dynamic>> _restaurants = [];
+  bool _loading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    final r = await ApiService.getRequest('/restaurants', auth: false);
+    if (!mounted) return;
+    setState(() {
+      _loading = false;
+      if (r['success'] == true) {
+        final money = NumberFormat('#,##0');
+        _restaurants = [
+          for (final x in (r['restaurants'] as List? ?? const []))
+            if (x is Map)
+              {
+                ...Map<String, dynamic>.from(x),
+                'name': '${x['name'] ?? ''}',
+                'location': '${x['address'] ?? x['city'] ?? ''}',
+                'cuisine': '${x['cuisine'] ?? ''}',
+                'cuisineTag': '${x['cuisine_tag'] ?? ''}',
+                'image': '${x['image_url'] ?? ''}',
+                'rating': asDouble(x['rating']) ?? 0.0,
+                'price': asDouble(x['avg_price_per_person']) != null
+                    ? 'PKR ${money.format(asDouble(x['avg_price_per_person']))}'
+                    : '',
+                'tags': [
+                  for (final t in (x['tags'] as List? ?? const [])) '$t',
+                ],
+                'lat': asDouble(x['latitude']),
+                'lng': asDouble(x['longitude']),
+              },
+        ];
+      } else {
+        _error =
+            '${r['message'] ?? r['error'] ?? 'Could not load restaurants'}';
+      }
+    });
+  }
 
   List<Map<String, dynamic>> get _filtered {
     return _restaurants.where((r) {
@@ -204,7 +170,22 @@ class _FoodSpotsPageState extends State<FoodSpotsPage> {
           ),
           // Restaurant list
           Expanded(
-            child: _filtered.isEmpty
+            child: _loading
+                ? const Center(child: CircularProgressIndicator())
+                : _error != null
+                ? Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(_error!, textAlign: TextAlign.center),
+                        TextButton(
+                          onPressed: _load,
+                          child: const Text('Retry'),
+                        ),
+                      ],
+                    ),
+                  )
+                : _filtered.isEmpty
                 ? const Center(
                     child: Text(
                       'No restaurants found.',
@@ -448,17 +429,18 @@ class _RestaurantCard extends StatelessWidget {
                     const SizedBox(width: 8),
                     Expanded(
                       child: ElevatedButton(
-                        onPressed: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => CreateBookingScreen(
-                              presetType: 'restaurant',
-                              presetItemName: restaurant['name'] as String,
-                              presetPricePerUnit:
-                                  restaurant['priceNum'] as double,
-                            ),
-                          ),
-                        ),
+                        // Walk-in-only places (accepts_reservations = false)
+                        // cannot be reserved.
+                        onPressed: restaurant['accepts_reservations'] == true
+                            ? () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => RestaurantReservationPage(
+                                    restaurant: restaurant,
+                                  ),
+                                ),
+                              )
+                            : null,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFFFF8F00),
                           foregroundColor: Colors.white,
@@ -468,8 +450,10 @@ class _RestaurantCard extends StatelessWidget {
                           ),
                           elevation: 0,
                         ),
-                        child: const Text(
-                          'Reserve Table',
+                        child: Text(
+                          restaurant['accepts_reservations'] == true
+                              ? 'Reserve Table'
+                              : 'Walk-in only',
                           style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w600,

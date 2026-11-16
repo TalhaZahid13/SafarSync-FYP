@@ -1,6 +1,7 @@
 // Third-party integrations: Groq (AI), Stripe, weather, email.
 // All keys are Edge Function secrets — never shipped in the app.
-import nodemailer from "npm:nodemailer@6.9.16";
+import nodemailer from "npm:nodemailer@10.6.0";
+import { HttpError } from "./http.ts";
 
 // ── Groq ────────────────────────────────────────────────────────────────────
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
@@ -62,7 +63,12 @@ function form(obj: Record<string, unknown>, prefix = "", out = new URLSearchPara
   return out;
 }
 
-export async function stripe(method: "GET" | "POST", path: string, params?: Record<string, unknown>) {
+export async function stripe(
+  method: "GET" | "POST",
+  path: string,
+  params?: Record<string, unknown>,
+  idempotencyKey?: string,
+) {
   const key = Deno.env.get("STRIPE_SECRET_KEY");
   if (!key) throw new Error("Stripe not configured. Set the STRIPE_SECRET_KEY secret.");
   const res = await fetch(`https://api.stripe.com/v1/${path}`, {
@@ -70,12 +76,19 @@ export async function stripe(method: "GET" | "POST", path: string, params?: Reco
     headers: {
       Authorization: `Bearer ${key}`,
       "Content-Type": "application/x-www-form-urlencoded",
+      // Same key → Stripe returns the original object instead of a duplicate.
+      ...(idempotencyKey ? { "Idempotency-Key": idempotencyKey } : {}),
     },
     body: method === "POST" ? form(params ?? {}).toString() : undefined,
     signal: AbortSignal.timeout(20000),
   });
   const data = await res.json();
-  if (!res.ok) throw new Error(data?.error?.message ?? `Stripe HTTP ${res.status}`);
+  if (!res.ok) {
+    const msg = data?.error?.message ?? `Stripe HTTP ${res.status}`;
+    console.error(`[stripe] ${method} ${path} failed: ${data?.error?.code ?? res.status} ${msg}`);
+    // Surface the provider's reason (e.g. unsupported currency) instead of a generic 500.
+    throw new HttpError(502, { error: `Payment provider error: ${msg}`, code: data?.error?.code ?? null });
+  }
   return data;
 }
 

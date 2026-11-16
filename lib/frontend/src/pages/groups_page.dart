@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:flutter/services.dart';
 import '../utils/api_service.dart';
 
@@ -577,6 +578,115 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
   List<Map<String, dynamic>> _members = [];
   bool _loading = true;
   String? _error;
+  int? _myUserId;
+
+  bool get _isOrganizer => _members.any(
+    (m) => m['user_id'] == _myUserId && m['role'] == 'organizer',
+  );
+
+  String get _inviteStatus {
+    final g = _group;
+    if (g == null) return '';
+    if (g['invite_revoked_at'] != null) {
+      return 'Revoked — nobody can join until a new code is issued.';
+    }
+    final exp = DateTime.tryParse('${g['invite_expires_at'] ?? ''}');
+    if (exp != null && exp.isBefore(DateTime.now())) return 'Expired.';
+    final parts = <String>[];
+    if (exp != null) {
+      parts.add('expires ${DateFormat('d MMM, HH:mm').format(exp.toLocal())}');
+    }
+    final maxUses = g['invite_max_uses'];
+    if (maxUses != null) parts.add('${g['invite_uses'] ?? 0}/$maxUses uses');
+    return parts.isEmpty
+        ? 'Active · no expiry'
+        : 'Active · ${parts.join(' · ')}';
+  }
+
+  Future<void> _newInviteCode() async {
+    int? hours;
+    int? maxUses;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setD) => AlertDialog(
+          title: const Text('New invite code'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('The current code will stop working immediately.'),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<int?>(
+                initialValue: hours,
+                decoration: const InputDecoration(labelText: 'Expires'),
+                items: const [
+                  DropdownMenuItem(value: null, child: Text('Never')),
+                  DropdownMenuItem(value: 24, child: Text('In 24 hours')),
+                  DropdownMenuItem(value: 168, child: Text('In 7 days')),
+                  DropdownMenuItem(value: 720, child: Text('In 30 days')),
+                ],
+                onChanged: (v) => setD(() => hours = v),
+              ),
+              DropdownButtonFormField<int?>(
+                initialValue: maxUses,
+                decoration: const InputDecoration(labelText: 'Max uses'),
+                items: const [
+                  DropdownMenuItem(value: null, child: Text('Unlimited')),
+                  DropdownMenuItem(value: 1, child: Text('1 person')),
+                  DropdownMenuItem(value: 5, child: Text('5 people')),
+                  DropdownMenuItem(value: 20, child: Text('20 people')),
+                ],
+                onChanged: (v) => setD(() => maxUses = v),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Generate'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (ok != true || !mounted) return;
+    final r = await ApiService.postRequest(
+      '/groups/${widget.groupId}/invite-code',
+      {'expires_in_hours': hours, 'max_uses': maxUses},
+    );
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          r['success'] == true
+              ? 'New invite code: ${r['invite_code']}'
+              : '${r['error'] ?? r['message'] ?? 'Could not create a new code'}',
+        ),
+      ),
+    );
+    if (r['success'] == true) _load();
+  }
+
+  Future<void> _revokeInviteCode() async {
+    final r = await ApiService.deleteRequest(
+      '/groups/${widget.groupId}/invite-code',
+    );
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          r['success'] == true
+              ? 'Invite code revoked. Members keep access.'
+              : '${r['error'] ?? r['message'] ?? 'Could not revoke the code'}',
+        ),
+      ),
+    );
+    if (r['success'] == true) _load();
+  }
 
   @override
   void initState() {
@@ -590,6 +700,7 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
       _error = null;
     });
     try {
+      _myUserId ??= await ApiService.getCurrentUserId();
       final r = await ApiService.getRequest('/groups/${widget.groupId}');
       if (!mounted) return;
       if (r['success'] == true) {
@@ -758,11 +869,33 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'Tap to copy — share with friends to join',
+                            'Tap to copy — share only with people you trust: '
+                            'anyone with the code can join and see members\' '
+                            'live locations. $_inviteStatus',
                             style: theme.textTheme.bodySmall?.copyWith(
                               color: theme.colorScheme.outline,
                             ),
                           ),
+                          if (_isOrganizer)
+                            Wrap(
+                              spacing: 8,
+                              children: [
+                                TextButton.icon(
+                                  onPressed: _newInviteCode,
+                                  icon: const Icon(Icons.refresh, size: 18),
+                                  label: const Text('New code'),
+                                ),
+                                if (_group!['invite_revoked_at'] == null)
+                                  TextButton.icon(
+                                    onPressed: _revokeInviteCode,
+                                    icon: const Icon(Icons.block, size: 18),
+                                    label: const Text('Revoke'),
+                                    style: TextButton.styleFrom(
+                                      foregroundColor: Colors.red,
+                                    ),
+                                  ),
+                              ],
+                            ),
                         ],
                       ),
                     ),

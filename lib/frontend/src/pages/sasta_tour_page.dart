@@ -84,7 +84,7 @@ class _SastaTourPageState extends State<SastaTourPage> {
             SliverToBoxAdapter(child: _buildHeader()),
             SliverToBoxAdapter(child: _buildFilters()),
             if (_loading)
-              const SliverFillRemaining(
+              SliverFillRemaining(
                 child: Center(
                   child: CircularProgressIndicator(color: AppTheme.turquoise),
                 ),
@@ -113,9 +113,9 @@ class _SastaTourPageState extends State<SastaTourPage> {
   }
 
   Widget _buildHeader() => Container(
-    decoration: const BoxDecoration(
+    decoration: BoxDecoration(
       gradient: LinearGradient(
-        colors: [Color(0xFF1B5A6E), Color(0xFF2CAFBC)],
+        colors: [Color(0xFF1B5A6E), AppTheme.turquoise],
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
       ),
@@ -514,7 +514,7 @@ class _PackageCard extends StatelessWidget {
                             label: const Text('View Details'),
                             style: OutlinedButton.styleFrom(
                               foregroundColor: AppTheme.turquoise,
-                              side: const BorderSide(color: AppTheme.turquoise),
+                              side: BorderSide(color: AppTheme.turquoise),
                               padding: const EdgeInsets.symmetric(vertical: 10),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(10),
@@ -613,9 +613,9 @@ class TourPackageDetailPage extends StatelessWidget {
                 ),
               ),
               background: Container(
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [Color(0xFF0D3B4D), Color(0xFF2CAFBC)],
+                    colors: [Color(0xFF0D3B4D), AppTheme.turquoise],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
@@ -659,7 +659,7 @@ class TourPackageDetailPage extends StatelessWidget {
                     children: dests
                         .map(
                           (d) => Chip(
-                            avatar: const Icon(
+                            avatar: Icon(
                               Icons.place_rounded,
                               size: 14,
                               color: AppTheme.turquoise,
@@ -730,8 +730,8 @@ class TourPackageDetailPage extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF1B5A6E), Color(0xFF2CAFBC)],
+                    gradient: LinearGradient(
+                      colors: [Color(0xFF1B5A6E), AppTheme.turquoise],
                     ),
                     borderRadius: BorderRadius.circular(16),
                   ),
@@ -826,7 +826,7 @@ class _DayCard extends StatelessWidget {
           Container(
             width: 36,
             height: 36,
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               color: AppTheme.turquoise,
               shape: BoxShape.circle,
             ),
@@ -900,7 +900,7 @@ class _DayCard extends StatelessWidget {
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Icon(
+                          Icon(
                             Icons.star_rounded,
                             size: 11,
                             color: AppTheme.turquoise,
@@ -1069,7 +1069,7 @@ class _BudgetPlannerPageState extends State<BudgetPlannerPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Row(
+                    Row(
                       children: [
                         Icon(
                           Icons.auto_awesome_rounded,
@@ -1189,7 +1189,7 @@ class _BudgetPlannerPageState extends State<BudgetPlannerPage> {
                       ),
                       child: Row(
                         children: [
-                          const Icon(
+                          Icon(
                             Icons.info_outline_rounded,
                             size: 16,
                             color: AppTheme.turquoise,
@@ -1210,7 +1210,7 @@ class _BudgetPlannerPageState extends State<BudgetPlannerPage> {
                               return Text(
                                 'PKR ${perPerson.toStringAsFixed(0)} per person  ·  '
                                 'PKR ${perDay.toStringAsFixed(0)}/day',
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 12,
                                   color: AppTheme.turquoise,
                                   fontWeight: FontWeight.w600,
@@ -1318,7 +1318,7 @@ class _BudgetPlannerPageState extends State<BudgetPlannerPage> {
     ),
     focusedBorder: OutlineInputBorder(
       borderRadius: BorderRadius.circular(10),
-      borderSide: const BorderSide(color: AppTheme.turquoise, width: 1.5),
+      borderSide: BorderSide(color: AppTheme.turquoise, width: 1.5),
     ),
     contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
   );
@@ -1390,8 +1390,8 @@ class _BudgetPlanResult extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xFF1B5A6E), Color(0xFF2CAFBC)],
+            gradient: LinearGradient(
+              colors: [Color(0xFF1B5A6E), AppTheme.turquoise],
             ),
             borderRadius: BorderRadius.circular(16),
           ),
@@ -1459,7 +1459,7 @@ class _BudgetPlanResult extends StatelessWidget {
             children: dests
                 .map(
                   (d) => Chip(
-                    avatar: const Icon(
+                    avatar: Icon(
                       Icons.place_rounded,
                       size: 14,
                       color: AppTheme.turquoise,
@@ -1662,7 +1662,7 @@ class _DestinationCostCard extends StatelessWidget {
               color: AppTheme.turquoise.withValues(alpha: 0.12),
               shape: BoxShape.circle,
             ),
-            child: const Icon(
+            child: Icon(
               Icons.place_rounded,
               color: AppTheme.turquoise,
               size: 22,
@@ -1712,7 +1712,7 @@ class _DestinationCostCard extends StatelessWidget {
                     ),
                     child: Text(
                       category,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 10,
                         color: AppTheme.turquoise,
                         fontWeight: FontWeight.w600,

@@ -1,3 +1,4 @@
+import 'admin_hospitality_tabs.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -56,7 +57,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
   @override
   void initState() {
     super.initState();
-    _tabs = TabController(length: 9, vsync: this)
+    _tabs = TabController(length: 11, vsync: this)
       ..addListener(() {
         if (!_tabs.indexIsChanging) _loadTabIfNeeded(_tabs.index);
       });
@@ -502,6 +503,8 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
         ],
         bottom: TabBar(
           controller: _tabs,
+          isScrollable: true,
+          tabAlignment: TabAlignment.start,
           indicatorColor: Colors.white,
           labelColor: Colors.white,
           unselectedLabelColor: Colors.white60,
@@ -548,6 +551,11 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
             ),
             const Tab(icon: Icon(Icons.analytics_rounded), text: 'Analytics'),
             const Tab(icon: Icon(Icons.payments_rounded), text: 'Payments'),
+            const Tab(icon: Icon(Icons.hotel_rounded), text: 'Hotels'),
+            const Tab(
+              icon: Icon(Icons.restaurant_rounded),
+              text: 'Restaurants',
+            ),
           ],
         ),
       ),
@@ -609,6 +617,8 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
             onApproveRefund: _approveRefund,
             onRejectRefund: _rejectRefund,
           ),
+          const AdminHotelsTab(),
+          const AdminRestaurantsTab(),
         ],
       ),
     );

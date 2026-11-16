@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import '../ui/app_theme.dart';
+import 'package:provider/provider.dart';
+import '../ui/destination_theme.dart';
 import 'package:intl/intl.dart';
 import '../utils/api_service.dart';
 import '../utils/payment_service.dart';
@@ -477,7 +480,7 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
                     color: const Color(0xFFE8F4F8),
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(
-                      color: const Color(0xFF2CAFBC).withValues(alpha: 0.4),
+                      color: AppTheme.turquoise.withValues(alpha: 0.4),
                     ),
                   ),
                   child: Row(
@@ -488,7 +491,7 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
                             : _isRestaurant
                             ? Icons.restaurant
                             : Icons.place,
-                        color: const Color(0xFF2CAFBC),
+                        color: AppTheme.turquoise,
                         size: 20,
                       ),
                       const SizedBox(width: 10),
@@ -727,7 +730,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
 
   Future<void> _cancel() async {
     final reason = await _askCancelReason();
-    if (reason == null) return;
+    if (reason == null || !mounted) return;
 
     setState(() => _cancelling = true);
     try {
@@ -737,7 +740,9 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
       );
       if (!mounted) return;
       if (r['success'] == true) {
-        _snack('Booking cancelled', success: true);
+        _snack(r['message'] as String? ?? 'Booking cancelled', success: true);
+        // A cancelled trip no longer drives the journey theme.
+        context.read<DestinationThemeProvider>().refresh().ignore();
         _load();
       } else {
         _snack(r['error'] as String? ?? 'Failed to cancel');
@@ -812,7 +817,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
         ],
       ),
     );
-    if (confirmed != true) return;
+    if (confirmed != true || !mounted) return;
 
     setState(() => _requestingRefund = true);
     try {
@@ -860,7 +865,11 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
     final status = b['status'] as String? ?? 'Pending';
     final payStatus = b['payment_status'] as String? ?? 'Unpaid';
     final amount = asDouble(b['total_amount']) ?? 0.0;
+    final isRestaurant = b['booking_type'] == 'restaurant';
+    final isHotelStay = b['booking_type'] == 'hotel' && b['hotel_id'] != null;
+    // Restaurant tables are free; everything else is paid via the server quote.
     final canPay =
+        !isRestaurant &&
         payStatus == 'Unpaid' &&
         (status == 'Pending' || status == 'Awaiting Payment');
     final canCancel = !['Completed', 'Cancelled', 'Refunded'].contains(status);
@@ -927,14 +936,52 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
               _Section(
                 title: 'Booking Info',
                 children: [
-                  _InfoRow('Booking ID', '#${b['booking_id']}'),
-                  _InfoRow('Booking Date', b['booking_date'] as String?),
-                  _InfoRow('Travel Date', b['travel_date'] as String?),
                   _InfoRow(
-                    'Duration',
-                    '${b['estimated_duration_days'] ?? 1} day(s)',
+                    'Reference',
+                    '${b['booking_reference'] ?? '#${b['booking_id']}'}',
                   ),
-                  _InfoRow('Travelers', '${b['num_travelers'] ?? 1} person(s)'),
+                  _InfoRow('Booking Date', b['booking_date'] as String?),
+                  if (isHotelStay) ...[
+                    _InfoRow('Hotel', b['hotel_name'] as String?),
+                    _InfoRow('Room', b['room_name'] as String?),
+                    _InfoRow(
+                      'Check-in',
+                      '${b['check_in_date'] ?? ''} from ${b['hotel_check_in_time'] ?? '14:00'}',
+                    ),
+                    _InfoRow(
+                      'Check-out',
+                      '${b['check_out_date'] ?? ''} by ${b['hotel_check_out_time'] ?? '12:00'}',
+                    ),
+                    _InfoRow(
+                      'Rooms / Guests',
+                      '${b['rooms'] ?? 1} / ${b['guests'] ?? 1}',
+                    ),
+                    _InfoRow(
+                      'Cancellation',
+                      'Free until ${b['free_cancel_hours'] ?? 48}h before check-in',
+                    ),
+                  ] else if (isRestaurant) ...[
+                    _InfoRow('Restaurant', b['restaurant_name'] as String?),
+                    _InfoRow('Date & time', b['reservation_local'] as String?),
+                    _InfoRow('Party size', '${b['party_size'] ?? 1}'),
+                    if (b['seating_preference'] != null)
+                      _InfoRow('Seating', b['seating_preference'] as String?),
+                  ] else ...[
+                    _InfoRow('Travel Date', b['travel_date'] as String?),
+                    _InfoRow(
+                      'Duration',
+                      '${b['estimated_duration_days'] ?? 1} day(s)',
+                    ),
+                    _InfoRow(
+                      'Travelers',
+                      '${b['num_travelers'] ?? 1} person(s)',
+                    ),
+                  ],
+                  if (b['contact_name'] != null)
+                    _InfoRow(
+                      'Contact',
+                      '${b['contact_name']} · ${b['contact_phone'] ?? ''}',
+                    ),
                   if (b['notes'] != null && (b['notes'] as String).isNotEmpty)
                     _InfoRow('Notes', b['notes'] as String),
                 ],
@@ -943,7 +990,12 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
               _Section(
                 title: 'Payment',
                 children: [
-                  _InfoRow('Total Amount', 'PKR ${amount.toStringAsFixed(0)}'),
+                  _InfoRow(
+                    'Total Amount',
+                    isRestaurant
+                        ? 'Free reservation'
+                        : 'PKR ${amount.toStringAsFixed(0)}',
+                  ),
                   _InfoRow('Payment Status', payStatus),
                   if (b['payment_intent_id'] != null)
                     _InfoRow('Transaction', b['payment_intent_id'] as String),

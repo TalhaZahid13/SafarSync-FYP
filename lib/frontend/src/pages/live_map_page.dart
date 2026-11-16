@@ -587,6 +587,7 @@ class _LiveMapPageState extends State<LiveMapPage> {
     _posStream?.cancel();
     _geocodeDebounce?.cancel();
     _backendDebounce?.cancel();
+    _mapController.dispose();
     super.dispose();
   }
 
@@ -655,9 +656,7 @@ class _LiveMapPageState extends State<LiveMapPage> {
       body: _error != null
           ? _ErrorView(error: _error!, onRetry: _start)
           : _isLoading
-          ? const Center(
-              child: CircularProgressIndicator(color: AppTheme.turquoise),
-            )
+          ? Center(child: CircularProgressIndicator(color: AppTheme.turquoise))
           : Stack(
               children: [
                 FlutterMap(
@@ -1059,7 +1058,7 @@ class _InfoPanel extends StatelessWidget {
                   color: AppTheme.turquoise.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.location_on,
                   color: AppTheme.turquoise,
                   size: 16,
@@ -1246,7 +1245,7 @@ class _RouteAlternativesCard extends StatelessWidget {
                     color: AppTheme.turquoise.withValues(alpha: 0.5),
                   ),
                 ),
-                child: const Text(
+                child: Text(
                   'Book',
                   style: TextStyle(
                     color: AppTheme.turquoise,

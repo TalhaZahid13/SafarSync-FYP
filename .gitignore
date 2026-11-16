@@ -62,3 +62,6 @@ supabase/.temp/
 
 # Edge Function secret values (pushed with `supabase secrets set --env-file`)
 supabase/.env.secrets
+
+# Claude Code personal settings (local permissions, may contain command history)
+.claude/settings.local.json

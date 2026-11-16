@@ -425,7 +425,7 @@ class _PopularDestinationsState extends State<PopularDestinations> {
                         Expanded(
                           child: Row(
                             children: <Widget>[
-                              const Icon(
+                              Icon(
                                 Icons.star,
                                 size: 16,
                                 color: AppTheme.turquoise,
@@ -477,7 +477,7 @@ class _PopularDestinationsState extends State<PopularDestinations> {
                                     alignment: Alignment.centerRight,
                                     child: Text(
                                       dest.price!,
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         color: AppTheme.turquoise,
                                         fontWeight: FontWeight.bold,
                                       ),

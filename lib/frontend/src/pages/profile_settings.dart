@@ -1,10 +1,12 @@
 import 'dart:io';
+import '../ui/app_theme.dart';
 import '../utils/app_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../utils/api_service.dart';
+import '../utils/user_profile_provider.dart';
 import '../utils/theme_controller.dart';
 import '../ui/destination_theme.dart';
 
@@ -105,10 +107,15 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
       // Upload to Supabase Storage — this already persists
       // profile_picture_url to the DB immediately, independent of Save.
       final r = await ApiService.uploadProfilePhoto(bytes, picked.name);
+      if (!mounted) return;
       if (r['success'] == true && r['url'] != null) {
         setState(() {
           _currentPhotoUrl = r['url'] as String;
           _photoChanged = true;
+        });
+        // Header avatar + profile page update immediately.
+        context.read<UserProfileProvider>().applySaved({
+          'profile_picture_url': _currentPhotoUrl,
         });
         await AppAuth.updateProfile(photoURL: _currentPhotoUrl);
         _snack('Photo updated', success: true);
@@ -128,13 +135,16 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
     setState(() => _saving = true);
 
     try {
+      // Optional fields are always sent; an emptied field is saved as null
+      // so users can actually clear their phone / city / bio.
+      String? orNull(TextEditingController c) =>
+          c.text.trim().isEmpty ? null : c.text.trim();
       final body = <String, dynamic>{
         if (_nameCtrl.text.trim().isNotEmpty)
           'full_name': _nameCtrl.text.trim(),
-        if (_phoneCtrl.text.trim().isNotEmpty)
-          'phone_number': _phoneCtrl.text.trim(),
-        if (_cityCtrl.text.trim().isNotEmpty) 'city': _cityCtrl.text.trim(),
-        if (_bioCtrl.text.trim().isNotEmpty) 'bio': _bioCtrl.text.trim(),
+        'phone_number': orNull(_phoneCtrl),
+        'city': orNull(_cityCtrl),
+        'bio': orNull(_bioCtrl),
         'blood_group': _selectedBloodGroup,
         if (_currentPhotoUrl != null) 'profile_picture_url': _currentPhotoUrl,
       };
@@ -143,6 +153,8 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
       if (!mounted) return;
 
       if (r['success'] == true) {
+        // Header, profile page etc. read UserProfileProvider: update it now.
+        context.read<UserProfileProvider>().applySaved(body);
         // Keep the auth profile (greeting/avatar) in sync with the saved row.
         await AppAuth.updateProfile(
           displayName: _nameCtrl.text.trim().isNotEmpty
@@ -296,7 +308,13 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
                 validator: (v) =>
                     (v == null || v.trim().isEmpty) ? 'Name is required' : null,
               ),
-              _inputField('Email', _emailCtrl, readOnly: true),
+              // The email is the sign-in identity managed by Supabase Auth /
+              // Google / Apple, so it is shown but not editable here.
+              _inputField(
+                'Email (sign-in, cannot be changed here)',
+                _emailCtrl,
+                readOnly: true,
+              ),
               _inputField(
                 'Contact Number',
                 _phoneCtrl,
@@ -441,7 +459,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
             label: 'Auto (from booking)',
             emoji: '✨',
             isSelected: !dtProvider.isManual,
-            color: const Color(0xFF2CAFBC),
+            color: AppTheme.turquoise,
             onTap: () => dtProvider.resetToAuto(),
           ),
           const SizedBox(height: 6),

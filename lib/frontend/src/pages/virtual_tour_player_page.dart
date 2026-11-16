@@ -1,4 +1,5 @@
 import 'dart:convert';
+import '../ui/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:webview_flutter/webview_flutter.dart';
@@ -75,11 +76,13 @@ class _VirtualTourPlayerPageState extends State<VirtualTourPlayerPage> {
             ? (_tour!['scenes'][0]['scene_name'] ?? '')
             : '';
         await _loadHtmlAndInjectTour();
-      } else {
+      } else if (mounted) {
         setState(() => _error = 'Tour not found');
       }
     } catch (e) {
-      setState(() => _error = _sanitizeErrorText('Could not load tour: $e'));
+      if (mounted) {
+        setState(() => _error = _sanitizeErrorText('Could not load tour: $e'));
+      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -250,6 +253,7 @@ class _VirtualTourPlayerPageState extends State<VirtualTourPlayerPage> {
 
   Future<void> _goToScene(Map<String, dynamic> scene) async {
     await _webCtrl.runJavaScript("goToScene('${scene['sceneKey']}')");
+    if (!mounted) return;
     setState(() => _sceneListOpen = false);
   }
 
@@ -262,9 +266,7 @@ class _VirtualTourPlayerPageState extends State<VirtualTourPlayerPage> {
         backgroundColor: const Color(0xFF0D1B2A),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
-          side: BorderSide(
-            color: const Color(0xFF2CAFBC).withValues(alpha: 0.4),
-          ),
+          side: BorderSide(color: AppTheme.turquoise.withValues(alpha: 0.4)),
         ),
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -274,17 +276,17 @@ class _VirtualTourPlayerPageState extends State<VirtualTourPlayerPage> {
             children: [
               Row(
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.info_outline_rounded,
-                    color: Color(0xFF2CAFBC),
+                    color: AppTheme.turquoise,
                     size: 20,
                   ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       title,
-                      style: const TextStyle(
-                        color: Color(0xFF2CAFBC),
+                      style: TextStyle(
+                        color: AppTheme.turquoise,
                         fontWeight: FontWeight.w700,
                         fontSize: 15,
                       ),
@@ -306,9 +308,9 @@ class _VirtualTourPlayerPageState extends State<VirtualTourPlayerPage> {
                 alignment: Alignment.centerRight,
                 child: TextButton(
                   onPressed: () => Navigator.pop(context),
-                  child: const Text(
+                  child: Text(
                     'Close',
-                    style: TextStyle(color: Color(0xFF2CAFBC)),
+                    style: TextStyle(color: AppTheme.turquoise),
                   ),
                 ),
               ),
@@ -334,11 +336,11 @@ class _VirtualTourPlayerPageState extends State<VirtualTourPlayerPage> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const SizedBox(
+          SizedBox(
             width: 44,
             height: 44,
             child: CircularProgressIndicator(
-              color: Color(0xFF2CAFBC),
+              color: AppTheme.turquoise,
               strokeWidth: 3,
             ),
           ),
@@ -394,7 +396,7 @@ class _VirtualTourPlayerPageState extends State<VirtualTourPlayerPage> {
             const SizedBox(height: 24),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF2CAFBC),
+                backgroundColor: AppTheme.turquoise,
               ),
               onPressed: _loadTourData,
               child: const Text('Try Again'),
@@ -440,7 +442,7 @@ class _VirtualTourPlayerPageState extends State<VirtualTourPlayerPage> {
                         : Icons.headset_mic_rounded,
                     onTap: _aiLoading ? null : _requestNarration,
                     label: 'AI Guide',
-                    accent: const Color(0xFF2CAFBC),
+                    accent: AppTheme.turquoise,
                   ),
                 ],
               ),
@@ -578,12 +580,12 @@ class _SceneListPanel extends StatelessWidget {
                     ),
                     decoration: BoxDecoration(
                       color: isActive
-                          ? const Color(0xFF2CAFBC).withValues(alpha: 0.15)
+                          ? AppTheme.turquoise.withValues(alpha: 0.15)
                           : const Color(0xFF1B3A4C).withValues(alpha: 0.5),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
                         color: isActive
-                            ? const Color(0xFF2CAFBC).withValues(alpha: 0.5)
+                            ? AppTheme.turquoise.withValues(alpha: 0.5)
                             : Colors.transparent,
                       ),
                     ),
@@ -594,7 +596,7 @@ class _SceneListPanel extends StatelessWidget {
                           height: 28,
                           decoration: BoxDecoration(
                             color: isActive
-                                ? const Color(0xFF2CAFBC).withValues(alpha: 0.2)
+                                ? AppTheme.turquoise.withValues(alpha: 0.2)
                                 : const Color(
                                     0xFF1B5A6E,
                                   ).withValues(alpha: 0.5),
@@ -605,7 +607,7 @@ class _SceneListPanel extends StatelessWidget {
                               '${i + 1}',
                               style: TextStyle(
                                 color: isActive
-                                    ? const Color(0xFF2CAFBC)
+                                    ? AppTheme.turquoise
                                     : Colors.white60,
                                 fontSize: 11,
                                 fontWeight: FontWeight.w700,
@@ -619,7 +621,7 @@ class _SceneListPanel extends StatelessWidget {
                             s['scene_name'] ?? 'Scene ${i + 1}',
                             style: TextStyle(
                               color: isActive
-                                  ? const Color(0xFF2CAFBC)
+                                  ? AppTheme.turquoise
                                   : Colors.white,
                               fontSize: 13,
                               fontWeight: isActive
@@ -631,9 +633,9 @@ class _SceneListPanel extends StatelessWidget {
                           ),
                         ),
                         if (isActive)
-                          const Icon(
+                          Icon(
                             Icons.visibility_rounded,
-                            color: Color(0xFF2CAFBC),
+                            color: AppTheme.turquoise,
                             size: 16,
                           ),
                       ],

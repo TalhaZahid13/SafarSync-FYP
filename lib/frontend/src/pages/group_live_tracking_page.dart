@@ -4,7 +4,8 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
 import '../utils/realtime_service.dart';
-import '../utils/app_auth.dart';
+import 'package:provider/provider.dart';
+import '../utils/user_profile_provider.dart';
 import '../utils/api_service.dart';
 import '../utils/safe_parse.dart';
 
@@ -97,8 +98,7 @@ class _GroupLiveTrackingPageState extends State<GroupLiveTrackingPage> {
   }
 
   void _resolveCurrentUser() {
-    final user = AppAuth.currentUser;
-    _myName = user?.displayName ?? user?.email?.split('@').first ?? 'Me';
+    _myName = context.read<UserProfileProvider>().fullName ?? 'Me';
   }
 
   Future<void> _initialize() async {
@@ -657,6 +657,7 @@ class _GroupLiveTrackingPageState extends State<GroupLiveTrackingPage> {
     _locationTimer?.cancel();
     _uiRefreshTimer?.cancel();
     _room?.leave();
+    _mapController.dispose();
     super.dispose();
   }
 }

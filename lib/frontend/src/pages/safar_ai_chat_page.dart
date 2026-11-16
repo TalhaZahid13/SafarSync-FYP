@@ -173,7 +173,7 @@ class _SafarAiChatPageState extends State<SafarAiChatPage> {
                     ),
                   ),
                   backgroundColor: AppTheme.pureWhite,
-                  side: const BorderSide(color: AppTheme.turquoise),
+                  side: BorderSide(color: AppTheme.turquoise),
                   onPressed: () => _sendMessage(_suggestions[i]),
                 ),
               ),
@@ -214,7 +214,7 @@ class _SafarAiChatPageState extends State<SafarAiChatPage> {
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(24),
-                        borderSide: const BorderSide(
+                        borderSide: BorderSide(
                           color: AppTheme.turquoise,
                           width: 1.5,
                         ),
@@ -278,7 +278,7 @@ class _MessageBubble extends StatelessWidget {
             bottomRight: Radius.circular(isUser ? 4 : 18),
           ),
           gradient: isUser
-              ? const LinearGradient(
+              ? LinearGradient(
                   colors: [AppTheme.turquoise, Color(0xFF1B8E99)],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,

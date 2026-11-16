@@ -1,9 +1,10 @@
 // bookings, group bookings, groups (invite codes), invitations, group chat
 import { exec, isUniqueViolation, q, q1, tx } from "../lib/db.ts";
-import { fail, idParam, json, type Router, text, toInt, toNum, clampLimit } from "../lib/http.ts";
+import { fail, idParam, json, type Router, text, toInt, clampLimit } from "../lib/http.ts";
 import { resolveAdmin, type AuthCtx } from "../lib/auth.ts";
 import { background, emit, notify } from "../lib/notify.ts";
 import { emails } from "../lib/external.ts";
+import { zonedToUtc } from "./hospitality.ts";
 
 const BOOKING_STATUSES = ["Pending", "Awaiting Payment", "Confirmed", "Active", "Completed", "Cancelled", "Refunded"];
 const TRANSITIONS: Record<string, string[]> = {
@@ -17,12 +18,29 @@ const TRANSITIONS: Record<string, string[]> = {
 };
 const GROUP_STATUSES = ["Planning", "Open", "Full", "Active", "Completed", "Cancelled"];
 
+// Columns every booking list/detail returns. Hotel stays and restaurant
+// reservations reuse destination_name/image_url so existing screens show them.
+export const BOOKING_SELECT = `
+  b.*, coalesce(d.name, h.name, rs.name) as destination_name,
+  coalesce(d.image_url, h.image_url, rs.image_url) as image_url,
+  coalesce(d.latitude, h.latitude, rs.latitude) as latitude,
+  coalesce(d.longitude, h.longitude, rs.longitude) as longitude,
+  d.average_cost, d.category, coalesce(d.city, h.city, rs.city) as city,
+  h.name as hotel_name, rt.name as room_name, rs.name as restaurant_name,
+  to_char(b.check_in, 'YYYY-MM-DD') as check_in_date, to_char(b.check_out, 'YYYY-MM-DD') as check_out_date,
+  to_char(h.check_in_time, 'HH24:MI') as hotel_check_in_time, to_char(h.check_out_time, 'HH24:MI') as hotel_check_out_time,
+  h.free_cancel_hours,
+  to_char(b.reservation_at at time zone coalesce(rs.timezone, 'Asia/Karachi'), 'YYYY-MM-DD HH24:MI') as reservation_local`;
+export const BOOKING_JOINS = `
+  left join public.destinations d on d.destination_id = b.destination_id
+  left join public.hotels h on h.hotel_id = b.hotel_id
+  left join public.hotel_room_types rt on rt.room_type_id = b.room_type_id
+  left join public.restaurants rs on rs.restaurant_id = b.restaurant_id`;
+
 export async function getBookingById(id: number) {
   return await q1(
-    `select b.*, d.name as destination_name, d.image_url, d.latitude, d.longitude, d.average_cost,
-            u.full_name, u.email
-     from public.bookings b
-     left join public.destinations d on d.destination_id = b.destination_id
+    `select ${BOOKING_SELECT}, u.full_name, u.email
+     from public.bookings b ${BOOKING_JOINS}
      join public.users u on u.user_id = b.user_id
      where b.booking_id = $1`, [id]);
 }
@@ -43,11 +61,77 @@ async function requireMemberOrAdmin(gid: number, auth: AuthCtx) {
   fail(403, "You are not a member of this group");
 }
 
+// 8 chars from a 32-symbol alphabet (no 0/O/1/I): ~1.1e12 codes, CSPRNG.
+// 256 is a multiple of 32, so `% 32` has no modulo bias.
 const makeCode = () => {
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  const bytes = crypto.getRandomValues(new Uint8Array(6));
+  const bytes = crypto.getRandomValues(new Uint8Array(8));
   return Array.from(bytes, (b) => alphabet[b % alphabet.length]).join("");
 };
+
+// Failed invite-code attempts per user (per isolate) — slows code guessing.
+const joinFailures = new Map<number, { n: number; until: number }>();
+const noteJoinFailure = (userId: number) => {
+  const now = Date.now();
+  const f = joinFailures.get(userId);
+  if (!f || f.until < now) joinFailures.set(userId, { n: 1, until: now + 15 * 60000 });
+  else f.n++;
+};
+const tooManyJoinFailures = (userId: number) => {
+  const f = joinFailures.get(userId);
+  return !!f && f.until > Date.now() && f.n >= 8;
+};
+
+/**
+ * The ONLY way to join a group: a valid invite code (optionally pinned to a
+ * group id). Checks revocation, expiry, use limit and capacity, then adds the
+ * caller atomically. Sequential group ids are never accepted on their own.
+ */
+async function joinWithInviteCode(auth: AuthCtx, rawCode: unknown, groupId: number | null) {
+  if (tooManyJoinFailures(auth.userId)) fail(429, "Too many invalid invite codes. Please try again in 15 minutes.");
+  const code = text(rawCode, 20)?.toUpperCase().replace(/[^A-Z0-9]/g, "");
+  if (!code) fail(400, "An invite code is required to join a group");
+  const gb = await q1(
+    `select group_booking_id, trip_name, max_members, status, invite_expires_at, invite_revoked_at,
+            invite_max_uses, invite_uses,
+            (select count(*) from public.group_booking_members where group_booking_id = gb.group_booking_id) as member_count
+     from public.group_bookings gb where upper(invite_code) = $1 ${groupId ? "and group_booking_id = $2" : ""}`,
+    groupId ? [code, groupId] : [code]);
+  if (!gb) { noteJoinFailure(auth.userId); fail(404, "Invalid invite code"); }
+  if (gb!.invite_revoked_at) fail(410, "This invite code has been revoked. Ask the organizer for a new one.");
+  if (gb!.invite_expires_at && new Date(gb!.invite_expires_at).getTime() < Date.now()) {
+    fail(410, "This invite code has expired. Ask the organizer for a new one.");
+  }
+  if (gb!.status === "Cancelled" || gb!.status === "Completed") fail(400, "This group trip is closed");
+  if (await isMember(gb!.group_booking_id, auth.userId)) fail(400, "Already a member of this group");
+  if (gb!.member_count >= gb!.max_members) fail(400, "Group is full");
+  await tx(async (t) => {
+    const used = await q(
+      `update public.group_bookings set invite_uses = invite_uses + 1
+       where group_booking_id = $1 and invite_revoked_at is null
+         and (invite_max_uses is null or invite_uses < invite_max_uses)
+       returning invite_uses`, [gb!.group_booking_id], t);
+    if (!used.length) fail(410, "This invite code has reached its use limit. Ask the organizer for a new one.");
+    try {
+      await q(`insert into public.group_booking_members (group_booking_id, user_id, role) values ($1, $2, 'member')`,
+        [gb!.group_booking_id, auth.userId], t);
+    } catch (e) {
+      if (isUniqueViolation(e)) fail(400, "Already a member of this group");
+      throw e;
+    }
+  });
+  await emit(`group-tracking:${gb!.group_booking_id}`, "member:joined",
+    { group_booking_id: gb!.group_booking_id, user_id: auth.userId, user_name: auth.name });
+  return gb!;
+}
+
+async function requireOrganizerOrAdmin(gid: number, auth: AuthCtx) {
+  const me = await q1(`select role from public.group_booking_members where group_booking_id = $1 and user_id = $2`,
+    [gid, auth.userId]);
+  if (me?.role === "organizer") return;
+  if (await resolveAdmin(auth)) return;
+  fail(403, "Only the group organizer can manage invite codes");
+}
 
 export function registerTrips(r: Router) {
   // ── single bookings ───────────────────────────────────────────────────────
@@ -62,20 +146,9 @@ export function registerTrips(r: Router) {
     const travelers = Math.max(toInt(b.num_travelers, 1)!, 1);
 
     if (isHotelOrRestaurant) {
-      const unit = toNum(b.item_price_per_unit) ?? 0;
-      const total = toNum(b.total_amount) ?? unit * days * travelers;
-      if (total < 0) fail(400, "Invalid amount");
-      const label = bookingType === "hotel" ? "Hotel" : "Restaurant";
-      const item = text(b.item_name, 200);
-      const tag = item ? `[${label}: ${item}]` : `[${label} Booking]`;
-      const notes = text(b.notes, 2000) ? `${tag} ${text(b.notes, 2000)}` : tag;
-      const row = await q1(
-        `insert into public.bookings (user_id, destination_id, booking_type, booking_date, travel_date,
-                                      num_travelers, estimated_duration_days, notes, total_amount)
-         values ($1, $2, $3, $4, $5, $6, $7, $8, $9) returning booking_id`,
-        [auth.userId, toInt(b.destination_id), bookingType, b.booking_date, b.travel_date || null,
-         travelers, days, notes, total]);
-      return json({ success: true, booking_id: row?.booking_id, total_amount: total, booking_type: bookingType, item_name: item }, 201);
+      // Hotel stays and restaurant tables are priced and checked for
+      // availability on the server only (see routes/hospitality.ts).
+      fail(410, "Please update SafarSync: hotel and restaurant bookings now use live availability and server pricing.");
     }
 
     const dest = await q1(`select destination_id, average_cost from public.destinations where destination_id = $1`,
@@ -94,8 +167,8 @@ export function registerTrips(r: Router) {
 
   r.get("/bookings/list", "user", async ({ auth }) => {
     const rows = await q(
-      `select b.*, d.name as destination_name, d.image_url, d.latitude, d.longitude, d.average_cost
-       from public.bookings b left join public.destinations d on d.destination_id = b.destination_id
+      `select ${BOOKING_SELECT}
+       from public.bookings b ${BOOKING_JOINS}
        where b.user_id = $1 order by b.created_at desc`, [auth.userId]);
     return json({ success: true, bookings: rows });
   });
@@ -114,8 +187,8 @@ export function registerTrips(r: Router) {
     }
     vals.push(limit);
     const rows = await q(
-      `select b.*, d.name as destination_name, d.image_url, d.category, d.city, d.latitude, d.longitude
-       from public.bookings b left join public.destinations d on d.destination_id = b.destination_id
+      `select ${BOOKING_SELECT}
+       from public.bookings b ${BOOKING_JOINS}
        where b.user_id = $1 ${filter} order by coalesce(b.travel_date, b.booking_date) asc nulls last
        limit $${vals.length}`, vals);
     return json({ success: true, bookings: rows });
@@ -166,12 +239,38 @@ export function registerTrips(r: Router) {
     if (["Completed", "Cancelled", "Refunded"].includes(booking!.status)) {
       fail(400, `Cannot cancel a ${booking!.status} booking`);
     }
-    const n = await exec(
-      `update public.bookings set status = 'Cancelled', cancelled_at = now(), cancellation_reason = $1
-       where booking_id = $2 and user_id = $3 and status not in ('Completed','Cancelled','Refunded')`,
-      [text(body?.reason, 1000) ?? "", booking!.booking_id, auth.userId]);
+    const b = booking!;
+    let refundRequested = false;
+    if (b.booking_type === "restaurant" && b.reservation_at && new Date(b.reservation_at).getTime() < Date.now()) {
+      fail(400, "This reservation time has already passed");
+    }
+    if (b.booking_type === "hotel" && b.hotel_id && b.payment_status === "Paid") {
+      // Free cancellation until `free_cancel_hours` before check-in (hotel's local check-in time).
+      const checkIn = zonedToUtc(String(b.check_in_date), String(b.hotel_check_in_time ?? "14:00"), "Asia/Karachi");
+      const deadline = checkIn.getTime() - Number(b.free_cancel_hours ?? 48) * 3600000;
+      if (Date.now() > deadline) {
+        fail(400, `Free cancellation ended ${b.free_cancel_hours ?? 48} hours before check-in. Please contact support.`);
+      }
+      refundRequested = true;
+    }
+    const n = await tx(async (t) => {
+      const updated = await q(
+        `update public.bookings set status = 'Cancelled', cancelled_at = now(), cancellation_reason = $1
+         where booking_id = $2 and user_id = $3 and status not in ('Completed','Cancelled','Refunded')
+         returning booking_id`,
+        [text(body?.reason, 1000) ?? "", b.booking_id, auth.userId], t);
+      if (updated.length && refundRequested && b.payment_intent_id) {
+        await q(`update public.payments set refund_requested_at = coalesce(refund_requested_at, now())
+                 where stripe_payment_intent_id = $1 and refund_approved_at is null`, [b.payment_intent_id], t);
+      }
+      return updated.length;
+    });
     if (!n) fail(400, "Booking could not be cancelled");
-    return json({ success: true, message: "Booking cancelled" });
+    return json({
+      success: true, refund_requested: refundRequested,
+      message: refundRequested ? "Booking cancelled — your refund has been requested and will be reviewed within 24-48 hours."
+                               : "Booking cancelled",
+    });
   });
 
   // ── group bookings ────────────────────────────────────────────────────────
@@ -248,23 +347,10 @@ export function registerTrips(r: Router) {
     return json({ success: true, group_booking: { ...gb, members, member_count: members.length } });
   });
 
-  r.post("/group-bookings/:group_booking_id/join", "user", async ({ auth, params }) => {
-    const gid = idParam(params.group_booking_id);
-    const gb = await q1(`select max_members, status from public.group_bookings where group_booking_id = $1`, [gid]);
-    if (!gb) fail(404, "Group not found");
-    if (gb!.status === "Cancelled" || gb!.status === "Completed") fail(400, "This group trip is closed");
-    // joining by shared Group ID is an existing app feature ("Join by Group ID")
-    const cnt = await q1(`select count(*) as c from public.group_booking_members where group_booking_id = $1`, [gid]);
-    if ((cnt?.c ?? 0) >= gb!.max_members) fail(400, "Group has reached maximum capacity");
-    try {
-      await q(`insert into public.group_booking_members (group_booking_id, user_id, role) values ($1, $2, 'member')`,
-        [gid, auth.userId]);
-    } catch (e) {
-      if (isUniqueViolation(e)) fail(400, "Already a member of this group");
-      throw e;
-    }
-    await emit(`group-tracking:${gid}`, "member:joined", { group_booking_id: gid, user_id: auth.userId, user_name: auth.name });
-    return json({ success: true, message: "Joined group trip successfully" });
+  // Joining needs the group's invite code; the numeric id alone is not enough.
+  r.post("/group-bookings/:group_booking_id/join", "user", async ({ auth, params, body }) => {
+    const gb = await joinWithInviteCode(auth, body?.invite_code, idParam(params.group_booking_id));
+    return json({ success: true, group_booking_id: gb.group_booking_id, message: "Joined group trip successfully" });
   });
 
   r.post("/group-bookings/:group_booking_id/close", "user", async ({ auth, params }) => {
@@ -372,25 +458,44 @@ export function registerTrips(r: Router) {
   });
 
   r.post("/groups/join", "user", async ({ auth, body }) => {
-    const code = text(body?.invite_code, 20)?.toUpperCase();
-    if (!code) fail(400, "invite_code is required");
-    const gb = await q1(
-      `select group_booking_id, trip_name, max_members, status,
-              (select count(*) from public.group_booking_members where group_booking_id = gb.group_booking_id) as member_count
-       from public.group_bookings gb where upper(invite_code) = $1`, [code]);
-    if (!gb) fail(404, "Invalid invite code");
-    if (gb!.status === "Cancelled") fail(400, "This group has been closed");
-    if (gb!.member_count >= gb!.max_members) fail(400, "Group is full");
-    try {
-      await q(`insert into public.group_booking_members (group_booking_id, user_id, role) values ($1, $2, 'member')`,
-        [gb!.group_booking_id, auth.userId]);
-    } catch (e) {
-      if (isUniqueViolation(e)) fail(400, "Already a member of this group");
-      throw e;
+    const gb = await joinWithInviteCode(auth, body?.invite_code, null);
+    return json({ success: true, group_id: gb.group_booking_id, group_name: gb.trip_name, message: "Joined group successfully" });
+  });
+
+  // Organizer (or admin): issue a fresh code — optional expiry / use limit.
+  // The previous code stops working immediately.
+  r.post("/groups/:group_id/invite-code", "user", async ({ auth, params, body }) => {
+    const gid = idParam(params.group_id);
+    await requireOrganizerOrAdmin(gid, auth);
+    const hours = toInt(body?.expires_in_hours);
+    const maxUses = toInt(body?.max_uses);
+    if (hours !== null && (hours < 1 || hours > 24 * 90)) fail(400, "expires_in_hours must be 1–2160");
+    if (maxUses !== null && (maxUses < 1 || maxUses > 500)) fail(400, "max_uses must be 1–500");
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const code = makeCode();
+      try {
+        const row = await q1(
+          `update public.group_bookings set invite_code = $1, invite_uses = 0, invite_revoked_at = null,
+                  invite_expires_at = case when $2::int is null then null else now() + make_interval(hours => $2::int) end,
+                  invite_max_uses = $3
+           where group_booking_id = $4
+           returning invite_code, invite_expires_at, invite_max_uses`, [code, hours, maxUses, gid]);
+        if (!row) fail(404, "Group not found");
+        return json({ success: true, ...row });
+      } catch (e) {
+        if (!isUniqueViolation(e)) throw e;
+      }
     }
-    await emit(`group-tracking:${gb!.group_booking_id}`, "member:joined",
-      { group_booking_id: gb!.group_booking_id, user_id: auth.userId, user_name: auth.name });
-    return json({ success: true, group_id: gb!.group_booking_id, group_name: gb!.trip_name, message: "Joined group successfully" });
+    fail(500, "Could not generate a unique invite code");
+    return json({});
+  });
+
+  // Organizer (or admin): revoke the current code; members keep access.
+  r.delete("/groups/:group_id/invite-code", "user", async ({ auth, params }) => {
+    const gid = idParam(params.group_id);
+    await requireOrganizerOrAdmin(gid, auth);
+    await exec(`update public.group_bookings set invite_revoked_at = now() where group_booking_id = $1`, [gid]);
+    return json({ success: true, message: "Invite code revoked. Existing members keep access." });
   });
 
   const GROUP_MEMBERS_SQL = `
@@ -409,6 +514,7 @@ export function registerTrips(r: Router) {
     const group = await q1(
       `select gb.group_booking_id as group_id, gb.trip_name as group_name, gb.description, gb.invite_code,
               gb.status, gb.max_members, gb.created_by, gb.created_at, u.full_name as creator_name,
+              gb.invite_expires_at, gb.invite_max_uses, gb.invite_uses, gb.invite_revoked_at,
               (select count(*) from public.group_booking_members where group_booking_id = gb.group_booking_id) as member_count
        from public.group_bookings gb left join public.users u on u.user_id = gb.created_by
        where gb.group_booking_id = $1`, [gid]);
@@ -519,6 +625,11 @@ export function registerTrips(r: Router) {
     if (inv!.receiver_id !== auth.userId) fail(403, "Not authorized to respond to this invitation");
     if (inv!.status !== "Pending") fail(400, `Invitation already ${inv!.status}`);
 
+    if (status === "Accepted") {
+      const cnt = await q1(`select count(*) as c from public.group_booking_members where group_booking_id = $1`,
+        [inv!.group_booking_id]);
+      if ((cnt?.c ?? 0) >= inv!.max_members) fail(400, "Group has reached maximum capacity");
+    }
     await tx(async (t) => {
       await q(`update public.group_invitations set status = $1 where id = $2`, [status, inv!.id], t);
       if (status === "Accepted") {
@@ -566,7 +677,8 @@ export function registerTrips(r: Router) {
     const message = typeof body?.message === "string" ? body.message.trim() : "";
     if (!message) fail(400, "Message cannot be empty");
     if (message.length > 4000) fail(400, "Message is too long");
-    const type = ["text", "image", "location", "system"].includes(body?.message_type) ? body.message_type : "text";
+    // 'system' messages are server-generated only; clients cannot forge them.
+    const type = ["text", "image", "location"].includes(body?.message_type) ? body.message_type : "text";
     if (!(await isMember(gid, auth.userId))) fail(403, "Not a member of this group");
     const ins = await q1(
       `insert into public.group_chat_messages (group_booking_id, user_id, message, message_type)

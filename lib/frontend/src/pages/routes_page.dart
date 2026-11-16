@@ -26,11 +26,11 @@ class _RoutesPageState extends State<RoutesPage> {
   static const Color _routeCard = AppTheme.pureWhite;
   static const Color _primaryText = AppTheme.darkSlate;
   static const Color _secondaryText = AppTheme.mediumGray;
-  static const Color _teal = AppTheme.turquoise;
-  static const Color _cyan = AppTheme.turquoise;
-  static const Color _violet = AppTheme.lightGray;
-  static const Color _amber = AppTheme.turquoise;
-  static const Color _orange = AppTheme.turquoise;
+  static Color get _teal => AppTheme.turquoise;
+  static Color get _cyan => AppTheme.turquoise;
+  static Color get _violet => AppTheme.lightGray;
+  static Color get _amber => AppTheme.turquoise;
+  static Color get _orange => AppTheme.turquoise;
 
   Map<String, dynamic>? _activeRoute;
   List<Map<String, dynamic>> _backendRoutes = [];
@@ -438,7 +438,7 @@ class _RoutesPageState extends State<RoutesPage> {
           borderRadius: BorderRadius.circular(20),
           border: Border.all(color: _cyan.withValues(alpha: 0.3), width: 1.2),
         ),
-        child: const Center(child: CircularProgressIndicator(color: _teal)),
+        child: Center(child: CircularProgressIndicator(color: _teal)),
       );
     }
 
@@ -536,7 +536,7 @@ class _RoutesPageState extends State<RoutesPage> {
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(colors: [_amber, _orange]),
+                  gradient: LinearGradient(colors: [_amber, _orange]),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Icon(Icons.navigation, color: Colors.white),
@@ -557,7 +557,7 @@ class _RoutesPageState extends State<RoutesPage> {
                     ),
                     Text(
                       activatedLabel,
-                      style: const TextStyle(color: _teal, fontSize: 11),
+                      style: TextStyle(color: _teal, fontSize: 11),
                     ),
                   ],
                 ),
@@ -850,7 +850,7 @@ class _RoutesPageState extends State<RoutesPage> {
 
               // User-created routes from backend
               if (_loadingRoutes)
-                const Padding(
+                Padding(
                   padding: EdgeInsets.symmetric(vertical: 12),
                   child: Center(child: CircularProgressIndicator(color: _teal)),
                 )

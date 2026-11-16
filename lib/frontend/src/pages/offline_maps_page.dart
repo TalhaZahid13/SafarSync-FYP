@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../ui/app_theme.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import '../utils/offline_map_service.dart';
@@ -24,7 +25,7 @@ class _OfflineMapsPageState extends State<OfflineMapsPage>
 
   // Viewed map state
   OfflineRegion? _viewedRegion;
-  static const _baseColor = Color(0xFF2CAFBC);
+  static Color get _baseColor => AppTheme.turquoise;
 
   @override
   void initState() {
@@ -159,7 +160,7 @@ class _OfflineMapsPageState extends State<OfflineMapsPage>
             ),
             child: Row(
               children: [
-                const Icon(Icons.info_outline, color: _baseColor, size: 20),
+                Icon(Icons.info_outline, color: _baseColor, size: 20),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
@@ -311,7 +312,7 @@ class _RegionCard extends StatelessWidget {
     required this.onView,
   });
 
-  static const _base = Color(0xFF2CAFBC);
+  static Color get _base => AppTheme.turquoise;
 
   @override
   Widget build(BuildContext context) {
@@ -441,7 +442,7 @@ class _RegionCard extends StatelessWidget {
                     label: const Text('View Map'),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: _base,
-                      side: const BorderSide(color: _base),
+                      side: BorderSide(color: _base),
                       padding: const EdgeInsets.symmetric(vertical: 10),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10),

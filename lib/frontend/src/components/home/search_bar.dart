@@ -20,6 +20,12 @@ class SearchBar extends StatefulWidget {
 class _SearchBarState extends State<SearchBar> {
   final TextEditingController _controller = TextEditingController();
 
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
   Future<void> _handleSearch(String query) async {
     final trimmed = query.trim();
     if (trimmed.isEmpty) {

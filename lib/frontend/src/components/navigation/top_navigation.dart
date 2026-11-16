@@ -1,6 +1,6 @@
-import '../../utils/app_auth.dart';
 import 'package:flutter/material.dart';
-import '../../utils/local_database_service.dart';
+import 'package:provider/provider.dart';
+import '../../utils/user_profile_provider.dart';
 import '../../utils/responsive.dart';
 import '../../utils/notification_service.dart';
 import '../../utils/api_service.dart';
@@ -14,13 +14,11 @@ class TopNavigation extends StatefulWidget {
 }
 
 class _TopNavigationState extends State<TopNavigation> {
-  String _firstName = '';
   int _unread = 0;
 
   @override
   void initState() {
     super.initState();
-    _loadUserName();
     _unread = NotificationService.instance.unreadCount;
     NotificationService.instance.addUnreadListener(_onUnreadChanged);
     _fetchUnreadCount();
@@ -48,36 +46,6 @@ class _TopNavigationState extends State<TopNavigation> {
     } catch (_) {}
   }
 
-  Future<void> _loadUserName() async {
-    final user = AppAuth.currentUser;
-    if (user == null) return;
-
-    // 1. Auth profile name (Google / Apple / signup metadata)
-    final authName = user.displayName?.trim() ?? '';
-    if (authName.isNotEmpty) {
-      _setName(authName);
-      return;
-    }
-
-    // 2. Local SQLite — full_name saved during signup / social login
-    final profile = await LocalDatabaseService.getUserProfile(user.uid);
-    final dbName = (profile?['full_name'] as String?)?.trim() ?? '';
-    if (dbName.isNotEmpty) {
-      _setName(dbName);
-      return;
-    }
-
-    // 3. Email prefix as last fallback
-    final email = user.email ?? '';
-    _setName(email.split('@').first);
-  }
-
-  void _setName(String fullName) {
-    if (!mounted) return;
-    // Show only the first word (first name)
-    setState(() => _firstName = fullName.split(' ').first);
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -95,7 +63,10 @@ class _TopNavigationState extends State<TopNavigation> {
     );
     final padding = ResponsiveUtil.getResponsivePadding(context);
 
-    final greeting = _firstName.isNotEmpty ? _firstName : 'Traveler';
+    // Name + photo come from the signed-in user's database profile and
+    // update as soon as the profile is saved (see UserProfileProvider).
+    final profile = context.watch<UserProfileProvider>();
+    final greeting = profile.firstName;
 
     return Padding(
       padding: EdgeInsets.only(bottom: padding),
@@ -140,6 +111,12 @@ class _TopNavigationState extends State<TopNavigation> {
             ),
           ),
           SizedBox(width: padding * 0.5),
+          _ProfileAvatar(
+            photoUrl: profile.photoUrl,
+            initials: profile.initials,
+            color: theme.colorScheme.primary,
+          ),
+          const SizedBox(width: 8),
           Stack(
             children: [
               Container(
@@ -180,6 +157,54 @@ class _TopNavigationState extends State<TopNavigation> {
             ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Signed-in user's photo, or their initials when there is none / it fails.
+class _ProfileAvatar extends StatelessWidget {
+  const _ProfileAvatar({
+    required this.photoUrl,
+    required this.initials,
+    required this.color,
+  });
+
+  final String? photoUrl;
+  final String initials;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final fallback = Center(
+      child: Text(
+        initials,
+        style: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.w700,
+          fontSize: 15,
+        ),
+      ),
+    );
+    return Semantics(
+      label: 'Your profile',
+      child: Container(
+        width: 44,
+        height: 44,
+        decoration: BoxDecoration(
+          color: color,
+          shape: BoxShape.circle,
+          border: Border.all(color: color.withValues(alpha: 0.25), width: 2),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: (photoUrl == null)
+            ? fallback
+            : Image.network(
+                photoUrl!,
+                key: ValueKey(photoUrl),
+                fit: BoxFit.cover,
+                errorBuilder: (_, _, _) => fallback,
+              ),
       ),
     );
   }

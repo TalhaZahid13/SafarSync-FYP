@@ -102,7 +102,9 @@ class _EmergencySOSScreenState extends State<EmergencySOSScreen>
       }
       if (perm == LocationPermission.denied ||
           perm == LocationPermission.deniedForever) {
-        setState(() => _locationLabel = 'Location permission denied');
+        if (mounted) {
+          setState(() => _locationLabel = 'Location permission denied');
+        }
         return;
       }
       final pos = await Geolocator.getCurrentPosition(
