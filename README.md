@@ -193,7 +193,7 @@ The Postgres schema lives in `supabase/migrations/` and is applied with `npx sup
 ### 1. Clone and install
 
 ```bash
-git clone https://github.com/TalhaZahid1/SafarSync-FYP.git
+git clone https://github.com/TalhaZahid13/SafarSync-FYP.git
 cd SafarSync-FYP
 flutter pub get
 ```
